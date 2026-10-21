@@ -1,0 +1,3 @@
+[submodule "PteraSoftware"]
+	path = PteraSoftware
+	url = https://github.com/camUrban/PteraSoftware.git
