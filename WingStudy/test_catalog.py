@@ -20,6 +20,30 @@ class CatalogChecks(unittest.TestCase):
         config["shape_sweep"].update(chord_count=3,ranges=[{"min_m":v,"max_m":v,"count":1} for v in (.1,.08,.05)])
         config["settings"].update(span_panels=4,chord_panels=2,cycles=3,dt_s=.025,wake_model="prescribed",wake_cycles=2)
         self.spec=model.plan(config);self.spec.update(ptera_version="5.1.0",companion_version="3.1.0")
+    def test_native_settings_in_excel_parameters(self):
+        self.spec['settings'].update(aeroelastic_enabled=True,spring_constant_rad=.267,wing_density=.1,damping_constant_rad=.1,step_discards=5)
+        self.saved('native-settings');catalog.export(model)
+        with zipfile.ZipFile(self.out.parent/'master_runs.xlsx') as archive:
+            sheet=ET.fromstring(archive.read('xl/worksheets/sheet1.xml'));ns={'s':catalog.NS}
+            data=sheet.find('s:sheetData',ns)
+            headers={''.join(cell.itertext()):cell.get('r')[:-1] for row in data if row.get('r')=='5' for cell in row}
+            cells={cell.get('r'):''.join(cell.itertext()) for row in data if row.get('r')=='6' for cell in row}
+            self.assertEqual(cells[headers['Native aeroelasticity']+'6'],'Yes')
+            self.assertAlmostEqual(float(cells[headers['Shared spring (Nm/rad)']+'6']),.267)
+
+    def test_rigid_physics_fingerprint_preserved(self):
+        source=(model.HERE/'model.py').read_text(encoding='utf-8')
+        self.assertEqual(catalog.physics_digest(source,rigid=True),'20e49232e1a07dab8faf2c2e9dc717de261377d4c0d7898bcab018df08807b02')
+
+    def test_aeroelastic_signature_separates_physics(self):
+        case=self.spec['cases'][0];rigid=self.spec['settings'];spring=copy.deepcopy(rigid)
+        spring.update(aeroelastic_enabled=True,spring_constant_rad=.267,wing_density=.1,damping_constant_rad=.01,step_discards=5)
+        self.assertNotEqual(catalog.signature(model,case,rigid),catalog.signature(model,case,spring))
+        changed=copy.deepcopy(spring);changed['spring_constant_rad']=.5
+        self.assertNotEqual(catalog.signature(model,case,spring),catalog.signature(model,case,changed))
+        disabled=copy.deepcopy(rigid);disabled.update(spring_constant_rad=999,damping_constant_rad=20)
+        self.assertEqual(catalog.signature(model,case,rigid),catalog.signature(model,case,disabled))
+
     def tearDown(self):self.patch.stop();self.temp.cleanup()
     def saved(self,name="source",thrust=2.,moment=1.):
         spec=copy.deepcopy(self.spec);catalog.prepare(model,spec,name)
@@ -115,12 +139,12 @@ class CatalogChecks(unittest.TestCase):
         proof={**identity,"ptera_commit":"verified-commit"}
         manifest={"companion_version":"fixture-proof","ptera_version":"5.1.0","ptera_commit":"verified-commit","ptera_worktree":""}
         (folder/"fixture-proof.json").write_text(json.dumps(proof))
-        catalog._HISTORICAL.pop("fixture-proof",None)
+        catalog._HISTORICAL.pop(("fixture-proof",False),None)
         self.assertTrue(catalog.verified_import(model,manifest))
         proof["physics"]="different";(folder/"fixture-proof.json").write_text(json.dumps(proof))
-        catalog._HISTORICAL.pop("fixture-proof",None)
+        catalog._HISTORICAL.pop(("fixture-proof",False),None)
         self.assertFalse(catalog.verified_import(model,manifest))
-        catalog._HISTORICAL.pop("fixture-proof",None)
+        catalog._HISTORICAL.pop(("fixture-proof",False),None)
 
 class LandscapeChecks(unittest.TestCase):
     def rows(self):

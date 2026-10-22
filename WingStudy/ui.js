@@ -8,7 +8,7 @@ function profileLinks(r,base){
 let selected = new Map(), lastOverlay = [], defaultsRoot = '', previewSerial = 0, timer;
 const geometryKeys = ['span_m','root_chord_m','tip_ratio','mid_ratio','sweep_deg','incidence_deg'];
 const motionKeys = ['frequency_hz','amplitude_deg','speed_mps'];
-const fixedKeys = [...motionKeys,'waveform_signature','rho','nu','dt_s','cycles','span_panels','chord_panels','wake_model','wake_cycles','tail_signature'];
+const fixedKeys = [...motionKeys,'waveform_signature','rho','nu','dt_s','cycles','span_panels','chord_panels','wake_model','wake_cycles','tail_signature','aeroelastic_enabled','spring_constant_rad','wing_density','damping_constant_rad','step_discards'];
 const captions = {
   span_m:'Tip-to-tip, including the hinge gap. No imposed maximum.',
   root_chord_m:'Root chord. No imposed maximum.',
@@ -109,6 +109,14 @@ function fill(original) {
     field('wake_cycles','Retain wake history (cycles)',s.wake_cycles,'0 = full history. Positive whole number keeps only that many cycles. Try 2 for screening; check finalists with longer/full wake.','number')+
     `<div class="full note"><button class="btn" id="fastWake">Use faster wake settings</button><span class="help"> Prescribed wake + 2 retained cycles. Motion, time step, mesh and total cycles stay as entered.</span></div>`);
   $('fastWake').onclick=()=>{$('wake_model').value='prescribed';$('wake_cycles').value='2';preview();};
+  $('solverFields').insertAdjacentHTML('beforeend',`<div class="full note"><label><input id="aeroelastic_enabled" type="checkbox" ${s.aeroelastic_enabled?'checked':''}> Include native Ptera aeroelasticity</label><p class="help">Independent torsional springs, all with the same stiffness. This models strip twist, not spanwise spar bending. Settings stay constant across the study.</p><div id="aeroelasticFields" class="fields">`+
+    field('spring_constant_rad','Shared spring stiffness (N m/rad)',s.spring_constant_rad,'2 mm rod estimate: assumed E = 34 GPa; EI = 0.02670 N m²; k = EI / 0.10 m = 0.2670 N m/rad. Pure end-moment equivalence; not a measured wing property.','number')+
+    field('wing_density','Wing mass per area (kg/m²)',s.wing_density,'Screening assumption 0.10 kg/m²; replace with measured wing mass / area.','number')+
+    field('damping_constant_rad','Shared damping (N m s/rad)',s.damping_constant_rad,'Screening assumption 0.10; not derived from rod diameter.','number')+
+    field('step_discards','Startup deformation hold (steps)',s.step_discards,'Native Ptera holds deformation during its startup steps. Default 5.','number')+
+    `<p class="help full">Rod modulus estimate: <a href="https://www.easycomposites.co.uk/2mm-carbon-fibre-rod" target="_blank" rel="noopener">supplier axial range 28–40 GPa</a>; axial modulus used as a bending-modulus approximation. Reference length is fixed at 100 mm so every strip receives the same k.</p></div></div>`);
+  const toggleAero=()=>{const on=$('aeroelastic_enabled').checked;$('aeroelasticFields').classList.toggle('hidden',!on);};
+  $('aeroelastic_enabled').onchange=toggleAero;toggleAero();
   fillTail(c.tail||defaults.tail);
 
   preview();
@@ -118,8 +126,9 @@ function config() {
   c.mode=$('studyMode').value; c.designs=structuredClone(customDesigns);
   geometryKeys.forEach(k => c.sweep[k] = $(k).value);
   Object.keys(defaults.limits).forEach(k => c.limits[k] = $(k).value);
-  Object.keys(defaults.settings).filter(k => k !== 'save_solver').forEach(k => c.settings[k] = $(k).value);
+  Object.keys(defaults.settings).filter(k => !['save_solver','aeroelastic_enabled'].includes(k)).forEach(k => c.settings[k] = $(k).value);
   c.settings.save_solver = false;
+  c.settings.aeroelastic_enabled=$('aeroelastic_enabled').checked;
   c.tail={...tailConfig(),enabled:false};
   c.shape_sweep=readShape();
   c.waveform={mode:$('waveformMode').value,points:$('waveformPoints').value};
@@ -277,7 +286,7 @@ function renderBestDesign(rows,study) {
       <h3>Single-wing objective</h3>${values([['Mean thrust / peak |roll| (1/m)',r[shapeObjective]],['Single-wing mean thrust (N)',r.single_wing_mean_thrust_N],['Peak |hinge roll moment| (N m)',r.single_wing_peak_abs_roll_moment_Nm],['RMS hinge roll moment (N m)',r.single_wing_rms_roll_moment_Nm],['Size-normalized score L·T/M',r.dimensionless_thrust_roll_score],['Reference half-span L (m)',r.reference_half_span_m],['Root-moment cycle difference (%)',r.root_moment_cycle_error_pct]])}
       <h3>Numerical inputs</h3>${values([['Delta time (s)',s.dt_s],['Cycles',s.cycles],['Span panels / half-wing',s.span_panels],
       ['Chordwise panels',s.chord_panels],['Cycle tolerance (%)',s.cycle_tolerance_pct],
-      ['Wake model',s.wake_model||'free'],['Retained wake cycles',Number(s.wake_cycles||0)||'Full history'],
+      ['Native aeroelasticity',s.aeroelastic_enabled?'Enabled':'Off'],['Shared spring (N m/rad)',s.aeroelastic_enabled?s.spring_constant_rad:'—'],['Mass per area (kg/m²)',s.aeroelastic_enabled?s.wing_density:'—'],['Damping (N m s/rad)',s.aeroelastic_enabled?s.damping_constant_rad:'—'],['Peak native twist (°)',r.peak_abs_native_twist_deg],['Wake model',s.wake_model||'free'],['Retained wake cycles',Number(s.wake_cycles||0)||'Full history'],
       ['Static tail enabled',s.tail?.enabled?'Yes':'No'],['Overall tail pitch (°)',s.tail?.enabled?s.tail.pitch_deg:'—'],['Averaging window start (s)',r.window_start_s],['Averaging window end (s)',r.window_end_s]])}</div></div>
     <div class="actions" style="margin-top:14px"><a href="${base}water_wing_forces.png" target="_blank">Ptera force plot</a><a href="${base}water_wing_moments.png" target="_blank">Ptera moment plot</a>${study.lean_outputs?`<a href="${base}animation.webp" target="_blank">Animation</a>`:''}${profileLinks(r,base)}<a href="/api/case/${study.id}/${r.id}" target="_blank">Full case data</a></div>
     <p class="caption">Winner maximizes single-wing final-cycle mean thrust divided by sampled peak absolute roll moment about that wing's hinge. No shared-motor screening. Physical scaling is conditional on similarity; L·T/M removes the ratio's length units. Converge mesh, wake and delta time before selecting a build.</p>`;

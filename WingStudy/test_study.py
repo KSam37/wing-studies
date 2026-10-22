@@ -79,6 +79,34 @@ class StudyChecks(unittest.TestCase):
             self.assertGreaterEqual(value,limits.min()-1e-9);self.assertLessEqual(value,limits.max()+1e-9)
         for v in original:self.assertLess(np.linalg.norm(vertices-v,axis=1).min(),1e-8)
 
+    def test_native_aeroelastic_settings_and_shared_spring(self):
+        import pterasoftware as ps
+        c=copy.deepcopy(model.DEFAULT);self.assertFalse(model.plan(c)['settings']['aeroelastic_enabled'])
+        c['settings'].update(aeroelastic_enabled=True,span_panels=4,chord_panels=2,dt_s=.025,cycles=3,wake_cycles=2)
+        p=model.plan(c);solver=model.build_solver(p['cases'][0],p['settings']);problem=solver.unsteady_problem
+        self.assertIsInstance(problem,ps.AeroelasticUnsteadyProblem)
+        self.assertAlmostEqual(problem.spring_constant_rad,34e9*math.pi*.002**4/64/.1)
+        self.assertAlmostEqual(problem.wing_density,.1);self.assertEqual(problem.step_discards,5)
+        self.assertEqual(solver.num_steps,120);self.assertEqual(problem.max_wake_rows,80)
+        wing=problem.movement.airplane_movements[0].base_airplane.wings[0]
+        self.assertEqual(len(wing.wing_cross_sections),5);self.assertFalse(wing.symmetric)
+        c['settings']['aeroelastic_enabled']='false'
+        with self.assertRaises(ValueError):model.plan(c)
+        c['settings']['aeroelastic_enabled']=True
+        for key,bad in [('spring_constant_rad',0),('wing_density',0),('damping_constant_rad',-1),('step_discards',120)]:
+            invalid=copy.deepcopy(c);invalid['settings'][key]=bad
+            with self.assertRaises(ValueError):model.plan(invalid)
+
+    def test_native_aeroelastic_custom_wave_acceleration(self):
+        c=copy.deepcopy(model.DEFAULT);c['settings']['aeroelastic_enabled']=True
+        c['waveform']={'mode':'custom','points':model.DEFAULT['waveform']['points']}
+        p=model.plan(c);wave=model.FlapWave(p['settings']['waveform']);acc=model.FlapAcceleration(p['settings']['waveform'])
+        h=1e-4
+        for phase in (.3,1.1,2.2,4.4):self.assertAlmostEqual(acc(phase),(wave(phase+h)-2*wave(phase)+wave(phase-h))/h**2,places=6)
+        solver=model.build_solver(p['cases'][0],p['settings'])
+        movement=solver.unsteady_problem.movement.airplane_movements[0].wing_movements[0]
+        self.assertTrue(callable(movement.spacingAnglesSecondDerivative_Gs_to_Wn_ixyz[0]))
+
     def test_chord_node_cartesian_grid_and_pruned_taper(self):
         c=copy.deepcopy(model.DEFAULT);c['shape_sweep']['decreasing']=False
         p=model.plan(c);self.assertEqual(p['case_count'],81)

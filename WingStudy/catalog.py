@@ -34,14 +34,14 @@ PARAM_HEADERS = ["Case #","Origin study","Local case","State","Recorded UTC","Si
     "Waveform points","Density (kg/m3)","Kinematic viscosity (m2/s)","Time step (s)","Cycles",
     "Span panels","Chord panels","Wake model","Retained wake cycles","Cycle tolerance (%)",
     "Leading-edge sweep (deg)","Incidence (deg)","Static tail","Ptera version","Solver identity",
-    "Run occurrences","All study / case locations","Outputs","Interactive case"]
+    "Run occurrences","All study / case locations","Outputs","Interactive case","Native aeroelasticity","Shared spring (Nm/rad)","Wing mass per area (kg/m2)","Damping (Nms/rad)","Startup hold (steps)"]
 RESULT_HEADERS = ["Rank","Case #","Origin study","Local case","State","Repeatable cycles","Cycle error (%)",
     *METRICS.values(),"Ranking value","Rank eligible (1/0)","Area (m2)","Aspect ratio","Wing span (m)","Simulation mode",
     "Outputs","Interactive case","Last error"]
 NS="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 RNS="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 ET.register_namespace("",NS)
-PHYSICS_NAMES={"FlapWave","build_solver","sweep_sections","custom_sections","custom_frames",
+PHYSICS_NAMES={"FlapWave","FlapAcceleration","build_aeroelastic_solver","build_solver","sweep_sections","custom_sections","custom_frames",
     "custom_transforms","solver_from_wing","single_wing_forces","wing_root_roll_moment",
     "shape_metrics","cycle_metrics","run_case"}
 
@@ -66,14 +66,33 @@ def connect(model):
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT);""")
     return db
 
-def physics_digest(source):
+AEROELASTIC_KEYS={"aeroelastic_enabled","spring_constant_rad","wing_density","damping_constant_rad","step_discards"}
+
+def physics_digest(source,rigid=False):
     tree=ast.parse(source)
-    return hashlib.sha256(compact([ast.dump(n,include_attributes=False) for n in tree.body
-        if isinstance(n,(ast.FunctionDef,ast.ClassDef)) and n.name in PHYSICS_NAMES]).encode()).hexdigest()
+    nodes=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.ClassDef)) and n.name in PHYSICS_NAMES]
+    if rigid:
+        # Project away only the explicit opt-in dispatch and aeroelastic-only reporting.
+        # All rigid load, movement and geometry code remains in the fingerprint.
+        nodes=[n for n in nodes if n.name not in ("FlapAcceleration","build_aeroelastic_solver")]
+        for node in nodes:
+            if node.name=="build_solver":
+                node.body=[n for n in node.body if not (isinstance(n,ast.If) and ast.dump(n.test)==ast.dump(ast.parse('settings.get("aeroelastic_enabled",False)',mode='eval').body))]
+            if node.name=="run_case":
+                node.body=[n for n in node.body if not (
+                    isinstance(n,ast.If) and ast.dump(n.test)==ast.dump(ast.parse('settings.get("aeroelastic_enabled",False)',mode='eval').body) or
+                    isinstance(n,ast.Expr) and isinstance(n.value,ast.Call) and any(k.arg=="aeroelastic_enabled" for k in n.value.keywords))]
+    return hashlib.sha256(compact([ast.dump(n,include_attributes=False) for n in nodes]).encode()).hexdigest()
+
+def physical_settings(settings):
+    values={k:v for k,v in settings.items() if k not in ("case_budget","save_solver","gap_m")}
+    if not values.get("aeroelastic_enabled",False):values={k:v for k,v in values.items() if k not in AEROELASTIC_KEYS}
+    return values
+
 
 _ENGINE={}
-_ENGINE_HASH={}
-def engine(model):
+_RIGID_ENGINE={}
+def engine(model,settings=None):
     """Actual solver code and dependency versions, independent of installation path."""
     if str(model.HERE) not in _ENGINE:
         import importlib.metadata as md
@@ -82,15 +101,20 @@ def engine(model):
                if p.is_file() and "__pycache__" not in p.parts and p.suffix not in (".pyc",".nbc",".nbi")}
         _ENGINE[str(model.HERE)]={"physics":physics_digest((model.HERE/"model.py").read_text(encoding="utf-8")),
             "native":files,"packages":{n:md.version(n) for n in ("PteraSoftware","numpy","scipy","numba")}}
-    if str(model.HERE) not in _ENGINE_HASH:_ENGINE_HASH[str(model.HERE)]=hashlib.sha256(compact(_ENGINE[str(model.HERE)]).encode()).hexdigest()
-    return _ENGINE[str(model.HERE)]
+    identity=_ENGINE[str(model.HERE)]
+    if settings is None or not settings.get("aeroelastic_enabled",False):
+        if str(model.HERE) not in _RIGID_ENGINE:
+            _RIGID_ENGINE[str(model.HERE)]={**identity,"physics":physics_digest((model.HERE/"model.py").read_text(encoding="utf-8"),rigid=True)}
+        identity=_RIGID_ENGINE[str(model.HERE)]
+    return identity
 
 _HISTORICAL={}
 def verified_import(model,manifest):
     """Audit old v3 code against the archived release before permitting reuse."""
-    if manifest.get("catalog_engine")==engine(model):return True
+    if manifest.get("catalog_engine")==engine(model,manifest.get("settings",{})):return True
     version=manifest.get("companion_version","")
-    if version not in _HISTORICAL:
+    key=(version,bool(manifest.get("settings",{}).get("aeroelastic_enabled",False)))
+    if key not in _HISTORICAL:
         path=root(model)/"share"/f"WingStudies-Windows-x64-{version}.zip"
         try:
             proof=root(model)/"provenance"/(version+".json")
@@ -104,11 +128,11 @@ def verified_import(model,manifest):
                     old=physics_digest(z.read(prefix+"WingStudy/model.py").decode("utf-8"))
                     native={k.removeprefix("PteraSoftware/"):v for k,v in report["sha256"].items()
                             if k.startswith("PteraSoftware/pterasoftware/")}
-            current=engine(model)
-            _HISTORICAL[version]={"matches":old==current["physics"] and native==current["native"] and
+            current=engine(model,manifest.get("settings",{}))
+            _HISTORICAL[key]={"matches":old==current["physics"] and native==current["native"] and
                 all(report["packages"].get(k)==v for k,v in current["packages"].items()),"commit":report.get("ptera_commit")}
-        except (OSError,ValueError,KeyError,zipfile.BadZipFile):_HISTORICAL[version]={"matches":False}
-    old=_HISTORICAL[version]
+        except (OSError,ValueError,KeyError,zipfile.BadZipFile):_HISTORICAL[key]={"matches":False}
+    old=_HISTORICAL[key]
     return (old["matches"] and old.get("commit")==manifest.get("ptera_commit") and
         "pterasoftware/" not in manifest.get("ptera_worktree","").replace("\\","/").lower() and
         manifest.get("ptera_version")==engine(model)["packages"]["PteraSoftware"])
@@ -117,9 +141,9 @@ def signature(model,case,settings,identity=None):
     # Root gap and grid labels do not affect an isolated sectioned wing's mesh.
     geometry={"sections":case["sections"]} if "sections" in case else {
         k:case[k] for k in model.GEOMETRY_KEYS}|{"gap_m":settings["gap_m"]}
-    settings={k:v for k,v in settings.items() if k not in ("case_budget","save_solver","gap_m")}
-    current=engine(model)
-    identity_hash=_ENGINE_HASH[str(model.HERE)] if identity is None or identity is current else hashlib.sha256(compact(identity).encode()).hexdigest()
+    current=engine(model,settings)
+    settings=physical_settings(settings)
+    identity_hash=hashlib.sha256(compact(current if identity is None else identity).encode()).hexdigest()
     value={"contract":2,"geometry":geometry,"settings":settings,"engine":identity_hash}
     return hashlib.sha256(compact(value).encode()).hexdigest()
 
@@ -154,7 +178,7 @@ def sync(model):
                 reusable=(manifest["settings"].get("simulation_mode")==model.SIMULATION_MODE and verified_import(model,manifest))
                 for row in rows:
                     case=known[row["id"]]
-                    identity=engine(model) if reusable else {"historical_unverified":study.name,"case":row["id"]}
+                    identity=engine(model,manifest["settings"]) if reusable else {"historical_unverified":study.name,"case":row["id"]}
                     sig=signature(model,case,manifest["settings"],identity)
                     payload={"case":case,"settings":manifest["settings"],"study_name":manifest["name"],
                         "ptera_version":manifest.get("ptera_version"),"reuse_verified":reusable}
@@ -163,7 +187,7 @@ def sync(model):
                 state=model.read_json(status_path).get("state","planned") if status_path.exists() else "planned"
                 for local_case,case in known.items():
                     if local_case in finished:continue
-                    identity=engine(model) if reusable else {"historical_unverified":study.name,"case":local_case}
+                    identity=engine(model,manifest["settings"]) if reusable else {"historical_unverified":study.name,"case":local_case}
                     sig=signature(model,case,manifest["settings"],identity)
                     payload={"case":case,"settings":manifest["settings"],"study_name":manifest["name"],
                         "ptera_version":manifest.get("ptera_version"),"reuse_verified":reusable}
@@ -172,7 +196,7 @@ def sync(model):
             except (OSError,ValueError,KeyError,TypeError):continue
 
 def prepare(model,spec,study):
-    spec["catalog_engine"]=engine(model)
+    spec["catalog_engine"]=engine(model,spec["settings"])
     with connect(model) as db:
         for case in spec["cases"]:
             payload={"case":case,"settings":spec["settings"],"study_name":spec["name"],
@@ -282,7 +306,7 @@ def landscape_data(model,rows,case_numbers):
         original=by_number[r["global_case_no"]]
         p.update(global_case_no=r["global_case_no"],source_study=r["_study"],source_case=original["id"],
                  thumbnail=model.wing_thumbnail(r,r["_settings"]["gap_m"]))
-    conditions={json.dumps({k:v for k,v in r["_settings"].items() if k not in ("case_budget","save_solver","gap_m")},sort_keys=True) for r in selected}
+    conditions={json.dumps(physical_settings(r["_settings"]),sort_keys=True) for r in selected}
     if len(conditions)>1 or any(not r["_verified"] for r in selected):
         spec.update(triangles=[],curve=[],vertex_case_ids=[],interpolation_kind="points")
         spec["note"]="Measured points only: driving/solver conditions differ or provenance is unverified. Filter to consistent verified conditions to enable interpolation. "+spec["note"]
@@ -318,7 +342,8 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
                 *[s.get(k) for k in ("rho","nu","dt_s","cycles","span_panels","chord_panels","wake_model","wake_cycles","cycle_tolerance_pct")],
                 r.get("sweep_deg"),r.get("incidence_deg"),bool(s.get("tail",{}).get("enabled")),r["_ptera_version"],r["_signature"],
                 len(r["occurrences"]),"\n".join(o["study"]+" / "+o["local_case"]+(" (reused)" if o["reused"] else "") for o in r["occurrences"]),
-                ("link",f"studies/{r['_study']}/{r['id']}/","Open outputs"),("link",f"{browser_url}/#catalog&case={r['global_case_no']}","Open case")])
+                ("link",f"studies/{r['_study']}/{r['id']}/","Open outputs"),("link",f"{browser_url}/#catalog&case={r['global_case_no']}","Open case"),
+                bool(s.get("aeroelastic_enabled",False)),*[s.get(k) if s.get("aeroelastic_enabled",False) else None for k in ("spring_constant_rad","wing_density","damping_constant_rad","step_discards")]])
         for r in rows:
             tables[1].append([r["catalog_rank"],r["global_case_no"],r["_study"],r["id"],r["catalog_state"],r.get("cycle_repeatable"),r.get("cycle_error_pct"),
                 *[r.get(k) for k in METRICS],r.get(metric) if r["catalog_rank"] is not None else None,int(r["catalog_rank"] is not None),r.get("area_m2"),r.get("aspect_ratio"),r.get("single_wing_span_m",r.get("reference_half_span_m")),r.get("simulation_mode","legacy paired"),

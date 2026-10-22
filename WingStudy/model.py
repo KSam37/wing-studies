@@ -44,7 +44,12 @@ DEFAULT = {
                  "frequency_hz": 1., "amplitude_deg": 20., "speed_mps": .5,
                  "case_budget": 10000, "cycle_tolerance_pct": 5.0, "save_solver": False},
 }
-DEFAULT["settings"].update(wake_model="free", wake_cycles=0)
+# Rod estimate: d=2 mm, assumed E=34 GPa (supplier axial range 28-40 GPa),
+# 0.10 m reference cantilever under pure end moment: k_theta=EI/L.
+ROD_EI_NM2=34e9*math.pi*.002**4/64
+DEFAULT["settings"].update(wake_model="free", wake_cycles=0,
+    aeroelastic_enabled=False, spring_constant_rad=ROD_EI_NM2/.10,
+    wing_density=.10, damping_constant_rad=.10, step_discards=5)
 DEFAULT["waveform"]={"mode":"sine","points":"0, 0\n0.25, 1\n0.5, 0\n0.75, -1\n1, 0"}
 DEFAULT.update(mode="shape_sweep",shape_sweep={"span_m":.6,"chord_count":4,
     "decreasing":True,"sweep_deg":0.,"incidence_deg":0.,
@@ -57,7 +62,7 @@ DEFAULT["tail"] = {"enabled":False,"pitch_deg":0.,"x_m":.65,"z_m":0.,
         {"y_m":0.,"x_m":0.,"chord_m":.10,"pitch_deg":0.,"roll_deg":0.},
         {"y_m":.10,"x_m":.015,"chord_m":.08,"pitch_deg":0.,"roll_deg":0.},
         {"y_m":.20,"x_m":.04,"chord_m":.04,"pitch_deg":0.,"roll_deg":0.}]}
-MODEL_NOTE = ("Stock Ptera 5.1.0 prescribed-motion UVLM with selectable wake convection and retention; one isolated rigid "
+MODEL_NOTE = ("Stock Ptera 5.1.0 prescribed-motion UVLM with optional native independent torsional springs, selectable wake convection and retention; one isolated "
               "flapping wing rooted at the moment reference origin, no body, and a fixed zero-camber mean surface (NACA 0012). "
               "Water viscosity affects the vortex model; membrane deformation, skin friction, "
               "separation, actuator limits, and structural strength are not resolved.")
@@ -361,7 +366,16 @@ def plan(config):
         "save_solver": bool(s.get("save_solver", False)),
         "wake_model": str(s.get("wake_model", "free")),
         "wake_cycles": number(s.get("wake_cycles",0), "Retained wake cycles", 0, None, True),
+        "aeroelastic_enabled": s.get("aeroelastic_enabled",False),
     }
+    if not isinstance(settings["aeroelastic_enabled"],bool):
+        raise ValueError("Native aeroelastic option must be a checkbox boolean.")
+    for key,label,lo,integer in (("spring_constant_rad","Shared torsional stiffness",1e-12,False),
+            ("wing_density","Wing mass per area",1e-12,False),
+            ("damping_constant_rad","Torsional damping",0.,False),("step_discards","Startup deformation hold steps",0,True)):
+        settings[key]=number(s.get(key,DEFAULT["settings"][key]),label,lo,None,integer)
+    if settings["aeroelastic_enabled"] and settings["step_discards"]>=math.ceil(settings["cycles"]/settings["frequency_hz"]/settings["dt_s"])-1:
+        raise ValueError("Startup hold must end before the last simulation step.")
     if settings["wake_model"] not in ("free", "prescribed"):
         raise ValueError("Choose free or prescribed wake.")
     settings["waveform"]=waveform
@@ -462,6 +476,8 @@ def plan(config):
     for i,case in enumerate(cases,1):case["id"]=f"case_{i:04d}"
     signature=tail_signature(settings["tail"])
     for c in cases:
+        c.update(aeroelastic_enabled=settings.get("aeroelastic_enabled",False))
+        if settings.get("aeroelastic_enabled",False):c.update({k:settings[k] for k in ("spring_constant_rad","wing_density","damping_constant_rad","step_discards")})
         c.update(simulation_mode=SIMULATION_MODE,single_wing_span_m=(c["span_m"]-settings["gap_m"])/2)
         c.update(tail_signature=signature,tail_enabled=settings["tail"]["enabled"],
                  tail_pitch_deg=settings["tail"].get("pitch_deg",0.))
@@ -771,6 +787,7 @@ def save_wing_profiles(case, settings, directory, prefix="wing"):
 
 
 def build_solver(case, settings):
+    if settings.get("aeroelastic_enabled",False):return build_aeroelastic_solver(case,settings)
     import pterasoftware as ps
     half_panels = settings["span_panels"]
     if "sections" in case:
@@ -783,6 +800,43 @@ def build_solver(case, settings):
                    symmetric=False,
                    num_chordwise_panels=settings["chord_panels"], chordwise_spacing="cosine")
     return solver_from_wing(case, settings, ps, wing)
+
+
+class FlapAcceleration:
+    """Analytic second phase derivative required by native aeroelastic movement."""
+    def __init__(self,spec):self.wave=FlapWave(spec)
+    def __call__(self,phase):
+        if self.wave.spline is None:return -math.sin(phase)
+        return float(self.wave.spline((phase/(2*math.pi))%1,2)/((2*math.pi)**2*self.wave.scale))
+
+
+def build_aeroelastic_solver(case,settings):
+    """Construct only stock Ptera aeroelastic classes: one unmirrored wing."""
+    import pterasoftware as ps
+    if settings.get("tail",{}).get("enabled",False):raise ValueError("Only one isolated wing is supported.")
+    if "sections" in case:sections,angles=custom_sections(case,settings,ps)
+    else:sections,angles=sweep_sections(case,settings,ps)
+    wing=ps.Wing(wing_cross_sections=sections,name="Study Wing",Ler_Gs_Cgs=(0.,0.,0.),
+        angles_Gs_to_Wn_ixyz=angles,symmetric=False,explode_into_strips=True,
+        num_chordwise_panels=settings["chord_panels"],chordwise_spacing="cosine")
+    airplane=ps.Airplane(wings=[wing],name="Water Wing",weight=0.)
+    spec=settings.get("waveform",{"mode":"sine"});custom=spec["mode"]=="custom"
+    kwargs={"spacingAnglesSecondDerivative_Gs_to_Wn_ixyz":(FlapAcceleration(spec),None,None)} if custom else {}
+    wm=ps.AeroelasticWingMovement(base_wing=airplane.wings[0],
+        wing_cross_section_movements=[ps.AeroelasticWingCrossSectionMovement(base_wing_cross_section=c)
+            for c in airplane.wings[0].wing_cross_sections],
+        ampAngles_Gs_to_Wn_ixyz=(case["amplitude_deg"],0.,0.),
+        periodAngles_Gs_to_Wn_ixyz=(1/case["frequency_hz"],0.,0.),
+        spacingAngles_Gs_to_Wn_ixyz=(FlapWave(spec) if custom else "sine","sine","sine"),**kwargs)
+    rows=math.ceil(settings["wake_cycles"]/case["frequency_hz"]/settings["dt_s"]) if settings.get("wake_cycles",0) else None
+    movement=ps.AeroelasticMovement(
+        airplane_movements=[ps.AeroelasticAirplaneMovement(base_airplane=airplane,wing_movements=[wm])],
+        operating_point_movement=ps.OperatingPointMovement(base_operating_point=ps.OperatingPoint(
+            rho=settings["rho"],nu=settings["nu"],vCg__E=case["speed_mps"],alpha=0.,beta=0.)),
+        delta_time=settings["dt_s"],num_steps=math.ceil(settings["cycles"]/case["frequency_hz"]/settings["dt_s"]),max_wake_rows=rows)
+    problem=ps.AeroelasticUnsteadyProblem(movement=movement,wing_density=settings["wing_density"],
+        spring_constant_rad=settings["spring_constant_rad"],damping_constant_rad=settings["damping_constant_rad"],step_discards=settings["step_discards"])
+    return ps.AeroelasticUnsteadyRingVortexLatticeMethodSolver(aeroelastic_unsteady_problem=problem)
 
 
 def sweep_sections(case, settings, ps):
@@ -988,6 +1042,7 @@ def estimated_case_seconds(settings,panels,steps):
     matches=[]
     for s,p,n,elapsed in _TIMING_CACHE["samples"]:
         if s.get("simulation_mode","legacy_paired")!=settings.get("simulation_mode","legacy_paired"):continue
+        if s.get("aeroelastic_enabled",False)!=settings.get("aeroelastic_enabled",False):continue
         if s.get("wake_model","free")!=settings.get("wake_model","free") or s.get("wake_cycles",0)!=settings.get("wake_cycles",0):continue
         if not .5<=panels/p<=2 or not .5<=steps/n<=2:continue
         scale=(panels/p)**2*(steps/n)**2
@@ -1104,6 +1159,12 @@ def run_case(case, settings, directory):
                     "cycles": settings["cycles"], "span_panels": settings["span_panels"],
                     "chord_panels": settings["chord_panels"], "rho": settings["rho"], "nu": settings["nu"]})
     metrics.update(wake_model=settings.get("wake_model","free"),wake_cycles=settings.get("wake_cycles",0),**profile)
+    metrics.update(aeroelastic_enabled=settings.get("aeroelastic_enabled",False))
+    if settings.get("aeroelastic_enabled",False):
+        metrics.update({k:settings[k] for k in ("spring_constant_rad","wing_density","damping_constant_rad","step_discards")})
+        # Native state history: inspect the solved structural response, not geometry previews.
+        states=solver.unsteady_problem.listDeformationAnglesYRad_Wcsp_to_Wcs_ixyz[0]
+        metrics["peak_abs_native_twist_deg"]=float(np.rad2deg(np.max(np.abs(states))))
     metrics.update(output_scope="isolated_single_wing", estimated_two_wing_thrust_note="Twice isolated-wing thrust; wing interaction is not modeled.")
     if has_tail:
         for offset,label in ((8,"main_wing"),(10,"tail")):
@@ -1382,7 +1443,7 @@ def comparison_data(rows, axes, metric, filters, mode="max", repeat_only=False):
             (not repeat_only or r.get("cycle_repeatable"))]
     if not rows:
         raise ValueError("No successful cases match these filters and repeatability settings.")
-    constants = (*MOTION_KEYS, "rho", "nu", "dt_s", "cycles", "span_panels", "chord_panels", "wake_model", "wake_cycles","tail_signature","waveform_signature","simulation_mode","reference_grid_span_m","chord_count")
+    constants = (*MOTION_KEYS, "rho", "nu", "dt_s", "cycles", "span_panels", "chord_panels", "wake_model", "wake_cycles","tail_signature","waveform_signature","simulation_mode","reference_grid_span_m","chord_count","aeroelastic_enabled","spring_constant_rad","wing_density","damping_constant_rad","step_discards")
     rows=[{**r,"wake_model":r.get("wake_model","free"),"wake_cycles":r.get("wake_cycles",0),"tail_signature":r.get("tail_signature","none"),"waveform_signature":r.get("waveform_signature","sine")} for r in rows]
     for key in constants:
         if len({r.get(key) for r in rows}) > 1:
