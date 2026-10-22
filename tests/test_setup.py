@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-spec=importlib.util.spec_from_file_location("setup_windows",Path(__file__).resolve().parents[1]/"setup_windows.py")
+spec=importlib.util.spec_from_file_location("setup_windows",Path(__file__).resolve().parents[1]/"tools"/"setup_windows.py")
 setup=importlib.util.module_from_spec(spec);spec.loader.exec_module(setup)
 
 class SetupChecks(unittest.TestCase):

@@ -93,15 +93,20 @@ def verified_import(model,manifest):
     if version not in _HISTORICAL:
         path=root(model)/"share"/f"WingStudies-Windows-x64-{version}.zip"
         try:
-            with zipfile.ZipFile(path) as z:
-                prefix=f"WingStudies-Windows-x64-{version}/"
-                report=json.loads(z.read(prefix+"support/bundle.json"))
-                old=physics_digest(z.read(prefix+"WingStudy/model.py").decode("utf-8"))
-                current=engine(model)
-                native={k.removeprefix("PteraSoftware/"):v for k,v in report["sha256"].items()
-                        if k.startswith("PteraSoftware/pterasoftware/")}
-                _HISTORICAL[version]={"matches":old==current["physics"] and native==current["native"] and
-                    all(report["packages"].get(k)==v for k,v in current["packages"].items()),"commit":report.get("ptera_commit")}
+            proof=root(model)/"provenance"/(version+".json")
+            if proof.is_file():
+                record=json.loads(proof.read_text(encoding="utf-8"))
+                old=record["physics"];native=record["native"];report=record
+            else:
+                with zipfile.ZipFile(path) as z:
+                    prefix=f"WingStudies-Windows-x64-{version}/"
+                    report=json.loads(z.read(prefix+"support/bundle.json"))
+                    old=physics_digest(z.read(prefix+"WingStudy/model.py").decode("utf-8"))
+                    native={k.removeprefix("PteraSoftware/"):v for k,v in report["sha256"].items()
+                            if k.startswith("PteraSoftware/pterasoftware/")}
+            current=engine(model)
+            _HISTORICAL[version]={"matches":old==current["physics"] and native==current["native"] and
+                all(report["packages"].get(k)==v for k,v in current["packages"].items()),"commit":report.get("ptera_commit")}
         except (OSError,ValueError,KeyError,zipfile.BadZipFile):_HISTORICAL[version]={"matches":False}
     old=_HISTORICAL[version]
     return (old["matches"] and old.get("commit")==manifest.get("ptera_commit") and
@@ -397,6 +402,11 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
                         ET.SubElement(hyperlinks,f"{{{NS}}}hyperlink",{"ref":ref,f"{{{RNS}}}id":rid})
                         ET.SubElement(rels,"Relationship",Id=rid,Type=RNS+"/hyperlink",Target=target,TargetMode="External")
                     link_relationships[f"xl/worksheets/_rels/sheet{index+1}.xml.rels"]=ET.tostring(rels,encoding="utf-8",xml_declaration=True)
+                    # CT_Worksheet requires filters/merges/validations/links before
+                    # print settings. Appending them after the template's margins
+                    # parses as XML but makes Excel discard both worksheet parts.
+                    order="sheetPr dimension sheetViews sheetFormatPr cols sheetData sheetCalcPr sheetProtection protectedRanges scenarios autoFilter sortState dataConsolidate customSheetViews mergeCells phoneticPr conditionalFormatting dataValidations hyperlinks printOptions pageMargins pageSetup headerFooter rowBreaks colBreaks customProperties cellWatches ignoredErrors smartTags drawing legacyDrawing legacyDrawingHF drawingHF picture oleObjects controls webPublishItems tableParts extLst".split()
+                    sheet[:]=sorted(sheet,key=lambda el:order.index(el.tag.rsplit('}',1)[-1]))
                     content=ET.tostring(sheet,encoding="utf-8",xml_declaration=True)
                 if info.filename=="xl/calcChain.xml":continue
                 if info.filename not in ("xl/worksheets/_rels/sheet1.xml.rels","xl/worksheets/_rels/sheet2.xml.rels"):dest.writestr(info,content)

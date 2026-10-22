@@ -24,3 +24,7 @@ __pycache__/
 .env.*
 *.log
 WingStudy/tmp*/
+
+!/tools/
+!/Open Results.cmd
+!/Open Master Excel.cmd

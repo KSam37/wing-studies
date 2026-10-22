@@ -11,8 +11,8 @@ set "OPENBLAS_NUM_THREADS=1"
 set "NUMBA_NUM_THREADS=1"
 where py >nul 2>nul
 if not errorlevel 1 (
-  py -3.14 "%~dp0setup_windows.py" --launch %*
+  py -3.14 "%~dp0tools\setup_windows.py" --launch %*
 ) else (
-  python "%~dp0setup_windows.py" --launch %*
+  python "%~dp0tools\setup_windows.py" --launch %*
 )
 if errorlevel 1 pause

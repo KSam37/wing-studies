@@ -2,9 +2,9 @@
 setlocal DisableDelayedExpansion
 where py >nul 2>nul
 if not errorlevel 1 (
-  py -3.14 "%~dp0setup_windows.py" %*
+  py -3.14 "%~dp0tools\setup_windows.py" %*
 ) else (
-  python "%~dp0setup_windows.py" %*
+  python "%~dp0tools\setup_windows.py" %*
 )
 if errorlevel 1 (
   echo.

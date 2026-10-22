@@ -12,9 +12,10 @@ import urllib.request
 import venv
 import zipfile
 
-ROOT=Path(__file__).resolve().parent
-LOCK=ROOT/"requirements-windows.lock"
-SOURCE=ROOT/"ptera-source.json"
+TOOLS=Path(__file__).resolve().parent
+ROOT=TOOLS.parent
+LOCK=TOOLS/"requirements-windows.lock"
+SOURCE=TOOLS/"ptera-source.json"
 
 def configuration():
     local=Path(os.environ["LOCALAPPDATA"])/"WingStudies"
@@ -93,6 +94,15 @@ def main(args=None):
         raise RuntimeError("Use 64-bit Python 3.14 on Windows. Tested with Python 3.14.2.")
     if args and args[0]=="--launch":
         python=configured_python()
+        if "--example" in args[1:]:
+            verify_source()
+            if "--check" in args[1:]:
+                verify_environment(python);return
+            destination=ROOT/"outputs/example";destination.mkdir(parents=True,exist_ok=True)
+            example=ROOT/"PteraSoftware/examples/unsteady_ring_vortex_lattice_method_solver_variable.py"
+            subprocess.run([str(python),"-u",str(example)],check=True,cwd=destination,
+                           env={**os.environ,"PYTHONPATH":str(ROOT/"PteraSoftware")})
+            return
         if "--check-installation" in args[1:]:
             verify_source();verify_environment(python)
             run([python,"-m","unittest","discover","-s",ROOT/"WingStudy","-p","test_*.py"])

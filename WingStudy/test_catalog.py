@@ -91,6 +91,12 @@ class CatalogChecks(unittest.TestCase):
         path=catalog.export(model,"single_wing_mean_thrust_N",browser_url="http://127.0.0.1:9999")
         ns={"s":catalog.NS}
         with zipfile.ZipFile(path) as z:
+            for name in ("xl/worksheets/sheet1.xml","xl/worksheets/sheet2.xml"):
+                tags=[el.tag.rsplit("}",1)[-1] for el in ET.fromstring(z.read(name))]
+                self.assertLess(tags.index("sheetData"),tags.index("autoFilter"))
+                self.assertLess(tags.index("autoFilter"),tags.index("mergeCells"))
+                self.assertLess(tags.index("hyperlinks"),tags.index("pageMargins"))
+                if "dataValidations" in tags:self.assertLess(tags.index("dataValidations"),tags.index("hyperlinks"))
             wb=ET.fromstring(z.read("xl/workbook.xml"));self.assertEqual([s.get("name") for s in wb.find("s:sheets",ns)],["Wing parameters","Ranked results"])
             sheet=ET.fromstring(z.read("xl/worksheets/sheet2.xml"));cells={c.get("r"):c for c in sheet.findall(".//s:c",ns)}
             self.assertEqual(float(cells["H6"].find("s:v",ns).text),3.)
@@ -103,6 +109,18 @@ class CatalogChecks(unittest.TestCase):
         with patch.object(catalog.os,"replace",side_effect=PermissionError("Excel is open")):catalog.export(model)
         self.assertEqual(path.read_bytes(),original);self.assertIn("Close master_runs.xlsx",catalog.listing(model)["excel_pending"])
         catalog.export(model);self.assertEqual(catalog.listing(model)["excel_pending"],"")
+    def test_compact_release_proof_preserves_native_identity_checks(self):
+        spec,study,row=self.saved();identity=catalog.engine(model)
+        folder=catalog.root(model)/"provenance";folder.mkdir()
+        proof={**identity,"ptera_commit":"verified-commit"}
+        manifest={"companion_version":"fixture-proof","ptera_version":"5.1.0","ptera_commit":"verified-commit","ptera_worktree":""}
+        (folder/"fixture-proof.json").write_text(json.dumps(proof))
+        catalog._HISTORICAL.pop("fixture-proof",None)
+        self.assertTrue(catalog.verified_import(model,manifest))
+        proof["physics"]="different";(folder/"fixture-proof.json").write_text(json.dumps(proof))
+        catalog._HISTORICAL.pop("fixture-proof",None)
+        self.assertFalse(catalog.verified_import(model,manifest))
+        catalog._HISTORICAL.pop("fixture-proof",None)
 
 class LandscapeChecks(unittest.TestCase):
     def rows(self):
