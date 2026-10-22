@@ -41,3 +41,9 @@ For the complete study workflow, output definitions, filtering, and modeling ass
 New runs model one isolated rigid wing with prescribed motion, positive forward speed, water density and viscosity, and selectable UVLM wake settings. Estimated pair thrust is twice the isolated single-wing value, without wing interaction. The primary shape score is mean thrust divided by sampled peak absolute root fluid roll moment; it is not a motor torque or structural qualification. Native simulations do not model membrane bending compliance, wing inertia, drivetrain loads, or zero-inflow test stands.
 
 Ptera is maintained by Cameron Urban and contributors under the licenses in the pinned upstream [PteraSoftware repository](https://github.com/camUrban/PteraSoftware/tree/17a98a10f724a743f1b5f1597579b24edf95cf2d). The companion is a separate research application. Third-party license notices remain with their packages. This repository is private; no public distribution license for the companion is granted here.
+
+## Shared simulation results
+
+The repository includes `outputs/studies/`, `outputs/provenance/`, `outputs/master_runs.xlsx`, and `outputs/master_runs.sqlite3`. Launch **Run Master Catalog.cmd** after setup to browse the compiled results and open original case outputs. Plots, animations, cutting profiles and recorded case inputs remain under their original study/case folders.
+
+The current shared snapshot contains 444 parameter sets and 446 study/case occurrences, including the completed 185-case study `20261021-203041-110378_study`. The older `20261021-143038-203113_sweep-75` retains its unfinished status (30 of 75 cases); its available records are included. Recorded failures and repeatability flags remain visible. Generated comparison folders are included. This adds about 2 GB to the initial repository download. Old software archives, environments, caches, logs and temporary files remain excluded.

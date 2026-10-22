@@ -28,3 +28,12 @@ WingStudy/tmp*/
 !/tools/
 !/Open Results.cmd
 !/Open Master Excel.cmd
+
+# Share recorded studies and the master catalog; keep caches and old packages local.
+!/outputs/
+/outputs/*
+!/outputs/studies/
+!/outputs/provenance/
+!/outputs/master_runs.xlsx
+!/outputs/master_runs.sqlite3
+outputs/studies/**/*.tmp
