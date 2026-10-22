@@ -1,1 +1,30 @@
-# Ignore rules disabled at user request.
+# Only application source and reproducibility files belong in this repository.
+/*
+!/.gitignore
+!/.gitattributes
+!/.gitmodules
+!/README.md
+!/requirements-windows.lock
+!/ptera-source.json
+!/setup_windows.py
+!/Setup Windows.cmd
+!/Run Wing Studies.cmd
+!/Run Master Catalog.cmd
+!/Check Installation.cmd
+!/WingStudy/
+!/PteraSoftware
+!/tests/
+!/docs/
+!/examples/
+__pycache__/
+*.py[cod]
+*.nbc
+*.nbi
+.env
+.env.*
+*.log
+WingStudy/tmp*/
+
+!/tools/
+!/Open Results.cmd
+!/Open Master Excel.cmd
