@@ -37,7 +37,7 @@ class StudyChecks(unittest.TestCase):
         rows=self.landscape_rows(.45)+self.landscape_rows(.6)
         for i,r in enumerate(rows):r['id']=f'case_{i:04d}';r[model.OBJECTIVE]=2+3*r['area_m2']+.2*r['aspect_ratio']
         d=model.shape_landscape_data(rows,model.DEFAULT['settings'])
-        self.assertEqual(d['interpolation_kind'],'smooth_surface');self.assertTrue(d['triangles']);self.assertFalse(d['curve'])
+        self.assertEqual(d['interpolation_kind'],'bounded_cubic_surface');self.assertTrue(d['triangles']);self.assertFalse(d['curve'])
         vertices=np.array(d['vertices'])
         for triangle in d['triangles']:
             p=vertices[triangle].mean(axis=0)
@@ -65,8 +65,14 @@ class StudyChecks(unittest.TestCase):
         rows+=self.landscape_rows(.45)
         for i,r in enumerate(rows):r['id']=f'nonlinear_{i}';r[model.OBJECTIVE]=1+500*r['area_m2']**2+.4*r['aspect_ratio']**2
         d=model.shape_landscape_data(rows,model.DEFAULT['settings']);vertices=np.array(d['vertices']);original=np.array([p['coords'] for p in d['points']])
-        self.assertEqual(d['interpolation_kind'],'smooth_surface');self.assertGreater(len(vertices),len(original))
-        self.assertTrue(np.isfinite(vertices).all());self.assertTrue((Delaunay(original[:,:2]).find_simplex(vertices[:,:2],tol=1e-9)>=0).all())
+        self.assertEqual(d['interpolation_kind'],'bounded_cubic_surface');self.assertGreater(len(vertices),len(original))
+        self.assertTrue(np.isfinite(vertices).all())
+        origin=original[:,:2].min(axis=0);extent=np.ptp(original[:,:2],axis=0)
+        base=Delaunay((original[:,:2]-origin)/extent);simplices=base.find_simplex((vertices[:,:2]-origin)/extent,tol=1e-9)
+        self.assertTrue((simplices>=0).all())
+        for value,simplex in zip(vertices[:,2],simplices):
+            limits=original[base.simplices[simplex],2]
+            self.assertGreaterEqual(value,limits.min()-1e-9);self.assertLessEqual(value,limits.max()+1e-9)
         for v in original:self.assertLess(np.linalg.norm(vertices-v,axis=1).min(),1e-8)
 
     def test_chord_node_cartesian_grid_and_pruned_taper(self):

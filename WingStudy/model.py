@@ -1266,29 +1266,44 @@ def shape_landscape_data(rows,settings,repeat_only=True):
                     # Sample each original triangle barycentrically: shared edge
                     # vertices stay shared and no point extends outside the hull.
                     subdivisions=max(1,min(14,int(math.sqrt(2400/len(base.simplices)))))
-                    dense=[];lookup={};faces=[]
+                    dense=[];bounded_values=[];lookup={};faces=[]
+                    # Cubic Bezier controls stay between measured endpoint values.
+                    # Shared edge controls make adjacent patches continuous.
+                    gradients=interpolator.grad[:,0,:]
                     for tri in base.simplices:
                         local={}
+                        heights=vertices[tri,2];controls={}
+                        for a in range(3):
+                            for b in range(3):
+                                if a!=b:
+                                    estimate=heights[a]+np.dot(gradients[tri[a]],norm[tri[b]]-norm[tri[a]])/3
+                                    controls[a,b]=float(np.clip(estimate,min(heights[a],heights[b]),max(heights[a],heights[b])))
+                        center=float(np.mean(list(controls.values())))
                         for i in range(subdivisions+1):
                             for j in range(subdivisions+1-i):
                                 uv=((subdivisions-i-j)*norm[tri[0]]+i*norm[tri[1]]+j*norm[tri[2]])/subdivisions
                                 key=tuple(np.round(uv,13))
-                                if key not in lookup:lookup[key]=len(dense);dense.append(uv)
+                                if key not in lookup:
+                                    weights=np.array([subdivisions-i-j,i,j],dtype=float)/subdivisions
+                                    value=float(np.dot(heights,weights**3))
+                                    value+=sum(3*weights[a]**2*weights[b]*v for (a,b),v in controls.items())
+                                    value+=6*float(np.prod(weights))*center
+                                    lookup[key]=len(dense);dense.append(uv);bounded_values.append(value)
                                 local[i,j]=lookup[key]
                         for i in range(subdivisions):
                             for j in range(subdivisions-i):
                                 faces.append([local[i,j],local[i+1,j],local[i,j+1]])
                                 if i+j<subdivisions-1:faces.append([local[i+1,j],local[i+1,j+1],local[i,j+1]])
-                    dense=np.array(dense);values=np.asarray(interpolator(dense))
+                    dense=np.array(dense);values=np.asarray(bounded_values)
                     if not np.all(np.isfinite(values)):raise ValueError("Cubic interpolation returned non-finite values.")
-                    vertices=np.column_stack((origin+dense*extent,values));triangles=faces;kind="smooth_surface"
+                    vertices=np.column_stack((origin+dense*extent,values));triangles=faces;kind="bounded_cubic_surface"
                 except QhullError:pass
             if not triangles:
                 axis=int(np.argmax(extent/scales));order=np.argsort(vertices[:,axis]);vertices=vertices[order];selected=[selected[i] for i in order]
                 distance=np.r_[0.,np.cumsum(np.linalg.norm(np.diff(norm[order],axis=0),axis=1))]
                 _,values=smooth_curve(distance,vertices);curve=values.tolist();kind="smooth_sampled_curve"
     note=("Smooth shape-preserving cubic interpolation along the fixed-span curve (A·AR = span²); no 2D sheet is fabricated." if fixed_span else
-          "Smooth C1 cubic surface within the sampled convex hull only; no extrapolation. The surface can overshoot between samples; rankings use measured values only." if triangles else
+          "Bounded cubic surface inside the measured perimeter only; no extrapolation. Each patch stays within its measured corner values, with shared continuous edges. Rankings use measured values only." if triangles else
           "Smooth shape-preserving cubic curve through the sampled locations." if curve else "Measured points only.")
     if len(selected)==2:note+=" Two sample locations only constrain a straight thrust trend; more samples are needed to determine curvature."
     duplicates=len(points)-len(selected)
