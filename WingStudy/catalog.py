@@ -275,7 +275,7 @@ def landscape_data(model,rows,case_numbers):
         if not model.shape_eligible(r,False):raise ValueError(f"Case #{n} has no valid thrust/moment result.")
         r["id"]=f"master_{n:06d}";selected.append(r)
     spec=model.shape_landscape_data(selected,selected[0]["_settings"],False)
-    if len(spec["points"])!=len(selected):raise ValueError("A selected case has missing area/aspect-ratio data.")
+    if len(spec["points"])!=len(selected):raise ValueError("A selected case has missing wing-area/thrust data.")
     lookup={r["id"]:r for r in selected}
     for p in spec["points"]:
         r=lookup[p["case_id"]]

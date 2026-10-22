@@ -18,13 +18,14 @@ class StudyChecks(unittest.TestCase):
         return [{**r,**r['geometry'],'area_m2':r['geometry']['area_m2']/2,'aspect_ratio':((span-p['settings']['gap_m'])/2)**2/(r['geometry']['area_m2']/2),'status':'ok','cycle_repeatable':True,'shape_ratio_valid':True,
                  model.OBJECTIVE:1+i*.1,'single_wing_mean_thrust_N':.5,'single_wing_peak_abs_roll_moment_Nm':.5/(1+i*.1)} for i,r in enumerate(p['cases'])]
 
-    def test_landscape_fixed_span_curve_duplicates_and_thumbnails(self):
+    def test_landscape_collinear_thrust_curve_duplicates_and_thumbnails(self):
         rows=self.landscape_rows()
         rows.append({**copy.deepcopy(rows[0]),'id':'case_duplicate',model.OBJECTIVE:10.})
         d=model.shape_landscape_data(rows,model.DEFAULT['settings'])
         self.assertEqual(len(d['points']),len(rows));self.assertTrue(d['duplicate_locations']>0)
-        self.assertEqual(d['interpolation_kind'],'smooth_fixed_span_curve');self.assertFalse(d['triangles'])
-        curve=np.array(d['curve']);np.testing.assert_allclose(curve[:,0]*curve[:,1],((.6-model.DEFAULT['settings']['gap_m'])/2)**2,atol=1e-12)
+        self.assertEqual(d['interpolation_kind'],'smooth_sampled_curve');self.assertFalse(d['triangles'])
+        curve=np.array(d['curve']);np.testing.assert_allclose(curve[:,1],.5)
+        self.assertEqual(d['axes'][1],'single_wing_mean_thrust_N')
         self.assertIn('case_duplicate',d['vertex_case_ids'])
         self.assertTrue(all(len(p['thumbnail'])==1 for p in d['points']))
         for p in d['points']:
@@ -35,7 +36,7 @@ class StudyChecks(unittest.TestCase):
 
     def test_landscape_varying_span_mesh_and_measured_only_export(self):
         rows=self.landscape_rows(.45)+self.landscape_rows(.6)
-        for i,r in enumerate(rows):r['id']=f'case_{i:04d}';r[model.OBJECTIVE]=2+3*r['area_m2']+.2*r['aspect_ratio']
+        for i,r in enumerate(rows):r['id']=f'case_{i:04d}';r['single_wing_mean_thrust_N']=.1+i*.01;r[model.OBJECTIVE]=2+3*r['area_m2']+.2*r['single_wing_mean_thrust_N']
         d=model.shape_landscape_data(rows,model.DEFAULT['settings'])
         self.assertEqual(d['interpolation_kind'],'bounded_cubic_surface');self.assertTrue(d['triangles']);self.assertFalse(d['curve'])
         vertices=np.array(d['vertices'])
@@ -48,6 +49,9 @@ class StudyChecks(unittest.TestCase):
             self.assertTrue((path/'comparisons/wing_shape_landscape_repeatable.png').is_file())
             with (path/'comparisons/wing_shape_landscape_repeatable.csv').open(newline='') as f:records=list(csv.DictReader(f))
             self.assertEqual(len(records),len(rows));self.assertIn('used_for_interpolation',records[0]);self.assertIn('sections',records[0])
+            for record,row in zip(records,rows):
+                self.assertAlmostEqual(float(record['aspect_ratio']),row['aspect_ratio'])
+                self.assertAlmostEqual(float(record['single_wing_mean_thrust_N']),row['single_wing_mean_thrust_N'])
         bad=[{**r,'cycle_repeatable':False} for r in rows]
         with self.assertRaises(ValueError):model.shape_landscape_data(bad,model.DEFAULT['settings'])
         self.assertEqual(len(model.shape_landscape_data(bad,model.DEFAULT['settings'],False)['points']),len(rows))
@@ -63,7 +67,7 @@ class StudyChecks(unittest.TestCase):
         self.assertGreaterEqual(curve[:,2].min(),original[:,2].min());self.assertLessEqual(curve[:,2].max(),original[:,2].max()+1e-10)
         for v in original:self.assertLess(np.linalg.norm(curve-v,axis=1).min(),1e-9)
         rows+=self.landscape_rows(.45)
-        for i,r in enumerate(rows):r['id']=f'nonlinear_{i}';r[model.OBJECTIVE]=1+500*r['area_m2']**2+.4*r['aspect_ratio']**2
+        for i,r in enumerate(rows):r['id']=f'nonlinear_{i}';r['single_wing_mean_thrust_N']=.1+i*.01;r[model.OBJECTIVE]=1+500*r['area_m2']**2+.4*r['single_wing_mean_thrust_N']**2
         d=model.shape_landscape_data(rows,model.DEFAULT['settings']);vertices=np.array(d['vertices']);original=np.array([p['coords'] for p in d['points']])
         self.assertEqual(d['interpolation_kind'],'bounded_cubic_surface');self.assertGreater(len(vertices),len(original))
         self.assertTrue(np.isfinite(vertices).all())
