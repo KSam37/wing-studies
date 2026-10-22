@@ -96,7 +96,7 @@ def start(config):
         import importlib.metadata
         specification.update(created=datetime.now().astimezone().isoformat(),
             python=sys.version, ptera_version=importlib.metadata.version("PteraSoftware"),
-            source_path=str(model.PTERA), companion_version="3.2.1",
+            source_path=str(model.PTERA), companion_version="3.2.2",
             water_source=model.WATER_SOURCE)
         try:
             bundle_source = model.PTERA/"BUNDLE_SOURCE.json"

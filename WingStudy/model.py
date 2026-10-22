@@ -1242,34 +1242,61 @@ def shape_landscape_data(rows,settings,repeat_only=True):
     vertices=np.array([points[i]["coords"] for i in selected]);triangles=[];curve=[];kind="points"
     products=vertices[:,0]*vertices[:,1]
     fixed_span=bool(np.allclose(products,products[0],rtol=1e-7,atol=1e-12))
+    from scipy.interpolate import PchipInterpolator,CloughTocher2DInterpolator
+    def smooth_curve(knots,values):
+        steps=max(2,min(32,2000//len(knots)))
+        samples=np.r_[np.concatenate([np.linspace(a,b,steps,endpoint=False) for a,b in zip(knots,knots[1:])]),knots[-1]]
+        return samples,PchipInterpolator(knots,values,axis=0,extrapolate=False)(samples)
     if len(vertices)>=2:
+        fixed_span=fixed_span and len(np.unique(vertices[:,0]))==len(vertices)
         if fixed_span:
             order=np.argsort(vertices[:,0]);vertices=vertices[order];selected=[selected[i] for i in order]
-            # Respect A*AR=span^2 between samples, rather than filling off-manifold cells.
-            k=float(np.median(products));substeps=max(1,min(12,2000//len(vertices)))
-            for a,b in zip(vertices,vertices[1:]):
-                for fraction in np.linspace(0,1,substeps,endpoint=False):
-                    area=float(a[0]+fraction*(b[0]-a[0]));ratio=float(a[2]+fraction*(b[2]-a[2]))
-                    curve.append([area,k/area,ratio])
-            curve.append(vertices[-1].tolist());kind="fixed_span_curve"
+            # Smooth thrust while respecting A*AR=span^2 exactly, rather than
+            # smoothing descriptor coordinates away from the physical curve.
+            k=float(np.median(products));areas,ratios=smooth_curve(vertices[:,0],vertices[:,2])
+            curve=np.column_stack((areas,k/areas,ratios)).tolist();kind="smooth_fixed_span_curve"
         else:
-            extent=np.ptp(vertices[:,:2],axis=0);norm=(vertices[:,:2]-vertices[:,:2].min(axis=0))/np.where(extent>0,extent,1.)
+            extent=np.ptp(vertices[:,:2],axis=0);origin=vertices[:,:2].min(axis=0)
+            norm=(vertices[:,:2]-origin)/np.where(extent>0,extent,1.)
             if len(vertices)>=3 and np.linalg.matrix_rank(norm-norm.mean(axis=0),tol=1e-10)==2:
                 from scipy.spatial import Delaunay,QhullError
-                try:triangles=Delaunay(norm).simplices.tolist();kind="triangulated_surface"
+                try:
+                    base=Delaunay(norm)
+                    interpolator=CloughTocher2DInterpolator(base,vertices[:,2],tol=1e-10,maxiter=1000)
+                    # Sample each original triangle barycentrically: shared edge
+                    # vertices stay shared and no point extends outside the hull.
+                    subdivisions=max(1,min(14,int(math.sqrt(2400/len(base.simplices)))))
+                    dense=[];lookup={};faces=[]
+                    for tri in base.simplices:
+                        local={}
+                        for i in range(subdivisions+1):
+                            for j in range(subdivisions+1-i):
+                                uv=((subdivisions-i-j)*norm[tri[0]]+i*norm[tri[1]]+j*norm[tri[2]])/subdivisions
+                                key=tuple(np.round(uv,13))
+                                if key not in lookup:lookup[key]=len(dense);dense.append(uv)
+                                local[i,j]=lookup[key]
+                        for i in range(subdivisions):
+                            for j in range(subdivisions-i):
+                                faces.append([local[i,j],local[i+1,j],local[i,j+1]])
+                                if i+j<subdivisions-1:faces.append([local[i+1,j],local[i+1,j+1],local[i,j+1]])
+                    dense=np.array(dense);values=np.asarray(interpolator(dense))
+                    if not np.all(np.isfinite(values)):raise ValueError("Cubic interpolation returned non-finite values.")
+                    vertices=np.column_stack((origin+dense*extent,values));triangles=faces;kind="smooth_surface"
                 except QhullError:pass
             if not triangles:
                 axis=int(np.argmax(extent/scales));order=np.argsort(vertices[:,axis]);vertices=vertices[order];selected=[selected[i] for i in order]
-                curve=vertices.tolist();kind="sampled_curve"
-    note=("Fixed span makes area and aspect ratio dependent (A·AR = span²). Interpolation follows this curve; no 2D sheet is fabricated." if fixed_span else
-          "Piecewise-linear triangulated interpolation inside the sampled convex hull only; no extrapolation." if triangles else
-          "Too few independent area/aspect-ratio locations for a surface; only a curve/points are shown.")
+                distance=np.r_[0.,np.cumsum(np.linalg.norm(np.diff(norm[order],axis=0),axis=1))]
+                _,values=smooth_curve(distance,vertices);curve=values.tolist();kind="smooth_sampled_curve"
+    note=("Smooth shape-preserving cubic interpolation along the fixed-span curve (A·AR = span²); no 2D sheet is fabricated." if fixed_span else
+          "Smooth C1 cubic surface within the sampled convex hull only; no extrapolation. The surface can overshoot between samples; rankings use measured values only." if triangles else
+          "Smooth shape-preserving cubic curve through the sampled locations." if curve else "Measured points only.")
+    if len(selected)==2:note+=" Two sample locations only constrain a straight thrust trend; more samples are needed to determine curvature."
     duplicates=len(points)-len(selected)
     if len(vertices)<2:note+=" At least two distinct descriptor locations are needed for interpolation."
     if duplicates:note+=f" {duplicates} additional shapes share area/aspect-ratio locations. All measured shapes are shown; interpolation follows the highest sampled ratio at each location."
     return {"axes":["area_m2","aspect_ratio",OBJECTIVE],"axis_labels":["Wing area (m²)","Aspect ratio","Thrust / roll moment (1/m)"],
             "points":points,"vertices":vertices.tolist(),"vertex_case_ids":[points[i]["case_id"] for i in selected],
-            "triangles":triangles,"curve":curve,"interpolation_kind":kind,"duplicate_locations":duplicates,
+            "triangles":triangles,"curve":curve,"interpolation_kind":kind,"duplicate_locations":duplicates,"distinct_locations":len(selected),
             "repeat_only":repeat_only,"note":note+" Interpolated values are estimates, not additional simulations. Area/AR describe the simulated single wing for isolated studies (paired convention for legacy studies); thumbnails are neutral top views normalized in size."}
 
 
@@ -1286,13 +1313,14 @@ def shape_landscape(study,repeat_only=True,export=True,*,selected_rows=None,sele
         rows=selected_rows;spec=selected_spec
     if not export:return spec
     plt=ieee_style();fig=plt.figure(figsize=(7.16,4.5),layout="constrained");ax=fig.add_subplot(111,projection="3d")
-    coords=np.array([p["coords"] for p in spec["points"]]);z=coords[:,2]
+    coords=np.array([p["coords"] for p in spec["points"]])
+    rendered=np.vstack([coords,*([np.array(spec["vertices"])] if spec["triangles"] else []),*([np.array(spec["curve"])] if spec["curve"] else [])]);z=rendered[:,2]
     from matplotlib.colors import Normalize
     norm=Normalize(vmin=float(min(z)),vmax=float(max(z)) if max(z)>min(z) else float(min(z))+1e-9)
     cmap=plt.get_cmap("cividis")
     verts=np.array(spec["vertices"])
     if spec["triangles"]:
-        faces=verts[np.array(spec["triangles"])];mesh=Poly3DCollection(faces,facecolors=[cmap(norm(face[:,2].mean())) for face in faces],alpha=.28,edgecolors="#688d99",linewidths=.35)
+        faces=verts[np.array(spec["triangles"])];mesh=Poly3DCollection(faces,facecolors=[cmap(norm(face[:,2].mean())) for face in faces],alpha=.65,edgecolors="none",linewidths=0,antialiased=False)
         ax.add_collection3d(mesh)
     if spec["curve"]:
         curve=np.array(spec["curve"]);ax.plot(*curve.T,color="#6d8b96",lw=1.1,alpha=.8,label="Interpolated upper envelope")
@@ -1302,10 +1330,10 @@ def shape_landscape(study,repeat_only=True,export=True,*,selected_rows=None,sele
             vv.extend([*poly,poly[0]]);codes.extend([MplPath.MOVETO,*([MplPath.LINETO]*(len(poly)-1)),MplPath.CLOSEPOLY])
         ax.scatter(*p["coords"],marker=MplPath(vv,codes),s=170,c=[cmap(norm(p["value"]))],edgecolors="#183f4c",linewidths=.45,depthshade=False)
     for setter,label in zip((ax.set_xlabel,ax.set_ylabel,ax.set_zlabel),spec["axis_labels"]):setter(label,labelpad=9)
-    ax.auto_scale_xyz(coords[:,0],coords[:,1],coords[:,2]);ax.view_init(elev=25,azim=-55)
+    ax.auto_scale_xyz(rendered[:,0],rendered[:,1],rendered[:,2]);ax.view_init(elev=25,azim=-55)
     from matplotlib.cm import ScalarMappable
-    fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label="Measured thrust / moment (1/m)",shrink=.65,pad=.1)
-    ax.set_title("Wing-shape landscape · measured wings + interpolated "+("surface" if spec["triangles"] else "curve" if spec["curve"] else "points only"),fontsize=9)
+    fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label="Thrust / moment (1/m)",shrink=.65,pad=.1)
+    ax.set_title("Wing-shape landscape · measured wings + smooth "+("surface" if spec["triangles"] else "curve" if spec["curve"] else "points only"),fontsize=9)
     dest=study/"comparisons";dest.mkdir(parents=True,exist_ok=True)
     tag="repeatable" if repeat_only else "all";stem=dest/f"wing_shape_landscape_{tag}"
     save_figure(fig,stem);plt.close(fig)

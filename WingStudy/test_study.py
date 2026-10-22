@@ -23,7 +23,7 @@ class StudyChecks(unittest.TestCase):
         rows.append({**copy.deepcopy(rows[0]),'id':'case_duplicate',model.OBJECTIVE:10.})
         d=model.shape_landscape_data(rows,model.DEFAULT['settings'])
         self.assertEqual(len(d['points']),len(rows));self.assertTrue(d['duplicate_locations']>0)
-        self.assertEqual(d['interpolation_kind'],'fixed_span_curve');self.assertFalse(d['triangles'])
+        self.assertEqual(d['interpolation_kind'],'smooth_fixed_span_curve');self.assertFalse(d['triangles'])
         curve=np.array(d['curve']);np.testing.assert_allclose(curve[:,0]*curve[:,1],((.6-model.DEFAULT['settings']['gap_m'])/2)**2,atol=1e-12)
         self.assertIn('case_duplicate',d['vertex_case_ids'])
         self.assertTrue(all(len(p['thumbnail'])==1 for p in d['points']))
@@ -37,7 +37,7 @@ class StudyChecks(unittest.TestCase):
         rows=self.landscape_rows(.45)+self.landscape_rows(.6)
         for i,r in enumerate(rows):r['id']=f'case_{i:04d}';r[model.OBJECTIVE]=2+3*r['area_m2']+.2*r['aspect_ratio']
         d=model.shape_landscape_data(rows,model.DEFAULT['settings'])
-        self.assertEqual(d['interpolation_kind'],'triangulated_surface');self.assertTrue(d['triangles']);self.assertFalse(d['curve'])
+        self.assertEqual(d['interpolation_kind'],'smooth_surface');self.assertTrue(d['triangles']);self.assertFalse(d['curve'])
         vertices=np.array(d['vertices'])
         for triangle in d['triangles']:
             p=vertices[triangle].mean(axis=0)
@@ -51,6 +51,23 @@ class StudyChecks(unittest.TestCase):
         bad=[{**r,'cycle_repeatable':False} for r in rows]
         with self.assertRaises(ValueError):model.shape_landscape_data(bad,model.DEFAULT['settings'])
         self.assertEqual(len(model.shape_landscape_data(bad,model.DEFAULT['settings'],False)['points']),len(rows))
+
+    def test_landscape_cubic_curvature_and_hull(self):
+        from scipy.spatial import Delaunay
+        rows=self.landscape_rows()
+        for r in rows:r[model.OBJECTIVE]=1+1000*r['area_m2']**2
+        d=model.shape_landscape_data(rows,model.DEFAULT['settings']);curve=np.array(d['curve'])
+        original=np.array([p['coords'] for p in d['points']]);order=np.argsort(original[:,0]);original=original[order]
+        linear=np.interp(curve[:,0],original[:,0],original[:,2])
+        self.assertGreater(np.max(np.abs(curve[:,2]-linear)),1e-5)
+        self.assertGreaterEqual(curve[:,2].min(),original[:,2].min());self.assertLessEqual(curve[:,2].max(),original[:,2].max()+1e-10)
+        for v in original:self.assertLess(np.linalg.norm(curve-v,axis=1).min(),1e-9)
+        rows+=self.landscape_rows(.45)
+        for i,r in enumerate(rows):r['id']=f'nonlinear_{i}';r[model.OBJECTIVE]=1+500*r['area_m2']**2+.4*r['aspect_ratio']**2
+        d=model.shape_landscape_data(rows,model.DEFAULT['settings']);vertices=np.array(d['vertices']);original=np.array([p['coords'] for p in d['points']])
+        self.assertEqual(d['interpolation_kind'],'smooth_surface');self.assertGreater(len(vertices),len(original))
+        self.assertTrue(np.isfinite(vertices).all());self.assertTrue((Delaunay(original[:,:2]).find_simplex(vertices[:,:2],tol=1e-9)>=0).all())
+        for v in original:self.assertLess(np.linalg.norm(vertices-v,axis=1).min(),1e-8)
 
     def test_chord_node_cartesian_grid_and_pruned_taper(self):
         c=copy.deepcopy(model.DEFAULT);c['shape_sweep']['decreasing']=False
