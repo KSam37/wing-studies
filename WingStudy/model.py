@@ -619,6 +619,10 @@ def custom_case(design, settings):
             "incidence_deg":sections[0]["pitch_deg"],
             **{k:settings[k] for k in MOTION_KEYS}}
     case["requested_sections"]=requested_sections
+    if design.get("outline_function"):
+        import wing_curves
+        definition=wing_curves.matching_definition(design["outline_function"],requested_sections)
+        if definition:case["outline_function"]=definition
     case["active_chord_count"]=len(sections)
     case["omitted_zero_chord_count"]=len(requested_sections)-len(sections)
     case["geometry"] = custom_geometry(case, settings)
@@ -766,6 +770,9 @@ def flat_pattern(case, settings):
 
 def save_wing_profiles(case, settings, directory, prefix="wing"):
     """Two separate actual-size SVGs; exact unfold where possible, else projection."""
+    if case.get("outline_function"):
+        import curve_profiles
+        return curve_profiles.save(case,directory,prefix)
     import xml.etree.ElementTree as ET
     ns="http://www.w3.org/2000/svg";ET.register_namespace("",ns)
     reason=""

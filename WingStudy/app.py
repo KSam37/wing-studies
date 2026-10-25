@@ -211,6 +211,13 @@ class Handler(BaseHTTPRequestHandler):
                 config['settings']={**config['settings'],"span_panels":max(int(config['settings']['span_panels']),len(data['design']['sections'])-1)}
                 spec=model.plan(config)
                 return self.send(wing_curves.smooth_wing(model,data['design'],spec['settings'],data.get('subdivisions',2)))
+            if path == "/api/function-wing":
+                import wing_curves
+                config={**data['config'],"mode":"custom","limits":{},"designs":[{"name":"Settings","sections":[
+                    {"y_m":0,"chord_m":.1},{"y_m":.1,"chord_m":.1}]}]}
+                settings=model.plan(config)['settings']
+                return self.send(wing_curves.function_wing(model,data.get('name'),data['span_m'],
+                    data['leading'],data['chord'],data.get('intervals',16),settings))
             if path == "/api/catalog":
                 with LOCK:
                     catalog.sync(model)

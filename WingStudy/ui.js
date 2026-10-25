@@ -461,7 +461,9 @@ function savedWingDesign(row){
   const sections=raw.map(s=>({y_m:s.y_m,x_m:s.x_m,chord_m:s.chord_m,
     pitch_deg:s.pitch_deg??row.incidence_deg??0,roll_deg:s.roll_deg??0}));
   if(sections.some(s=>Object.values(s).some(v=>!Number.isFinite(v))))throw Error('The saved wing geometry is incomplete.');
-  return {name:`${row.design_name||row.id||'Wing'} copy`.slice(0,80),sections};
+  const design={name:`${row.design_name||row.id||'Wing'} copy`.slice(0,80),sections};
+  if(row.outline_function){design.outline_function=structuredClone(row.outline_function);design.sections=structuredClone(row.outline_function.sample_sections);}
+  return design;
 }
 function wingSweepTemplate(wing,gap){
   const sections=structuredClone(wing.sections);
@@ -471,6 +473,23 @@ function wingSweepTemplate(wing,gap){
     ranges:sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1}))};
 }
 let smoothingWing=false;
+async function createFunctionWing(){
+  try{
+    const previous=Number($('span_panels').value);
+    const r=await api('function-wing',{config:config(),name:$('functionName').value,span_m:Number($('functionSpan').value),
+      leading:$('functionLeading').value,chord:$('functionChord').value,intervals:Number($('functionIntervals').value)});
+    $('span_panels').value=String(r.required_span_panels);customDesigns.push(r.design);editingDesign=customDesigns.length-1;
+    draft=structuredClone(r.design);renderEditor();preview();
+    notify(`Function wing added, including its full zero-tip SVG.${r.required_span_panels>previous?` Span panels raised to ${r.required_span_panels}.`:''}`);
+  }catch(e){notify(e.message);}
+}
+function functionDescription(f){
+  const describe=(name,p)=>name+'\n'+p.breaks.slice(0,-1).map((a,i)=>{
+    const c=p.coefficients.map(row=>row[i]);
+    return `${a} ≤ s ≤ ${p.breaks[i+1]}: ${c[0]}·u³ + ${c[1]}·u² + ${c[2]}·u + ${c[3]}, u=s−${a}`;
+  }).join('\n');
+  return `s=y/${f.span_m} m, 0≤s≤1\n`+describe('Leading-edge x(s), m',f.leading)+'\n'+describe('Chord c(s), m',f.chord);
+}
 async function smoothWing(wing){
   if(smoothingWing)return;smoothingWing=true;
   try{
@@ -527,6 +546,7 @@ function installCustomUI(){
     <details style="margin:14px 0"><summary>Copy a wing from a previous study</summary><div class="fields" style="margin-top:12px"><label>Previous study<select id="savedWingStudy"></select></label><label>Saved wing<select id="savedWingCase"></select></label></div><button type="button" class="btn" id="copySavedWing" style="margin-top:10px" disabled>Copy wing into study</button><p class="help">Copies the neutral geometry into the list below. Your current motion, water and solver settings are kept. The original wing and its results stay saved.</p></details>
     <div class="split"><h3>Design one half-wing</h3><button class="btn" id="newWing">New wing</button></div>
     <div id="curveFitInfo" class="note hidden"></div>
+    <details style="margin:14px 0"><summary>Define a wing with functions</summary><p class="help">Use normalized span s=y/L from 0 to 1. Enter polynomials up to cubic using +, -, *, /, ** and parentheses. x(0)=0; c(s) must be positive before the tip and c(1)=0. New function wings start flat, with zero pitch and roll.</p><div class="fields"><label>Wing name<input id="functionName" value="Function wing"></label><label>Function root-to-tip span L (m)<input id="functionSpan" type="number" step="any" value="0.3"></label><label>Leading-edge x(s), meters<input id="functionLeading" value="0"></label><label>Chord width c(s), meters<input id="functionChord" value="0.3*(1-s**2)"></label><label>Sampling intervals, including zero tip<input id="functionIntervals" type="number" min="2" max="128" step="1" value="16"></label></div><button type="button" class="btn" id="createFunctionWing">Create function wing</button></details>
     <p class="help">Sections run from root to tip. Edit widths and angles below, or drag the numbered chord endpoints in the editor. One wing is simulated; left/right cutting templates are exported.</p>
     <div class="fields" style="margin-top:12px"><label>Wing name<input id="wingName" maxlength="80"></label><label>Number of chord sections<input id="sectionCount" type="number" min="2" step="1"><button class="btn" id="applySections" style="margin-top:7px">Apply section count</button></label></div>
     <div style="overflow:auto;margin-top:15px"><table id="sectionTable"><thead><tr><th>Section</th><th>Position<br>m</th><th>Aft offset<br>m</th><th>Chord width<br>m</th><th>Pitch<br>°</th><th>Roll<br>°</th><th>Leading-edge<br>sweep °</th></tr></thead><tbody id="sectionRows"></tbody></table></div>
@@ -543,6 +563,7 @@ function installCustomUI(){
   </div>`);
   const style=document.createElement('style');style.textContent='#sectionTable input{padding:7px 4px;min-width:54px}#sectionTable th,#sectionTable td{padding:7px 4px}#sectionTable td:first-child{font-weight:600}';document.head.appendChild(style);
   $('studyMode').onchange=()=>modeChanged(true);
+  $('createFunctionWing').onclick=createFunctionWing;
   $('savedWingStudy').onchange=savedWingCases;
   $('copySavedWing').onclick=()=>{const s=studyData.find(s=>s.id===$('savedWingStudy').value),r=s?.rows.find(r=>r.id===$('savedWingCase').value);if(r)copySavedWing(r);};
   $('newWing').onclick=()=>{editingDesign=-1;draft=defaultWing();draft.name='Wing '+(customDesigns.length+1);renderEditor();};
@@ -588,9 +609,9 @@ function resultGeometryKeys(){const study=chosenStudy(),nodes=[...new Set((study
 function updateHeatAxes(){const keys=resultGeometryKeys(),key=keys.join(',');if(key===heatAxisKey)return;heatAxisKey=key;$('axisChoices').innerHTML=keys.map((k,i)=>`<label class="axis-choice"><input type="checkbox" data-axis="${k}" ${i<2?'checked':''}>${esc(fields[k]?.[0]||k)}</label>`).join('');document.querySelectorAll('[data-axis]').forEach(box=>box.onchange=()=>{if(checkedAxes().length>3){box.checked=false;notify('Choose up to three axes.');return;}clearDesign();updateHeatFilters();});clearDesign();}
 function renderEditor(){
   $('wingName').value=draft.name;$('sectionCount').value=draft.sections.length;
-  const fit=draft.curve_fit;$('curveFitInfo').classList.toggle('hidden',!fit);
+  const fit=draft.curve_fit,func=draft.outline_function;$('curveFitInfo').classList.toggle('hidden',!fit&&!func);
   const label=p=>p.method==='polynomial'?`degree ${p.degree} polynomial`:p.method;
-  $('curveFitInfo').innerHTML=fit?`<strong>Initial curve fit</strong><p>Leading edge: ${esc(label(fit.leading_edge))}. Chord profile: ${esc(label(fit.chord_profile))}. ${fit.anchor_count} original active points retained; ${fit.section_count} Ptera sections.</p><p class="help">${esc(fit.note)} Manual edits change the fitted shape.</p>`:'';
+  $('curveFitInfo').innerHTML=(fit?`<strong>Initial curve fit · zero-width tip</strong><p>Leading edge: ${esc(label(fit.leading_edge))}. Chord profile: ${esc(label(fit.chord_profile))}. ${fit.section_count} sampled sections.</p><p class="help">${esc(fit.note)} Function tip: ${fit.function_tip_m} m; simulated tip: ${fit.simulation_tip_m} m.</p>`:'')+(func?`<details><summary>Defining curve functions</summary><pre style="white-space:pre-wrap">${esc(functionDescription(func))}</pre></details><p class="help">SVG uses these exact smooth functions, not the section polygon. Manual geometry edits detach the function; smooth again to refit.</p>`:'');
   $('sectionRows').innerHTML=draft.sections.map((s,i)=>`<tr><td>${i===0?'Root':i===draft.sections.length-1?'Tip':i+1}</td>${sectionKeys.map(k=>`<td><input type="number" step="any" data-section="${i}" data-key="${k}" aria-label="Section ${i+1} ${k}" value="${s[k]}" ${i===0&&['y_m','x_m'].includes(k)?'disabled':''}></td>`).join('')}<td>${i?`<input type="number" step="any" data-edge-angle="${i}" aria-label="Section ${i+1} leading-edge sweep" value="${edgeAngle(i)}">`:'—'}</td></tr>`).join('');
   document.querySelectorAll('[data-section]').forEach(input=>input.oninput=e=>{draft.sections[Number(input.dataset.section)][input.dataset.key]=Number(input.value);syncEdgeAngles();drawDraft();});
   document.querySelectorAll('[data-edge-angle]').forEach(input=>input.oninput=()=>{
@@ -638,11 +659,15 @@ function draftCase(){
 }
 let editorScale=1, editorMin=0, draggedChord=null, viewYaw=-.55, viewElevation=.5;
 function drawDraft(){
+  if(draft.outline_function&&JSON.stringify(draft.sections)!==JSON.stringify(draft.outline_function.sample_sections)){
+    delete draft.outline_function;delete draft.curve_fit;$('curveFitInfo').classList.add('hidden');
+    notify('Geometry edited: the old curve function was detached. Use Smooth this wing to generate a new function and curved SVG.');
+  }
   $('draftError').classList.add('hidden');
   const ss=draft.sections;if(ss.some(s=>sectionKeys.some(k=>!Number.isFinite(s[k])))||ss.at(-1).y_m<=0)return;
   const min=Math.min(...ss.map(s=>s.x_m)),max=Math.max(...ss.map(s=>s.x_m+s.chord_m));
   editorMin=min;editorScale=Math.min(460/ss.at(-1).y_m,165/(max-min||.1));
-  const stop=ss.findIndex(s=>s.chord_m===0),outline=ss.slice(0,stop<0?ss.length:stop);
+  const stop=ss.findIndex(s=>s.chord_m===0),outline=draft.outline_function?ss:ss.slice(0,stop<0?ss.length:stop);
   const X=y=>50+y*editorScale,Y=x=>40+(x-min)*editorScale;
   $('chordEditor').innerHTML=`<text x="16" y="20" font-size="11" fill="#647787">UNPITCHED HALF-WING · DRAG THE NUMBERED ENDPOINTS</text><polygon points="${[...outline.map(s=>[X(s.y_m),Y(s.x_m)]),...outline.toReversed().map(s=>[X(s.y_m),Y(s.x_m+s.chord_m)])].map(p=>p.join(',')).join(' ')}" fill="#c6e6df" stroke="#007f78"/>`+ss.map((s,i)=>`<line x1="${X(s.y_m)}" y1="${Y(s.x_m)}" x2="${X(s.y_m)}" y2="${Y(s.x_m+s.chord_m)}" stroke="#5bafa2"/><circle data-chord-handle="${i}" cx="${X(s.y_m)}" cy="${Y(s.x_m+s.chord_m)}" r="9" fill="#007f78" style="cursor:ns-resize"/><text pointer-events="none" x="${X(s.y_m)}" y="${Y(s.x_m+s.chord_m)+3}" text-anchor="middle" fill="white" font-size="9">${i+1}</text>`).join('');
   document.querySelectorAll('[data-chord-handle]').forEach(h=>h.onpointerdown=e=>{e.preventDefault();draggedChord=Number(h.dataset.chordHandle);$('chordEditor').setPointerCapture(e.pointerId);});
