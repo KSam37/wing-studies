@@ -79,14 +79,37 @@ class StudyChecks(unittest.TestCase):
             self.assertGreaterEqual(value,limits.min()-1e-9);self.assertLessEqual(value,limits.max()+1e-9)
         for v in original:self.assertLess(np.linalg.norm(vertices-v,axis=1).min(),1e-8)
 
+    def test_json_write_retries_transient_windows_lock(self):
+        original=model.os.replace;attempts=[]
+        def briefly_locked(src,dst):
+            attempts.append(1)
+            if len(attempts)==1:raise PermissionError('Transient Windows sharing lock')
+            return original(src,dst)
+        with tempfile.TemporaryDirectory(dir=model.HERE) as td,patch.object(model.os,'replace',side_effect=briefly_locked),patch.object(model.time,'sleep'):
+            path=Path(td)/'status.json';model.write_json(path,{'complete':True})
+            self.assertEqual(model.read_json(path),{'complete':True});self.assertEqual(len(attempts),2)
+
+    def test_eta_excludes_suspended_validation_and_reused_outputs(self):
+        settings=model.plan(copy.deepcopy(model.DEFAULT))['settings'];settings['aeroelastic_enabled']=True
+        with tempfile.TemporaryDirectory(dir=model.HERE) as td,patch.object(model,'OUTPUTS',Path(td)),patch.dict(model._TIMING_CACHE,{'at':0.,'samples':[]},clear=True):
+            for name,elapsed,extra,row_extra in [('actual',200.,{},{}),('suspended',30000.,{'exclude_timing_from_eta':True},{}),('cache',1.,{},{'reused_from':{'case':'cached'}})]:
+                folder=Path(td)/name;folder.mkdir()
+                model.write_json(folder/'manifest.json',{'settings':settings,'panels_per_case':32,**extra})
+                model.write_json(folder/'results.json',[{'status':'ok','steps':200,'elapsed_s':elapsed,**row_extra}])
+            estimate=model.estimated_case_seconds(settings,32,200)
+            self.assertEqual(estimate['timing_samples'],1);self.assertEqual(estimate['case_seconds'],200.)
+            changed={**settings,'damping_constant_rad':999.}
+            self.assertEqual(model.estimated_case_seconds(changed,32,200)['timing_samples'],0)
+        self.assertIsNone(model.runtime_status({'exclude_timing_from_eta':True},{'state':'running'},[])['eta_remaining_s'])
+
     def test_native_aeroelastic_settings_and_shared_spring(self):
         import pterasoftware as ps
         c=copy.deepcopy(model.DEFAULT);self.assertFalse(model.plan(c)['settings']['aeroelastic_enabled'])
         c['settings'].update(aeroelastic_enabled=True,span_panels=4,chord_panels=2,dt_s=.025,cycles=3,wake_cycles=2)
         p=model.plan(c);solver=model.build_solver(p['cases'][0],p['settings']);problem=solver.unsteady_problem
         self.assertIsInstance(problem,ps.AeroelasticUnsteadyProblem)
-        self.assertAlmostEqual(problem.spring_constant_rad,34e9*math.pi*.002**4/64/.1)
-        self.assertAlmostEqual(problem.wing_density,.1);self.assertEqual(problem.step_discards,5)
+        self.assertAlmostEqual(problem.spring_constant_rad,34e9*math.pi*.004**4/64/.1)
+        self.assertAlmostEqual(problem.wing_density,.5);self.assertAlmostEqual(problem.damping_constant_rad,2.0);self.assertEqual(problem.step_discards,5)
         self.assertEqual(solver.num_steps,120);self.assertEqual(problem.max_wake_rows,80)
         wing=problem.movement.airplane_movements[0].base_airplane.wings[0]
         self.assertEqual(len(wing.wing_cross_sections),5);self.assertFalse(wing.symmetric)

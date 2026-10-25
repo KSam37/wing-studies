@@ -44,12 +44,12 @@ DEFAULT = {
                  "frequency_hz": 1., "amplitude_deg": 20., "speed_mps": .5,
                  "case_budget": 10000, "cycle_tolerance_pct": 5.0, "save_solver": False},
 }
-# Rod estimate: d=2 mm, assumed E=34 GPa (supplier axial range 28-40 GPa),
+# Rod estimate: d=4 mm, assumed E=34 GPa (supplier axial range 28-40 GPa),
 # 0.10 m reference cantilever under pure end moment: k_theta=EI/L.
-ROD_EI_NM2=34e9*math.pi*.002**4/64
+ROD_EI_NM2=34e9*math.pi*.004**4/64
 DEFAULT["settings"].update(wake_model="free", wake_cycles=0,
     aeroelastic_enabled=False, spring_constant_rad=ROD_EI_NM2/.10,
-    wing_density=.10, damping_constant_rad=.10, step_discards=5)
+    wing_density=.50, damping_constant_rad=2.0, step_discards=5)
 DEFAULT["waveform"]={"mode":"sine","points":"0, 0\n0.25, 1\n0.5, 0\n0.75, -1\n1, 0"}
 DEFAULT.update(mode="shape_sweep",shape_sweep={"span_m":.6,"chord_count":4,
     "decreasing":True,"sweep_deg":0.,"incidence_deg":0.,
@@ -73,7 +73,14 @@ def write_json(path, data):
     path = Path(path)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, indent=2, allow_nan=False), encoding="utf-8")
-    os.replace(tmp, path)
+    # OneDrive/antivirus may briefly open the destination without delete sharing.
+    for attempt in range(5):
+        try:
+            os.replace(tmp,path)
+            break
+        except PermissionError:
+            if attempt==4:raise
+            time.sleep(.05*2**attempt)
 
 
 def read_json(path):
@@ -1034,8 +1041,9 @@ def estimated_case_seconds(settings,panels,steps):
             for path in sorted(OUTPUTS.iterdir(),reverse=True)[:30]:
                 try:
                     m=read_json(path/"manifest.json")
+                    if m.get("exclude_timing_from_eta",False):continue
                     for row in read_json(path/"results.json")[-8:]:
-                        if row.get("status")=="ok" and row.get("elapsed_s",0)>0:
+                        if row.get("status")=="ok" and row.get("elapsed_s",0)>0 and not row.get("reused_from"):
                             samples.append((m["settings"],m["panels_per_case"],row["steps"],row["elapsed_s"]))
                 except (OSError,ValueError,KeyError,TypeError):continue
         _TIMING_CACHE.update(at=time.time(),samples=samples)
@@ -1043,6 +1051,7 @@ def estimated_case_seconds(settings,panels,steps):
     for s,p,n,elapsed in _TIMING_CACHE["samples"]:
         if s.get("simulation_mode","legacy_paired")!=settings.get("simulation_mode","legacy_paired"):continue
         if s.get("aeroelastic_enabled",False)!=settings.get("aeroelastic_enabled",False):continue
+        if settings.get("aeroelastic_enabled",False) and any(s.get(k)!=settings.get(k) for k in ("spring_constant_rad","wing_density","damping_constant_rad")):continue
         if s.get("wake_model","free")!=settings.get("wake_model","free") or s.get("wake_cycles",0)!=settings.get("wake_cycles",0):continue
         if not .5<=panels/p<=2 or not .5<=steps/n<=2:continue
         scale=(panels/p)**2*(steps/n)**2
@@ -1054,6 +1063,7 @@ def estimated_case_seconds(settings,panels,steps):
 def runtime_status(manifest,status,rows):
     import statistics
     if status.get("state")!="running":return {"eta_remaining_s":0.}
+    if manifest.get("exclude_timing_from_eta",False):return {"eta_remaining_s":None,"eta_basis":"Validation timing excludes the overnight interruption"}
     samples=[r["elapsed_s"] for r in rows[-5:] if r.get("elapsed_s",0)>0]
     seconds=statistics.median(samples) if samples else estimated_case_seconds(manifest["settings"],manifest["panels_per_case"],manifest["max_steps"])["case_seconds"]
     if seconds is None:return {"eta_remaining_s":None,"eta_basis":"Calibrating first case"}

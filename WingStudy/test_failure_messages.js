@@ -10,3 +10,11 @@ assert(context.caseFailure({...row,error:'angles_Wcsp_to_Wcs_ixyz[1] must be les
 assert(!context.caseFailure({...row,error:'<script>bad</script>'}).includes('<script>'));
 assert(context.caseFailure({...row,aeroelastic_enabled:false}).includes('solver failed'));
 console.log('6 failure-message checks passed.');
+
+const inputs={spring_constant_rad:{value:''},wing_density:{value:''},damping_constant_rad:{value:''}};let previews=0;
+context.$=key=>inputs[key];context.preview=()=>previews++;context.notify=()=>{};
+const presetCode=source.slice(source.indexOf('function applyRodFabricPreset('),source.indexOf('function caseFailure('));
+vm.runInContext(presetCode,context);context.applyRodFabricPreset();
+assert(Math.abs(Number(inputs.spring_constant_rad.value)-16*.26703537555513246)<1e-12);
+assert.equal(Number(inputs.wing_density.value),.5);assert.equal(Number(inputs.damping_constant_rad.value),2);assert.equal(previews,1);
+console.log('4 material-preset checks passed.');

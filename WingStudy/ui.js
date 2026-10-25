@@ -1,6 +1,11 @@
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let defaults, fields, familyNames, planData, studyData = [], currentStudy = '';
+function applyRodFabricPreset(){
+  const preset={spring_constant_rad:34e9*Math.PI*.004**4/64/.10,wing_density:.50,damping_constant_rad:2.0};
+  for(const [key,value] of Object.entries(preset))$(key).value=String(value);
+  preview();notify('Applied 4 mm rod/fabric estimates. Damping is an unmeasured screening coefficient; original studies are unchanged.');
+}
 function caseFailure(r){
   if(r.status!=='failed')return '';
   const native=String(r.error||'');
@@ -119,13 +124,14 @@ function fill(original) {
     `<div class="full note"><button class="btn" id="fastWake">Use faster wake settings</button><span class="help"> Prescribed wake + 2 retained cycles. Motion, time step, mesh and total cycles stay as entered.</span></div>`);
   $('fastWake').onclick=()=>{$('wake_model').value='prescribed';$('wake_cycles').value='2';preview();};
   $('solverFields').insertAdjacentHTML('beforeend',`<div class="full note"><label><input id="aeroelastic_enabled" type="checkbox" ${s.aeroelastic_enabled?'checked':''}> Include native Ptera aeroelasticity</label><p class="help">Independent torsional springs, all with the same stiffness. This models strip twist, not spanwise spar bending. Settings stay constant across the study.</p><div id="aeroelasticFields" class="fields">`+
-    field('spring_constant_rad','Shared spring stiffness (N m/rad)',s.spring_constant_rad,'2 mm rod estimate: assumed E = 34 GPa; EI = 0.02670 N m²; k = EI / 0.10 m = 0.2670 N m/rad. Pure end-moment equivalence; not a measured wing property.','number')+
-    field('wing_density','Wing mass per area (kg/m²)',s.wing_density,'Screening assumption 0.10 kg/m²; replace with measured wing mass / area.','number')+
-    field('damping_constant_rad','Shared damping (N m s/rad)',s.damping_constant_rad,'Screening assumption 0.10; not derived from rod diameter.','number')+
+    field('spring_constant_rad','Shared spring stiffness (N m/rad)',s.spring_constant_rad,'4 mm rod estimate: assumed E = 34 GPa; EI = 0.42726 N m²; k = EI / 0.10 m = 4.2726 N m/rad. Pure end-moment equivalence; not a measured wing property.','number')+
+    field('wing_density','Wing mass per area (kg/m²)',s.wing_density,'Rod + fabric screening estimate 0.50 kg/m². Includes fabric mass; replace with measured total wing mass / area.','number')+
+    field('damping_constant_rad','Shared damping (N m s/rad)',s.damping_constant_rad,'Native damping trial 2.0; not a measured material property or derived from rod diameter.','number')+
     field('step_discards','Startup deformation hold (steps)',s.step_discards,'Native Ptera holds deformation during its startup steps. Default 5.','number')+
-    `<p class="help full">Rod modulus estimate: <a href="https://www.easycomposites.co.uk/2mm-carbon-fibre-rod" target="_blank" rel="noopener">supplier axial range 28–40 GPa</a>; axial modulus used as a bending-modulus approximation. Reference length is fixed at 100 mm so every strip receives the same k.</p></div></div>`);
+    `<div class="full"><button class="btn" id="rodFabricPreset" type="button">Use 4 mm rod + fabric preset</button><p class="help">Sets spring to 4.2726 N m/rad, total mass/area to 0.50 kg/m², damping to 2.0 N m s/rad. Fabric adds mass and no stiffness; the native strip surface follows the springs. Assumes 50 g/m² fabric and 1500 kg/m³ carbon composite. Mass is a screening approximation; damping needs calibration. Tested at Δt = 0.02 s; a 0.005 s trial failed, so smaller time steps are not automatically stable.</p></div><p class="help full">Rod modulus estimate: <a href="https://www.easycomposites.co.uk/4mm-carbon-fibre-rod" target="_blank" rel="noopener">supplier axial range 28–40 GPa</a>; axial modulus used as a bending-modulus approximation. Reference length is fixed at 100 mm so every strip receives the same k.</p></div></div>`);
   const toggleAero=()=>{const on=$('aeroelastic_enabled').checked;$('aeroelasticFields').classList.toggle('hidden',!on);};
   $('aeroelastic_enabled').onchange=toggleAero;toggleAero();
+  $('rodFabricPreset').onclick=applyRodFabricPreset;
   fillTail(c.tail||defaults.tail);
 
   preview();
@@ -252,7 +258,7 @@ function rankWingPreview(r){
 }
 function renderResults(){
  const study=chosenStudy();$('loadConfig').disabled=!study;$('makeHeat').disabled=!study;$('stop').classList.toggle('hidden',!study||study.status.state!=='running');$('outputPath').textContent=study?defaultsRoot+'\\'+study.id:defaultsRoot;
- if(study){const q=study.status,pct=100*q.completed/Math.max(q.total,1);$('progressArea').innerHTML=`<p class="note">${(study.rows.some(r=>r.simulation_mode==='isolated_single_wing_v1')||study.simulation_mode==='isolated_single_wing_v1')?'Single-wing run: native plots show one wing. Estimated pair thrust = 2 × single-wing thrust.':'Existing paired-wing results have cancelling native roll moments. New studies simulate one wing.'}</p><div class="split status-line"><span>${esc(q.message||q.state)}</span><strong>${q.completed} / ${q.total}</strong></div><div class="progress"><div style="width:${pct}%"></div></div><p class="caption">${q.state==='running'?(q.eta_remaining_s===null?'ETA: calibrating first case':`Estimated remaining: ${duration(q.eta_remaining_s)} · ${esc(q.eta_basis||'')}`):esc(q.state)} · includes saving native plots and animation.</p>`;
+ if(study){const q=study.status,pct=100*q.completed/Math.max(q.total,1);$('progressArea').innerHTML=`<p class="note">${(study.rows.some(r=>r.simulation_mode==='isolated_single_wing_v1')||study.simulation_mode==='isolated_single_wing_v1')?'Single-wing run: native plots show one wing. Estimated pair thrust = 2 × single-wing thrust.':'Existing paired-wing results have cancelling native roll moments. New studies simulate one wing.'}</p><div class="split status-line"><span>${esc(q.message||q.state)}</span><strong>${q.completed} / ${q.total}</strong></div><div class="progress"><div style="width:${pct}%"></div></div><p class="caption">${q.state==='running'?(q.eta_remaining_s===null?esc(q.eta_basis||'ETA: calibrating first case'):`Estimated remaining: ${duration(q.eta_remaining_s)} · ${esc(q.eta_basis||'')}`):esc(q.state)} · includes saving native plots and animation.</p>`;
  $('studyLinks').innerHTML=`<a class="btn" href="/files/${study.id}/manifest.json" target="_blank">Study settings</a><a class="btn" href="/files/${study.id}/run.log" target="_blank">Solver log</a>`+(study.rows.length?`<a class="btn" href="/files/${study.id}/summary.csv" download>Summary CSV</a>${study.rows.some(r=>r.status==='ok')?`<a class="btn" href="/files/${study.id}/comparisons/time_histories.csv" download>Raw histories CSV</a>`:''}`:'');
  }else{$('progressArea').innerHTML='<p class="caption">Select a study to compare shapes under fixed conditions.</p>';$('studyLinks').innerHTML='';}
  let rows=activeRows(),metric=$('rankMetric').value;if($('repeatOnly').checked)rows=rows.filter(r=>r.cycle_repeatable||r.status==='failed');
