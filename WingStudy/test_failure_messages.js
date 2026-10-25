@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync(__dirname+'/ui.js','utf8');
+const code=source.slice(source.indexOf('const esc ='),source.indexOf('let defaults,'))+source.slice(source.indexOf('function caseFailure('),source.indexOf('function profileLinks('));
+const context={};vm.createContext(context);vm.runInContext(code,context);
+assert.equal(context.caseFailure({status:'ok'}),'');
+const row={status:'failed',aeroelastic_enabled:true,error:'angles_Wcsp_to_Wcs_ixyz[1] must be greater than or equal to -90.0.'};
+assert(context.caseFailure(row).includes('Native aeroelastic deformation'));
+assert(context.caseFailure(row).includes('no valid force result'));
+assert(context.caseFailure({...row,error:'angles_Wcsp_to_Wcs_ixyz[1] must be less than or equal to 90.0.'}).includes('Native aeroelastic deformation'));
+assert(!context.caseFailure({...row,error:'<script>bad</script>'}).includes('<script>'));
+assert(context.caseFailure({...row,aeroelastic_enabled:false}).includes('solver failed'));
+console.log('6 failure-message checks passed.');
