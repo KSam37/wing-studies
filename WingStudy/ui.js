@@ -264,8 +264,9 @@ function renderResults(){
  let rows=activeRows(),metric=$('rankMetric').value;if($('repeatOnly').checked)rows=rows.filter(r=>r.cycle_repeatable||r.status==='failed');
  rows.sort((a,b)=>Number(shapeEligible(b))-Number(shapeEligible(a))||(metric==='cycle_error_pct'?(a[metric]??Infinity)-(b[metric]??Infinity):(b[metric]??-Infinity)-(a[metric]??-Infinity)));
  $('noResults').classList.toggle('hidden',rows.length>0);
- $('ranking').innerHTML=rows.map((r,i)=>{const key=r._study+'/'+r.id,base='/files/'+key+'/',valid=shapeEligible(r),fmt=v=>Number.isFinite(v)?v.toPrecision(5):'—';return `<article class="wing-rank" data-ranked-case="${esc(r.id)}"><div class="wing-rank-number">${valid?i+1:'—'}</div>${rankWingPreview(r)}<div><div class="split"><strong>${r.global_case_no?'Case #'+r.global_case_no+' · ':''}${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="wing-rank-score">${fmt(r[shapeObjective])}<small style="font-size:10px"> 1/m</small></span></div><div class="wing-rank-values"><span>Single-wing thrust <strong>${fmt(r.single_wing_mean_thrust_N)} N</strong></span><span>${r.simulation_mode==='isolated_single_wing_v1'?`Est. pair thrust <strong>${fmt(r.estimated_two_wing_mean_thrust_N)} N</strong></span><span>`:''}Peak |roll| <strong>${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m</strong></span><span>${r.status==='failed'?'Failed':valid?(r.cycle_repeatable?'Repeatable':'Unsettled'):'Rerun / invalid ratio'}</span></div><div class="help">${esc(r._studyName)} · ${r.simulation_mode==='isolated_single_wing_v1'?'Isolated single wing':'Legacy paired-wing run — native roll cancels; rerun'} · wing span ${Number((r.single_wing_span_m??(r.span_m-(studyData.find(s=>s.id===r._study)?.config.settings.gap_m??.04))/2).toPrecision(5))} m · chords ${esc((r.requested_sections||r.sections)?(r.requested_sections||r.sections).map(s=>Number(s.chord_m.toPrecision(4))).join(' / '):'legacy geometry')} m</div>${caseFailure(r)}<div class="wing-rank-links"><label style="display:inline"><input aria-label="Compare ${r.id}" data-ref="${key}" type="checkbox" ${selected.has(key)?'checked':''} ${r.status==='ok'?'':'disabled'}> Compare</label> · ${r.status==='ok'?`<a href="${base}water_wing_forces.png" target="_blank">Forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · `:''}${profileLinks(r,base)}<a href="/api/case/${key}" target="_blank">Full values</a> · <button type="button" class="btn" data-copy-saved="${esc(key)}">Copy wing to design</button></div></div></article>`;}).join('');
+ $('ranking').innerHTML=rows.map((r,i)=>{const key=r._study+'/'+r.id,base='/files/'+key+'/',valid=shapeEligible(r),fmt=v=>Number.isFinite(v)?v.toPrecision(5):'—';return `<article class="wing-rank" data-ranked-case="${esc(r.id)}"><div class="wing-rank-number">${valid?i+1:'—'}</div>${rankWingPreview(r)}<div><div class="split"><strong>${r.global_case_no?'Case #'+r.global_case_no+' · ':''}${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="wing-rank-score">${fmt(r[shapeObjective])}<small style="font-size:10px"> 1/m</small></span></div><div class="wing-rank-values"><span>Single-wing thrust <strong>${fmt(r.single_wing_mean_thrust_N)} N</strong></span><span>${r.simulation_mode==='isolated_single_wing_v1'?`Est. pair thrust <strong>${fmt(r.estimated_two_wing_mean_thrust_N)} N</strong></span><span>`:''}Peak |roll| <strong>${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m</strong></span><span>${r.status==='failed'?'Failed':valid?(r.cycle_repeatable?'Repeatable':'Unsettled'):'Rerun / invalid ratio'}</span></div><div class="help">${esc(r._studyName)} · ${r.simulation_mode==='isolated_single_wing_v1'?'Isolated single wing':'Legacy paired-wing run — native roll cancels; rerun'} · wing span ${Number((r.single_wing_span_m??(r.span_m-(studyData.find(s=>s.id===r._study)?.config.settings.gap_m??.04))/2).toPrecision(5))} m · chords ${esc((r.requested_sections||r.sections)?(r.requested_sections||r.sections).map(s=>Number(s.chord_m.toPrecision(4))).join(' / '):'legacy geometry')} m</div>${caseFailure(r)}<div class="wing-rank-links"><label style="display:inline"><input aria-label="Compare ${r.id}" data-ref="${key}" type="checkbox" ${selected.has(key)?'checked':''} ${r.status==='ok'?'':'disabled'}> Compare</label> · ${r.status==='ok'?`<a href="${base}water_wing_forces.png" target="_blank">Forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · `:''}${profileLinks(r,base)}<a href="/api/case/${key}" target="_blank">Full values</a> · <button type="button" class="btn" data-copy-saved="${esc(key)}">Copy wing to design</button> <button type="button" class="btn" data-smooth-saved="${esc(key)}">Smooth this wing</button></div></div></article>`;}).join('');
  $('saveRanking').disabled=!study||study.status.state==='running';
+ document.querySelectorAll('[data-smooth-saved]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r._study+'/'+r.id===b.dataset.smoothSaved);if(r)smoothWing(savedWingDesign(r));});
  document.querySelectorAll('[data-copy-saved]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r._study+'/'+r.id===b.dataset.copySaved);if(r)copySavedWing(r);});
  document.querySelectorAll('[data-ref]').forEach(box=>box.onchange=()=>{const key=box.dataset.ref,r=rows.find(r=>r._study+'/'+r.id===key);if(box.checked){if(selected.size>=4){box.checked=false;notify('Choose up to four cases.');return;}selected.set(key,r);}else selected.delete(key);drawOverlay();});
  $('topSummary').innerHTML='<p class="caption">Highest single-wing mean thrust / peak absolute hinge roll moment first. Each preview shows the neutral top-view shape; sizes are normalized for comparison.</p>';
@@ -469,6 +470,19 @@ function wingSweepTemplate(wing,gap){
     decreasing:sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m),
     ranges:sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1}))};
 }
+let smoothingWing=false;
+async function smoothWing(wing){
+  if(smoothingWing)return;smoothingWing=true;
+  try{
+    const previous=Number($('span_panels').value);
+    const result=await api('smooth-wing',{design:wing,config:config(),subdivisions:Number($('curveSubdivisions').value)});
+    $('span_panels').value=String(result.required_span_panels);
+    customDesigns.push(result.design);editingDesign=customDesigns.length-1;draft=structuredClone(result.design);
+    $('studyMode').value='custom';renderEditor();modeChanged(false);tab('setup');preview();
+    $('customEditor').scrollIntoView({behavior:'smooth',block:'start'});
+    notify(`Smoothed wing added as a new editable design.${result.required_span_panels>previous?` Span panels raised from ${previous} to ${result.required_span_panels} to include the curve sections.`:''}`);
+  }catch(e){notify(e.message);}finally{smoothingWing=false;}
+}
 async function sweepFromWing(wing){
   try{
     const c=config();c.mode='custom';c.designs=[structuredClone(wing)];
@@ -512,6 +526,7 @@ function installCustomUI(){
   card.insertAdjacentHTML('beforeend',`<div id="customEditor" class="hidden">
     <details style="margin:14px 0"><summary>Copy a wing from a previous study</summary><div class="fields" style="margin-top:12px"><label>Previous study<select id="savedWingStudy"></select></label><label>Saved wing<select id="savedWingCase"></select></label></div><button type="button" class="btn" id="copySavedWing" style="margin-top:10px" disabled>Copy wing into study</button><p class="help">Copies the neutral geometry into the list below. Your current motion, water and solver settings are kept. The original wing and its results stay saved.</p></details>
     <div class="split"><h3>Design one half-wing</h3><button class="btn" id="newWing">New wing</button></div>
+    <div id="curveFitInfo" class="note hidden"></div>
     <p class="help">Sections run from root to tip. Edit widths and angles below, or drag the numbered chord endpoints in the editor. One wing is simulated; left/right cutting templates are exported.</p>
     <div class="fields" style="margin-top:12px"><label>Wing name<input id="wingName" maxlength="80"></label><label>Number of chord sections<input id="sectionCount" type="number" min="2" step="1"><button class="btn" id="applySections" style="margin-top:7px">Apply section count</button></label></div>
     <div style="overflow:auto;margin-top:15px"><table id="sectionTable"><thead><tr><th>Section</th><th>Position<br>m</th><th>Aft offset<br>m</th><th>Chord width<br>m</th><th>Pitch<br>°</th><th>Roll<br>°</th><th>Leading-edge<br>sweep °</th></tr></thead><tbody id="sectionRows"></tbody></table></div>
@@ -521,7 +536,8 @@ function installCustomUI(){
     <svg id="custom3d" viewBox="0 0 560 260" style="width:100%;background:#f3f8f8;border:1px solid #dce5e9;border-radius:8px;touch-action:none;cursor:grab;margin-top:8px" aria-label="Rotatable three dimensional custom wing preview"></svg>
     <p class="caption">Drag the 3D view to rotate. Draft previews update immediately; add or update the wing to include it in the study.</p>
     <p id="draftError" class="error hidden"></p>
-    <div class="actions" style="margin:16px 0"><button class="btn primary" id="saveWing">Add wing to study</button><button class="btn" id="copyWing">Add as a copy</button><button type="button" class="btn" id="sweepDraft">Use this wing for a geometry sweep</button></div>
+    <div class="actions" style="margin:16px 0"><button class="btn primary" id="saveWing">Add wing to study</button><button class="btn" id="copyWing">Add as a copy</button><button type="button" class="btn" id="sweepDraft">Use this wing for a geometry sweep</button><button type="button" class="btn" id="smoothDraft">Smooth this wing</button></div>
+    <label style="max-width:320px">Curve subdivisions per original interval<input id="curveSubdivisions" type="number" min="1" max="16" step="1" value="2"></label><p class="help">Smoothing keeps the original points and adds sections between them. More subdivisions give a closer native Ptera approximation and can increase runtime. Span panels are raised only when needed to include every interval.</p>
     <h3>Wings in this study</h3><div id="designQueue"></div>
     <p class="help">One simulation per saved wing. Sections 2 and 3 are shared constants. No Cartesian sweep runs in this mode. Separate left/right SVGs unfold planar section strips, including untwisted bent wings. Nonplanar twist or overlapping layouts export labeled projections instead.</p>
   </div>`);
@@ -537,6 +553,7 @@ function installCustomUI(){
     draft.sections=Array.from({length:n},(_,i)=>{const y=tip*i/(n-1),j=Math.max(0,old.findIndex(s=>s.y_m>=y)-1),a=old[j],b=old[Math.min(j+1,old.length-1)],t=(y-a.y_m)/(b.y_m-a.y_m||1);return Object.fromEntries(sectionKeys.map(k=>[k,k==='y_m'?y:a[k]+t*(b[k]-a[k]) ]));});renderEditor();
   };
   $('saveWing').onclick=()=>saveDraft(false);$('copyWing').onclick=()=>saveDraft(true);
+  $('smoothDraft').onclick=()=>{try{readDraft();smoothWing(structuredClone(draft));}catch(e){notify(e.message);}};
   $('sweepDraft').onclick=()=>{try{readDraft();sweepFromWing(structuredClone(draft));}catch(e){notify(e.message);}};
 }
 function modeChanged(update){
@@ -571,6 +588,9 @@ function resultGeometryKeys(){const study=chosenStudy(),nodes=[...new Set((study
 function updateHeatAxes(){const keys=resultGeometryKeys(),key=keys.join(',');if(key===heatAxisKey)return;heatAxisKey=key;$('axisChoices').innerHTML=keys.map((k,i)=>`<label class="axis-choice"><input type="checkbox" data-axis="${k}" ${i<2?'checked':''}>${esc(fields[k]?.[0]||k)}</label>`).join('');document.querySelectorAll('[data-axis]').forEach(box=>box.onchange=()=>{if(checkedAxes().length>3){box.checked=false;notify('Choose up to three axes.');return;}clearDesign();updateHeatFilters();});clearDesign();}
 function renderEditor(){
   $('wingName').value=draft.name;$('sectionCount').value=draft.sections.length;
+  const fit=draft.curve_fit;$('curveFitInfo').classList.toggle('hidden',!fit);
+  const label=p=>p.method==='polynomial'?`degree ${p.degree} polynomial`:p.method;
+  $('curveFitInfo').innerHTML=fit?`<strong>Initial curve fit</strong><p>Leading edge: ${esc(label(fit.leading_edge))}. Chord profile: ${esc(label(fit.chord_profile))}. ${fit.anchor_count} original active points retained; ${fit.section_count} Ptera sections.</p><p class="help">${esc(fit.note)} Manual edits change the fitted shape.</p>`:'';
   $('sectionRows').innerHTML=draft.sections.map((s,i)=>`<tr><td>${i===0?'Root':i===draft.sections.length-1?'Tip':i+1}</td>${sectionKeys.map(k=>`<td><input type="number" step="any" data-section="${i}" data-key="${k}" aria-label="Section ${i+1} ${k}" value="${s[k]}" ${i===0&&['y_m','x_m'].includes(k)?'disabled':''}></td>`).join('')}<td>${i?`<input type="number" step="any" data-edge-angle="${i}" aria-label="Section ${i+1} leading-edge sweep" value="${edgeAngle(i)}">`:'—'}</td></tr>`).join('');
   document.querySelectorAll('[data-section]').forEach(input=>input.oninput=e=>{draft.sections[Number(input.dataset.section)][input.dataset.key]=Number(input.value);syncEdgeAngles();drawDraft();});
   document.querySelectorAll('[data-edge-angle]').forEach(input=>input.oninput=()=>{
@@ -588,8 +608,9 @@ function renderEditor(){
   renderQueue();drawDraft();
 }
 function renderQueue(){
-  $('designQueue').innerHTML=customDesigns.length?customDesigns.map((d,i)=>`<div class="split" style="padding:10px 0;border-bottom:1px solid #dce5e9"><span><strong>${esc(d.name)}</strong> · ${d.sections.length} sections</span><div class="actions"><button class="btn" data-edit-wing="${i}">Edit</button><button type="button" class="btn" data-sweep-wing="${i}">Use for geometry sweep</button><button class="btn danger" data-remove-wing="${i}">Remove</button></div></div>`).join(''):'<p class="caption">No wings added yet.</p>';
+  $('designQueue').innerHTML=customDesigns.length?customDesigns.map((d,i)=>`<div class="split" style="padding:10px 0;border-bottom:1px solid #dce5e9"><span><strong>${esc(d.name)}</strong> · ${d.sections.length} sections</span><div class="actions"><button class="btn" data-edit-wing="${i}">Edit</button><button type="button" class="btn" data-sweep-wing="${i}">Use for geometry sweep</button><button type="button" class="btn" data-smooth-wing="${i}">Smooth this wing</button><button class="btn danger" data-remove-wing="${i}">Remove</button></div></div>`).join(''):'<p class="caption">No wings added yet.</p>';
   document.querySelectorAll('[data-edit-wing]').forEach(b=>b.onclick=()=>{editingDesign=Number(b.dataset.editWing);draft=structuredClone(customDesigns[editingDesign]);renderEditor();});
+  document.querySelectorAll('[data-smooth-wing]').forEach(b=>b.onclick=()=>smoothWing(structuredClone(customDesigns[Number(b.dataset.smoothWing)])));
   document.querySelectorAll('[data-sweep-wing]').forEach(b=>b.onclick=()=>sweepFromWing(structuredClone(customDesigns[Number(b.dataset.sweepWing)])));
   document.querySelectorAll('[data-remove-wing]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.removeWing);customDesigns.splice(i,1);if(editingDesign===i)editingDesign=-1;else if(editingDesign>i)editingDesign--;renderEditor();preview();});
 }

@@ -204,6 +204,13 @@ class Handler(BaseHTTPRequestHandler):
                 spec=model.plan(data)
                 spec.update(catalog.preview(model,spec))
                 return self.send(spec)
+            if path == "/api/smooth-wing":
+                import wing_curves
+                config={**data['config'],"mode":"custom","designs":[data['design']]}
+                # Permit the geometry helper to report the required native mesh size.
+                config['settings']={**config['settings'],"span_panels":max(int(config['settings']['span_panels']),len(data['design']['sections'])-1)}
+                spec=model.plan(config)
+                return self.send(wing_curves.smooth_wing(model,data['design'],spec['settings'],data.get('subdivisions',2)))
             if path == "/api/catalog":
                 with LOCK:
                     catalog.sync(model)
