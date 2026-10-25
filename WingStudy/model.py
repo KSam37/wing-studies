@@ -293,6 +293,14 @@ def shape_grid(raw,settings,budget):
     span=number(raw.get("span_m"),"Fixed total span",settings["gap_m"]+1e-12)
     sweep=number(raw.get("sweep_deg",0),"Fixed leading-edge sweep",-89.9,89.9)
     pitch=number(raw.get("incidence_deg",0),"Fixed incidence",-89.9,89.9)
+    baseline=None
+    if raw.get("baseline") is not None:
+        if not isinstance(raw["baseline"],dict):raise ValueError("The sweep baseline must be a wing design object.")
+        base=custom_case(raw["baseline"],settings)
+        if len(base["requested_sections"])!=n:
+            raise ValueError("The sweep baseline must have one section for every chord range.")
+        baseline={"name":base["design_name"],"sections":base["requested_sections"]}
+        span=2*baseline["sections"][-1]["y_m"]+settings["gap_m"]
     decreasing=raw.get("decreasing",False)
     if not isinstance(decreasing,bool):raise ValueError("Decreasing chord selection must be true/false.")
     ranges=raw.get("ranges",[])
@@ -321,7 +329,7 @@ def shape_grid(raw,settings,budget):
     if total>budget:raise ValueError(f"This grid has {total:,} admissible shapes ({raw_count:,} unconstrained), above the {budget:,}-case budget. Reduce samples or raise the budget.")
     return {"count":total,"unconstrained_count":raw_count,"pruned_count":raw_count-total,
             "span_m":span,"sweep_deg":sweep,"incidence_deg":pitch,"chord_count":n,
-            "decreasing":decreasing,"levels":levels,"suffix":suffix}
+            "decreasing":decreasing,"levels":levels,"suffix":suffix,"baseline":baseline}
 
 
 def shape_combinations(grid):
@@ -448,6 +456,8 @@ def plan(config):
             half=(shape_spec["span_m"]-settings["gap_m"])/2
             sections=[{"y_m":half*i/(len(chords)-1),"x_m":math.tan(math.radians(shape_spec["sweep_deg"]))*half*i/(len(chords)-1),
                        "chord_m":chord,"pitch_deg":shape_spec["incidence_deg"],"roll_deg":0.} for i,chord in enumerate(chords)]
+            if shape_spec["baseline"]:
+                sections=[{**s,"chord_m":chord} for s,chord in zip(shape_spec["baseline"]["sections"],chords)]
             if (min_chord is not None and min(v for v in chords if v>0)<min_chord or max_chord is not None and max(chords)>max_chord):
                 skipped+=1;continue
             case=custom_case({"name":f"Shape {len(cases)+1:04d}","sections":sections},settings)

@@ -24,3 +24,10 @@ assert.equal(vm.runInContext('customDesigns[1].sections[0].chord_m',context),.2)
 context.copySavedWing({sections:[]});assert.equal(vm.runInContext('customDesigns.length',context),2);
 assert.throws(()=>context.savedWingDesign({sections:[{y_m:0},{y_m:1}]}),/incomplete/);
 console.log('14 saved-wing geometry and copy checks passed.');
+const wing={name:'Custom gull',sections:row.sections},template=context.wingSweepTemplate(wing,.04);
+assert.equal(template.span_m,.64);assert.equal(template.chord_count,2);
+assert.equal(JSON.stringify(template.baseline.sections),JSON.stringify(wing.sections));
+assert.equal(JSON.stringify(template.ranges),JSON.stringify([{min_m:.2,max_m:.2,count:1},{min_m:.1,max_m:.1,count:1}]));
+template.baseline.sections[0].roll_deg=0;assert.equal(wing.sections[0].roll_deg,20);
+assert.equal(context.wingSweepTemplate({name:'Increasing',sections:[{y_m:0,chord_m:.1},{y_m:.2,chord_m:.2}]},.04).decreasing,false);
+console.log('6 custom-wing sweep template checks passed.');

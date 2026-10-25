@@ -94,6 +94,8 @@ The exporter writes worksheet elements in the order required by Excel, placing f
 
 ## Reuse a saved wing design
 
+To sweep around a custom wing, choose **Use this wing for a geometry sweep** in its editor, or **Use for geometry sweep** beside a saved custom wing. The sweep starts with each min/max equal to the original chord width and one sample, reproducing the exact wing. Widen the desired chord ranges and increase their sample counts. Uneven section positions, leading-edge offsets, pitch and roll are kept fixed; no resampling to an equally spaced grid occurs. The non-increasing constraint follows the baseline's chord ordering and remains editable. **Use regular grid instead** returns to the standard equally spaced geometry sweep. The baseline is included in exported study settings and survives import. Existing custom wings stay in the study's custom-design list. Identical geometry and physical settings retain the same catalog signature whether requested as a custom wing or as a baseline sweep.
+
 Choose **Copy wing to design** beside any wing in study results or Master runs. You can also switch to **Build individual custom wings** and expand **Copy a wing from a previous study**. The selected neutral wing geometry is added to the current study and opened for editing, including its spanwise positions, chord widths, sweep offsets, pitch and roll. Existing queued wings and current motion/water/solver settings are kept. Original runs and their results are unchanged. Edit the copied wing and choose **Update wing in study**, or use **Add as a copy** to build several variations. Run the study when ready; the existing catalog reuse check still avoids solving identical geometry under identical conditions.
 
 ## Optional native aeroelasticity (v3.3)

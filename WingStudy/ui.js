@@ -447,7 +447,7 @@ async function init() {
     setInterval(()=>{if(!$('results').classList.contains('hidden'))refresh();},3500);
   } catch(e){notify('Could not connect to local server: '+e.message);}
 }
-let customDesigns=[], editingDesign=-1, draft;
+let customDesigns=[], editingDesign=-1, draft, sweepBaseline=null;
 const sectionKeys=['y_m','x_m','chord_m','pitch_deg','roll_deg'];
 function defaultWing(){return {name:'Gull wing',sections:[
   {y_m:0,x_m:0,chord_m:.15,pitch_deg:5,roll_deg:20},
@@ -461,6 +461,23 @@ function savedWingDesign(row){
     pitch_deg:s.pitch_deg??row.incidence_deg??0,roll_deg:s.roll_deg??0}));
   if(sections.some(s=>Object.values(s).some(v=>!Number.isFinite(v))))throw Error('The saved wing geometry is incomplete.');
   return {name:`${row.design_name||row.id||'Wing'} copy`.slice(0,80),sections};
+}
+function wingSweepTemplate(wing,gap){
+  const sections=structuredClone(wing.sections);
+  return {baseline:{name:wing.name,sections},span_m:2*sections.at(-1).y_m+gap,
+    chord_count:sections.length,sweep_deg:0,incidence_deg:0,
+    decreasing:sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m),
+    ranges:sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1}))};
+}
+async function sweepFromWing(wing){
+  try{
+    const c=config();c.mode='custom';c.designs=[structuredClone(wing)];
+    await api('preview',c);
+    fillShape(wingSweepTemplate(wing,Number($('gap_m').value)));
+    $('studyMode').value='shape_sweep';modeChanged(false);tab('setup');preview();
+    $('sweepEditor').scrollIntoView({behavior:'smooth',block:'start'});
+    notify('Custom wing loaded as the sweep baseline. Set chord min/max and sample counts to explore around it.');
+  }catch(e){notify(e.message);}
 }
 function copySavedWing(row){
   try{
@@ -504,7 +521,7 @@ function installCustomUI(){
     <svg id="custom3d" viewBox="0 0 560 260" style="width:100%;background:#f3f8f8;border:1px solid #dce5e9;border-radius:8px;touch-action:none;cursor:grab;margin-top:8px" aria-label="Rotatable three dimensional custom wing preview"></svg>
     <p class="caption">Drag the 3D view to rotate. Draft previews update immediately; add or update the wing to include it in the study.</p>
     <p id="draftError" class="error hidden"></p>
-    <div class="actions" style="margin:16px 0"><button class="btn primary" id="saveWing">Add wing to study</button><button class="btn" id="copyWing">Add as a copy</button></div>
+    <div class="actions" style="margin:16px 0"><button class="btn primary" id="saveWing">Add wing to study</button><button class="btn" id="copyWing">Add as a copy</button><button type="button" class="btn" id="sweepDraft">Use this wing for a geometry sweep</button></div>
     <h3>Wings in this study</h3><div id="designQueue"></div>
     <p class="help">One simulation per saved wing. Sections 2 and 3 are shared constants. No Cartesian sweep runs in this mode. Separate left/right SVGs unfold planar section strips, including untwisted bent wings. Nonplanar twist or overlapping layouts export labeled projections instead.</p>
   </div>`);
@@ -520,20 +537,35 @@ function installCustomUI(){
     draft.sections=Array.from({length:n},(_,i)=>{const y=tip*i/(n-1),j=Math.max(0,old.findIndex(s=>s.y_m>=y)-1),a=old[j],b=old[Math.min(j+1,old.length-1)],t=(y-a.y_m)/(b.y_m-a.y_m||1);return Object.fromEntries(sectionKeys.map(k=>[k,k==='y_m'?y:a[k]+t*(b[k]-a[k]) ]));});renderEditor();
   };
   $('saveWing').onclick=()=>saveDraft(false);$('copyWing').onclick=()=>saveDraft(true);
+  $('sweepDraft').onclick=()=>{try{readDraft();sweepFromWing(structuredClone(draft));}catch(e){notify(e.message);}};
 }
 function modeChanged(update){
   const custom=$('studyMode').value==='custom';$('customEditor').classList.toggle('hidden',!custom);$('sweepEditor').classList.toggle('hidden',custom);if(update)preview();
 }
 function installShapeUI(){
-  $('sweepEditor').innerHTML=`<div id="migrationNotice" class="note hidden"></div><div id="geometryFields" class="hidden"></div><p class="help">Search every admissible combination of chord lengths at equally spaced root-to-tip nodes. The reference grid span and motion stay fixed. Trailing zeros shorten the active wing. Min/max endpoints are included.</p><div class="fields"><label>Reference total span (m)<input id="shapeSpan" type="number" step="any"></label><label>Number of chord nodes<input id="shapeNodes" type="number" min="2" max="64" step="1"><button type="button" class="btn" id="applyShapeNodes" style="margin-top:8px">Apply node count</button></label><label>Fixed leading-edge sweep (°)<input id="shapeSweep" type="number" step="any" value="0"></label><label>Fixed wing incidence (°)<input id="shapePitch" type="number" step="any" value="0"></label></div><label style="margin:16px 0"><input type="checkbox" id="decreasingChords"> Require non-increasing chords from root to tip</label><p class="help">When checked, every next chord must be shorter or equal. Equal chords allow rectangular regions. Rejected branches are pruned before building cases.</p><div style="overflow:auto"><table><thead><tr><th>Chord node</th><th>Span fraction</th><th>Minimum (m)</th><th>Maximum (m)</th><th>Linspace samples</th></tr></thead><tbody id="shapeRanges"></tbody></table></div><p class="help">Zero omits a section: all chords after it must also be zero. The wing ends at the last positive section; at least two positive sections are required. One sample holds a chord fixed: use equal min/max. Use coarse grids to find promising regions, then narrow ranges and refine. There is no automatic claim of a continuous optimum.</p>`;
+  $('sweepEditor').innerHTML=`<div id="migrationNotice" class="note hidden"></div><div id="geometryFields" class="hidden"></div><div id="sweepBaselineInfo" class="note hidden"></div><button type="button" class="btn hidden" id="clearSweepBaseline">Use regular grid instead</button><p class="help">Search every admissible combination of chord lengths at root-to-tip nodes. Regular grids use equally spaced nodes; a custom baseline keeps its own section positions and angles. Motion stays fixed. Trailing zeros shorten the active wing. Min/max endpoints are included.</p><div class="fields"><label>Reference total span (m)<input id="shapeSpan" type="number" step="any"></label><label>Number of chord nodes<input id="shapeNodes" type="number" min="2" max="64" step="1"><button type="button" class="btn" id="applyShapeNodes" style="margin-top:8px">Apply node count</button></label><label>Fixed leading-edge sweep (°)<input id="shapeSweep" type="number" step="any" value="0"></label><label>Fixed wing incidence (°)<input id="shapePitch" type="number" step="any" value="0"></label></div><label style="margin:16px 0"><input type="checkbox" id="decreasingChords"> Require non-increasing chords from root to tip</label><p class="help">When checked, every next chord must be shorter or equal. Equal chords allow rectangular regions. Rejected branches are pruned before building cases.</p><div style="overflow:auto"><table><thead><tr><th>Chord node</th><th>Span fraction</th><th>Minimum (m)</th><th>Maximum (m)</th><th>Linspace samples</th></tr></thead><tbody id="shapeRanges"></tbody></table></div><p class="help">Zero omits a section: all chords after it must also be zero. The wing ends at the last positive section; at least two positive sections are required. One sample holds a chord fixed: use equal min/max. Use coarse grids to find promising regions, then narrow ranges and refine. There is no automatic claim of a continuous optimum.</p>`;
   $('previewDetails').insertAdjacentHTML('afterend','<p class="note" id="runtimeEstimate">Runtime ETA calibrates from local cases.</p>');
+  $('clearSweepBaseline').onclick=()=>{const s=readShape();fillShape({...s,baseline:null});preview();};
   $('applyShapeNodes').onclick=()=>{const n=Number($('shapeNodes').value);if(!Number.isInteger(n)||n<2||n>64){notify('Use 2–64 chord nodes.');return;}const old=readShape().ranges;renderShapeRanges(Array.from({length:n},(_,i)=>old[i]||{min_m:.06,max_m:.14,count:3}));preview();};
 }
 function renderShapeRanges(ranges){
-  $('shapeRanges').innerHTML=ranges.map((r,i)=>`<tr><td><strong>${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</strong></td><td>${(i/(ranges.length-1)).toFixed(3)}</td>${['min_m','max_m','count'].map(k=>`<td><input type="number" step="${k==='count'?'1':'any'}" data-shape-row="${i}" data-shape-key="${k}" value="${esc(r[k])}" style="min-width:85px"></td>`).join('')}</tr>`).join('');
+  $('shapeRanges').innerHTML=ranges.map((r,i)=>`<tr><td><strong>${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</strong></td><td>${(sweepBaseline?sweepBaseline.sections[i].y_m/sweepBaseline.sections.at(-1).y_m:i/(ranges.length-1)).toFixed(3)}</td>${['min_m','max_m','count'].map(k=>`<td><input type="number" step="${k==='count'?'1':'any'}" data-shape-row="${i}" data-shape-key="${k}" value="${esc(r[k])}" style="min-width:85px"></td>`).join('')}</tr>`).join('');
 }
-function fillShape(raw){const s={...defaults.shape_sweep,...raw};$('shapeSpan').value=s.span_m;$('shapeNodes').value=s.chord_count;$('shapeSweep').value=s.sweep_deg||0;$('shapePitch').value=s.incidence_deg||0;$('decreasingChords').checked=!!s.decreasing;renderShapeRanges(s.ranges);}
-function readShape(){const ranges=[];document.querySelectorAll('[data-shape-row]').forEach(e=>{const i=Number(e.dataset.shapeRow);ranges[i]??={};ranges[i][e.dataset.shapeKey]=Number(e.value);});return {span_m:Number($('shapeSpan').value),chord_count:Number($('shapeNodes').value),decreasing:$('decreasingChords').checked,sweep_deg:Number($('shapeSweep').value),incidence_deg:Number($('shapePitch').value),ranges};}
+function fillShape(raw){
+  const s={...defaults.shape_sweep,...raw};sweepBaseline=s.baseline?structuredClone(s.baseline):null;
+  $('shapeSpan').value=s.span_m;$('shapeNodes').value=s.chord_count;
+  $('shapeSweep').value=s.sweep_deg||0;$('shapePitch').value=s.incidence_deg||0;
+  $('decreasingChords').checked=!!s.decreasing;
+  for(const id of ['shapeSpan','shapeNodes','applyShapeNodes','shapeSweep','shapePitch'])$(id).disabled=!!sweepBaseline;
+  for(const id of ['shapeSweep','shapePitch'])$(id).closest('label').classList.toggle('hidden',!!sweepBaseline);
+  $('sweepBaselineInfo').classList.toggle('hidden',!sweepBaseline);$('clearSweepBaseline').classList.toggle('hidden',!sweepBaseline);
+  $('sweepBaselineInfo').innerHTML=sweepBaseline?`<strong>Sweep around ${esc(sweepBaseline.name)}</strong><p>Section positions, leading-edge offsets, pitch and roll stay fixed. Only chord widths vary. Start with the exact wing below, then edit min/max and sample counts.</p><details><summary>Fixed section geometry</summary><table><thead><tr><th>Node</th><th>Position m</th><th>Aft offset m</th><th>Pitch °</th><th>Roll °</th></tr></thead><tbody>${sweepBaseline.sections.map((s,i)=>`<tr><td>${i+1}</td>${['y_m','x_m','pitch_deg','roll_deg'].map(k=>`<td>${esc(s[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`:'';
+  renderShapeRanges(s.ranges);
+}
+function readShape(){
+  const ranges=[];document.querySelectorAll('[data-shape-row]').forEach(e=>{const i=Number(e.dataset.shapeRow);ranges[i]??={};ranges[i][e.dataset.shapeKey]=Number(e.value);});
+  return {span_m:sweepBaseline?2*sweepBaseline.sections.at(-1).y_m+Number($('gap_m').value):Number($('shapeSpan').value),chord_count:Number($('shapeNodes').value),decreasing:$('decreasingChords').checked,sweep_deg:Number($('shapeSweep').value),incidence_deg:Number($('shapePitch').value),ranges,baseline:sweepBaseline?structuredClone(sweepBaseline):null};
+}
 let heatAxisKey='';
 function resultGeometryKeys(){const study=chosenStudy(),nodes=[...new Set((study?.rows||[]).flatMap(r=>Object.keys(r).filter(k=>/^chord_\d+_m$/.test(k))))].sort((a,b)=>Number(a.split('_')[1])-Number(b.split('_')[1]));if(nodes.length)return nodes;if(study?.config.mode==='shape_sweep')return Array.from({length:study.config.shape_sweep.chord_count},(_,i)=>`chord_${i+1}_m`);return geometryKeys;}
 function updateHeatAxes(){const keys=resultGeometryKeys(),key=keys.join(',');if(key===heatAxisKey)return;heatAxisKey=key;$('axisChoices').innerHTML=keys.map((k,i)=>`<label class="axis-choice"><input type="checkbox" data-axis="${k}" ${i<2?'checked':''}>${esc(fields[k]?.[0]||k)}</label>`).join('');document.querySelectorAll('[data-axis]').forEach(box=>box.onchange=()=>{if(checkedAxes().length>3){box.checked=false;notify('Choose up to three axes.');return;}clearDesign();updateHeatFilters();});clearDesign();}
@@ -556,8 +588,9 @@ function renderEditor(){
   renderQueue();drawDraft();
 }
 function renderQueue(){
-  $('designQueue').innerHTML=customDesigns.length?customDesigns.map((d,i)=>`<div class="split" style="padding:10px 0;border-bottom:1px solid #dce5e9"><span><strong>${esc(d.name)}</strong> · ${d.sections.length} sections</span><div class="actions"><button class="btn" data-edit-wing="${i}">Edit</button><button class="btn danger" data-remove-wing="${i}">Remove</button></div></div>`).join(''):'<p class="caption">No wings added yet.</p>';
+  $('designQueue').innerHTML=customDesigns.length?customDesigns.map((d,i)=>`<div class="split" style="padding:10px 0;border-bottom:1px solid #dce5e9"><span><strong>${esc(d.name)}</strong> · ${d.sections.length} sections</span><div class="actions"><button class="btn" data-edit-wing="${i}">Edit</button><button type="button" class="btn" data-sweep-wing="${i}">Use for geometry sweep</button><button class="btn danger" data-remove-wing="${i}">Remove</button></div></div>`).join(''):'<p class="caption">No wings added yet.</p>';
   document.querySelectorAll('[data-edit-wing]').forEach(b=>b.onclick=()=>{editingDesign=Number(b.dataset.editWing);draft=structuredClone(customDesigns[editingDesign]);renderEditor();});
+  document.querySelectorAll('[data-sweep-wing]').forEach(b=>b.onclick=()=>sweepFromWing(structuredClone(customDesigns[Number(b.dataset.sweepWing)])));
   document.querySelectorAll('[data-remove-wing]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.removeWing);customDesigns.splice(i,1);if(editingDesign===i)editingDesign=-1;else if(editingDesign>i)editingDesign--;renderEditor();preview();});
 }
 async function saveDraft(copy){

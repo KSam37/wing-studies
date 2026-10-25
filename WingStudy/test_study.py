@@ -130,6 +130,44 @@ class StudyChecks(unittest.TestCase):
         movement=solver.unsteady_problem.movement.airplane_movements[0].wing_movements[0]
         self.assertTrue(callable(movement.spacingAnglesSecondDerivative_Gs_to_Wn_ixyz[0]))
 
+    def test_custom_wing_sweep_preserves_geometry_and_cache_identity(self):
+        import catalog
+        wing={'name':'Uneven gull','sections':[
+            {'y_m':0.,'x_m':0.,'chord_m':.16,'pitch_deg':4.,'roll_deg':12.},
+            {'y_m':.08,'x_m':.015,'chord_m':.12,'pitch_deg':2.,'roll_deg':-8.},
+            {'y_m':.3,'x_m':.07,'chord_m':.07,'pitch_deg':-1.,'roll_deg':0.}]}
+        c=copy.deepcopy(model.DEFAULT);c.update(mode='custom',designs=[wing])
+        original=model.plan(c);original_wing=copy.deepcopy(wing)
+        c['mode']='shape_sweep'
+        c['shape_sweep'].update(chord_count=3,baseline=wing,span_m=.64,
+            ranges=[{'min_m':s['chord_m'],'max_m':s['chord_m'],'count':1} for s in wing['sections']])
+        baseline=model.plan(c)
+        self.assertEqual(baseline['case_count'],1)
+        self.assertEqual(baseline['cases'][0]['sections'],original['cases'][0]['sections'])
+        self.assertEqual(catalog.signature(model,baseline['cases'][0],baseline['settings']),
+                         catalog.signature(model,original['cases'][0],original['settings']))
+        c['shape_sweep']['ranges'][1]={'min_m':.10,'max_m':.14,'count':3}
+        swept=model.plan(c);self.assertEqual(swept['case_count'],3)
+        for case in swept['cases']:
+            for i,section in enumerate(case['sections']):
+                for key in ('y_m','x_m','pitch_deg','roll_deg'):
+                    self.assertEqual(section[key],wing['sections'][i][key])
+        self.assertEqual(wing,original_wing)
+        c['shape_sweep']['baseline']['sections']=wing['sections'][:-1]
+        with self.assertRaisesRegex(ValueError,'one section'):
+            model.plan(c)
+
+    def test_custom_sweep_zero_suffix_keeps_original_station_positions(self):
+        c=copy.deepcopy(model.DEFAULT)
+        c['shape_sweep'].update(chord_count=3,decreasing=True,baseline={'name':'Shortenable','sections':[
+            {'y_m':0,'chord_m':.2},{'y_m':.1,'chord_m':.1},{'y_m':.4,'chord_m':.05}]},
+            ranges=[{'min_m':.2,'max_m':.2,'count':1},{'min_m':.1,'max_m':.1,'count':1},
+                    {'min_m':0,'max_m':.05,'count':2}])
+        p=model.plan(c);self.assertEqual(p['case_count'],2)
+        short=next(r for r in p['cases'] if r['chord_3_m']==0)
+        self.assertEqual([s['y_m'] for s in short['sections']],[0.,.1])
+        self.assertAlmostEqual(short['single_wing_span_m'],.1)
+
     def test_chord_node_cartesian_grid_and_pruned_taper(self):
         c=copy.deepcopy(model.DEFAULT);c['shape_sweep']['decreasing']=False
         p=model.plan(c);self.assertEqual(p['case_count'],81)
