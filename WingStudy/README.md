@@ -92,6 +92,10 @@ In **Master runs**, select studies (Ctrl-click for several), global case numbers
 
 The exporter writes worksheet elements in the order required by Excel, placing filters, merges, validation and hyperlinks before page settings. This prevents Excel from discarding the two worksheet parts on open. Original study records are unchanged. Compact release identity files in `outputs/provenance` replace the need to keep obsolete application ZIPs for historical reuse verification.
 
+## Reuse a saved wing design
+
+Choose **Copy wing to design** beside any wing in study results or Master runs. You can also switch to **Build individual custom wings** and expand **Copy a wing from a previous study**. The selected neutral wing geometry is added to the current study and opened for editing, including its spanwise positions, chord widths, sweep offsets, pitch and roll. Existing queued wings and current motion/water/solver settings are kept. Original runs and their results are unchanged. Edit the copied wing and choose **Update wing in study**, or use **Add as a copy** to build several variations. Run the study when ready; the existing catalog reuse check still avoids solving identical geometry under identical conditions.
+
 ## Optional native aeroelasticity (v3.3)
 
 Section 3 includes **Include native Ptera aeroelasticity**, off by default. It uses only stock Ptera `Wing(explode_into_strips=True)`, `AeroelasticWingCrossSectionMovement`, `AeroelasticWingMovement`, `AeroelasticAirplaneMovement`, `AeroelasticMovement`, `AeroelasticUnsteadyProblem`, and its aeroelastic ring-VLM solver. One isolated wing is simulated. No native source files or structural equations are changed. Each span strip receives exactly the same `spring_constant_rad`; this is local twist about each strip's leading edge, not a flexible spanwise spar or a deformable membrane. The default geometry preview and cutting SVGs show the neutral shape; the solved animation shows native deformation.

@@ -243,7 +243,7 @@ $('configFile').onchange=async e=>{
 function chosenStudy(){return studyData.find(s=>s.id===currentStudy);}
 function refs(){return [...selected.values()].map(r=>({study:r._study,id:r.id}));}
 let rendering=false;
-async function refresh(){if(rendering)return;rendering=true;try{studyData=await api('studies');if(!currentStudy&&studyData.length)currentStudy=studyData[0].id;$('studySelect').innerHTML='<option value="all">All studies · ranking only</option>'+studyData.map(s=>`<option value="${s.id}">${esc(s.name)} · ${esc(s.created.slice(0,16).replace('T',' '))}</option>`).join('');$('studySelect').value=currentStudy||'all';renderResults();}catch(e){notify(e.message);}finally{rendering=false;}}
+async function refresh(){if(rendering)return;rendering=true;try{studyData=await api('studies');if(!currentStudy&&studyData.length)currentStudy=studyData[0].id;$('studySelect').innerHTML='<option value="all">All studies · ranking only</option>'+studyData.map(s=>`<option value="${s.id}">${esc(s.name)} · ${esc(s.created.slice(0,16).replace('T',' '))}</option>`).join('');$('studySelect').value=currentStudy||'all';savedWingOptions();renderResults();}catch(e){notify(e.message);}finally{rendering=false;}}
 function activeRows(){let set=currentStudy==='all'?studyData:studyData.filter(s=>s.id===currentStudy);return set.flatMap(s=>s.rows.map(r=>({...r,_study:s.id,_studyName:s.name})));}
 const shapeObjective='single_wing_thrust_roll_ratio_1pm';
 function shapeEligible(r){return r.status==='ok'&&r.shape_ratio_valid&&Number.isFinite(r[shapeObjective]);}
@@ -264,8 +264,9 @@ function renderResults(){
  let rows=activeRows(),metric=$('rankMetric').value;if($('repeatOnly').checked)rows=rows.filter(r=>r.cycle_repeatable||r.status==='failed');
  rows.sort((a,b)=>Number(shapeEligible(b))-Number(shapeEligible(a))||(metric==='cycle_error_pct'?(a[metric]??Infinity)-(b[metric]??Infinity):(b[metric]??-Infinity)-(a[metric]??-Infinity)));
  $('noResults').classList.toggle('hidden',rows.length>0);
- $('ranking').innerHTML=rows.map((r,i)=>{const key=r._study+'/'+r.id,base='/files/'+key+'/',valid=shapeEligible(r),fmt=v=>Number.isFinite(v)?v.toPrecision(5):'—';return `<article class="wing-rank" data-ranked-case="${esc(r.id)}"><div class="wing-rank-number">${valid?i+1:'—'}</div>${rankWingPreview(r)}<div><div class="split"><strong>${r.global_case_no?'Case #'+r.global_case_no+' · ':''}${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="wing-rank-score">${fmt(r[shapeObjective])}<small style="font-size:10px"> 1/m</small></span></div><div class="wing-rank-values"><span>Single-wing thrust <strong>${fmt(r.single_wing_mean_thrust_N)} N</strong></span><span>${r.simulation_mode==='isolated_single_wing_v1'?`Est. pair thrust <strong>${fmt(r.estimated_two_wing_mean_thrust_N)} N</strong></span><span>`:''}Peak |roll| <strong>${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m</strong></span><span>${r.status==='failed'?'Failed':valid?(r.cycle_repeatable?'Repeatable':'Unsettled'):'Rerun / invalid ratio'}</span></div><div class="help">${esc(r._studyName)} · ${r.simulation_mode==='isolated_single_wing_v1'?'Isolated single wing':'Legacy paired-wing run — native roll cancels; rerun'} · wing span ${Number((r.single_wing_span_m??(r.span_m-(studyData.find(s=>s.id===r._study)?.config.settings.gap_m??.04))/2).toPrecision(5))} m · chords ${esc((r.requested_sections||r.sections)?(r.requested_sections||r.sections).map(s=>Number(s.chord_m.toPrecision(4))).join(' / '):'legacy geometry')} m</div>${caseFailure(r)}<div class="wing-rank-links"><label style="display:inline"><input aria-label="Compare ${r.id}" data-ref="${key}" type="checkbox" ${selected.has(key)?'checked':''} ${r.status==='ok'?'':'disabled'}> Compare</label> · ${r.status==='ok'?`<a href="${base}water_wing_forces.png" target="_blank">Forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · `:''}${profileLinks(r,base)}<a href="/api/case/${key}" target="_blank">Full values</a></div></div></article>`;}).join('');
+ $('ranking').innerHTML=rows.map((r,i)=>{const key=r._study+'/'+r.id,base='/files/'+key+'/',valid=shapeEligible(r),fmt=v=>Number.isFinite(v)?v.toPrecision(5):'—';return `<article class="wing-rank" data-ranked-case="${esc(r.id)}"><div class="wing-rank-number">${valid?i+1:'—'}</div>${rankWingPreview(r)}<div><div class="split"><strong>${r.global_case_no?'Case #'+r.global_case_no+' · ':''}${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="wing-rank-score">${fmt(r[shapeObjective])}<small style="font-size:10px"> 1/m</small></span></div><div class="wing-rank-values"><span>Single-wing thrust <strong>${fmt(r.single_wing_mean_thrust_N)} N</strong></span><span>${r.simulation_mode==='isolated_single_wing_v1'?`Est. pair thrust <strong>${fmt(r.estimated_two_wing_mean_thrust_N)} N</strong></span><span>`:''}Peak |roll| <strong>${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m</strong></span><span>${r.status==='failed'?'Failed':valid?(r.cycle_repeatable?'Repeatable':'Unsettled'):'Rerun / invalid ratio'}</span></div><div class="help">${esc(r._studyName)} · ${r.simulation_mode==='isolated_single_wing_v1'?'Isolated single wing':'Legacy paired-wing run — native roll cancels; rerun'} · wing span ${Number((r.single_wing_span_m??(r.span_m-(studyData.find(s=>s.id===r._study)?.config.settings.gap_m??.04))/2).toPrecision(5))} m · chords ${esc((r.requested_sections||r.sections)?(r.requested_sections||r.sections).map(s=>Number(s.chord_m.toPrecision(4))).join(' / '):'legacy geometry')} m</div>${caseFailure(r)}<div class="wing-rank-links"><label style="display:inline"><input aria-label="Compare ${r.id}" data-ref="${key}" type="checkbox" ${selected.has(key)?'checked':''} ${r.status==='ok'?'':'disabled'}> Compare</label> · ${r.status==='ok'?`<a href="${base}water_wing_forces.png" target="_blank">Forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · `:''}${profileLinks(r,base)}<a href="/api/case/${key}" target="_blank">Full values</a> · <button type="button" class="btn" data-copy-saved="${esc(key)}">Copy wing to design</button></div></div></article>`;}).join('');
  $('saveRanking').disabled=!study||study.status.state==='running';
+ document.querySelectorAll('[data-copy-saved]').forEach(b=>b.onclick=()=>{const r=rows.find(r=>r._study+'/'+r.id===b.dataset.copySaved);if(r)copySavedWing(r);});
  document.querySelectorAll('[data-ref]').forEach(box=>box.onchange=()=>{const key=box.dataset.ref,r=rows.find(r=>r._study+'/'+r.id===key);if(box.checked){if(selected.size>=4){box.checked=false;notify('Choose up to four cases.');return;}selected.set(key,r);}else selected.delete(key);drawOverlay();});
  $('topSummary').innerHTML='<p class="caption">Highest single-wing mean thrust / peak absolute hinge roll moment first. Each preview shows the neutral top-view shape; sizes are normalized for comparison.</p>';
  if(study?.rows.some(shapeEligible))$('studyLinks').insertAdjacentHTML('beforeend',`<a class="btn" href="/files/${study.id}/comparisons/top_performers.csv" download>Top shapes CSV</a>`+(study.status.state.startsWith('complete')?`<a class="btn" href="/files/${study.id}/comparisons/shape_comparison.png" target="_blank">Shape comparison PNG</a><a class="btn" href="/files/${study.id}/comparisons/shape_comparison.csv" download>Comparison CSV</a>`:''));
@@ -452,6 +453,38 @@ function defaultWing(){return {name:'Gull wing',sections:[
   {y_m:0,x_m:0,chord_m:.15,pitch_deg:5,roll_deg:20},
   {y_m:.15,x_m:.02,chord_m:.13,pitch_deg:3,roll_deg:-15},
   {y_m:.3,x_m:.05,chord_m:.07,pitch_deg:0,roll_deg:0}]};}
+function savedWingDesign(row){
+  // Copy neutral input sections, never solved deformation or projected outlines.
+  const raw=row.sections||row.geometry?.stations;
+  if(!Array.isArray(raw)||raw.length<2)throw Error('This saved case has no usable section geometry.');
+  const sections=raw.map(s=>({y_m:s.y_m,x_m:s.x_m,chord_m:s.chord_m,
+    pitch_deg:s.pitch_deg??row.incidence_deg??0,roll_deg:s.roll_deg??0}));
+  if(sections.some(s=>Object.values(s).some(v=>!Number.isFinite(v))))throw Error('The saved wing geometry is incomplete.');
+  return {name:`${row.design_name||row.id||'Wing'} copy`.slice(0,80),sections};
+}
+function copySavedWing(row){
+  try{
+    const design=savedWingDesign(row);
+    customDesigns.push(design);editingDesign=customDesigns.length-1;
+    draft=structuredClone(design);$('studyMode').value='custom';
+    renderEditor();modeChanged(false);tab('setup');preview();
+    $('customEditor').scrollIntoView({behavior:'smooth',block:'start'});
+    notify('Wing copied into this study. Edit it or add copies for variations. Current motion, water and solver settings are kept.');
+  }catch(e){notify(e.message);}
+}
+function savedWingOptions(){
+  const studies=$('savedWingStudy'),cases=$('savedWingCase');if(!studies)return;
+  const previous=studies.value;
+  studies.innerHTML=studyData.filter(s=>s.rows.length).map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${esc(s.id.slice(0,15))}</option>`).join('');
+  if([...studies.options].some(o=>o.value===previous))studies.value=previous;
+  savedWingCases();
+}
+function savedWingCases(){
+  const picker=$('savedWingCase'),previous=picker.value,study=studyData.find(s=>s.id===$('savedWingStudy').value);
+  picker.innerHTML=(study?.rows||[]).map(r=>`<option value="${esc(r.id)}">${r.global_case_no?'#'+r.global_case_no+' · ':''}${esc(r.design_name||r.id)} · ${esc(r.id)}</option>`).join('');
+  if([...picker.options].some(o=>o.value===previous))picker.value=previous;
+  $('copySavedWing').disabled=!study?.rows.length;
+}
 function installCustomUI(){
   const fieldsHost=$('geometryFields'), card=fieldsHost.parentElement;
   const divider=card.querySelector('hr');
@@ -460,6 +493,7 @@ function installCustomUI(){
   card.appendChild(sweep);
   divider.insertAdjacentHTML('beforebegin',`<label style="margin-top:15px">Design mode<select id="studyMode"><option value="shape_sweep">Search chord-length combinations</option><option value="custom">Build individual custom wings</option></select></label>`);
   card.insertAdjacentHTML('beforeend',`<div id="customEditor" class="hidden">
+    <details style="margin:14px 0"><summary>Copy a wing from a previous study</summary><div class="fields" style="margin-top:12px"><label>Previous study<select id="savedWingStudy"></select></label><label>Saved wing<select id="savedWingCase"></select></label></div><button type="button" class="btn" id="copySavedWing" style="margin-top:10px" disabled>Copy wing into study</button><p class="help">Copies the neutral geometry into the list below. Your current motion, water and solver settings are kept. The original wing and its results stay saved.</p></details>
     <div class="split"><h3>Design one half-wing</h3><button class="btn" id="newWing">New wing</button></div>
     <p class="help">Sections run from root to tip. Edit widths and angles below, or drag the numbered chord endpoints in the editor. One wing is simulated; left/right cutting templates are exported.</p>
     <div class="fields" style="margin-top:12px"><label>Wing name<input id="wingName" maxlength="80"></label><label>Number of chord sections<input id="sectionCount" type="number" min="2" step="1"><button class="btn" id="applySections" style="margin-top:7px">Apply section count</button></label></div>
@@ -476,6 +510,8 @@ function installCustomUI(){
   </div>`);
   const style=document.createElement('style');style.textContent='#sectionTable input{padding:7px 4px;min-width:54px}#sectionTable th,#sectionTable td{padding:7px 4px}#sectionTable td:first-child{font-weight:600}';document.head.appendChild(style);
   $('studyMode').onchange=()=>modeChanged(true);
+  $('savedWingStudy').onchange=savedWingCases;
+  $('copySavedWing').onclick=()=>{const s=studyData.find(s=>s.id===$('savedWingStudy').value),r=s?.rows.find(r=>r.id===$('savedWingCase').value);if(r)copySavedWing(r);};
   $('newWing').onclick=()=>{editingDesign=-1;draft=defaultWing();draft.name='Wing '+(customDesigns.length+1);renderEditor();};
   $('wingName').oninput=e=>draft.name=e.target.value;
   $('applySections').onclick=()=>{
