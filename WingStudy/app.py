@@ -62,6 +62,23 @@ def studies():
     return result
 
 
+def sweep_studies():
+    """Small study index: avoid probing thousands of individual result files."""
+    result=[]
+    if not model.OUTPUTS.exists():return result
+    for p in sorted(model.OUTPUTS.iterdir(),reverse=True):
+        try:
+            manifest=model.read_json(p/'manifest.json');status=model.read_json(p/'status.json')
+            if status.get('state')=='running' and not pid_alive(manifest.get('worker_pid')):
+                status={**status,'state':'interrupted','message':'Worker stopped; completed results retained.'}
+            result.append({'id':p.name,'name':manifest['name'],'created':manifest['created'],
+                'config':manifest['config'],'status':status,'case_count':manifest['case_count'],
+                'rigid':not manifest['settings'].get('aeroelastic_enabled',False),
+                'isolated':manifest['settings'].get('simulation_mode')==model.SIMULATION_MODE})
+        except (OSError,ValueError,KeyError):continue
+    return result
+
+
 def pid_alive(pid):
     if not pid:
         return False
@@ -157,17 +174,22 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         try:
             if path in ("/", "/index.html"):
-                return self.send((model.HERE/"ui.html").read_bytes(), kind="text/html; charset=utf-8")
+                return self.send((model.HERE/"workflow.html").read_bytes(), kind="text/html; charset=utf-8")
             if path == "/catalog-ui.js":
                 return self.send((model.HERE/"catalog-ui.js").read_bytes(),kind="application/javascript; charset=utf-8")
             if path == "/ui.js":
                 return self.send((model.HERE/"ui.js").read_bytes(), kind="application/javascript; charset=utf-8")
+            if path == "/workflow.js":
+                return self.send((model.HERE/"workflow.js").read_bytes(), kind="application/javascript; charset=utf-8")
             if path == "/api/defaults":
-                return self.send({"config":model.DEFAULT, "fields":model.FIELDS, "families":model.FAMILIES,
+                import torque_study
+                return self.send({"config":torque_study.default_config(model), "fields":model.FIELDS, "families":model.FAMILIES,
                                   "geometry_keys":model.GEOMETRY_KEYS,
                                   "output_root":str(model.OUTPUTS), "model_note":model.MODEL_NOTE})
             if path == "/api/studies":
                 return self.send(studies())
+            if path == "/api/sweep-studies":
+                return self.send(sweep_studies())
             if path == "/api/catalog":
                 return self.send(catalog.listing(model))
             if path == "/master_runs.xlsx":
@@ -204,6 +226,11 @@ class Handler(BaseHTTPRequestHandler):
                 spec=model.plan(data)
                 spec.update(catalog.preview(model,spec))
                 return self.send(spec)
+            if path == "/api/torque-results":
+                import torque_study
+                limit=model.number(data.get('maximum_root_moment_nm'),'Maximum root moment',1e-12)
+                return self.send(torque_study.results(model,study_path(data['study']),limit,
+                    repeat_only=True,export=bool(data.get('export',False))))
             if path == "/api/smooth-wing":
                 import wing_curves
                 config={**data['config'],"mode":"custom","designs":[data['design']]}
@@ -235,7 +262,11 @@ class Handler(BaseHTTPRequestHandler):
                 if ACTIVE != data["id"] or PROCESS is None or PROCESS.poll() is not None:
                     raise ValueError("This session has no active worker for that study.")
                 with LOCK:
-                    PROCESS.terminate(); PROCESS.wait(timeout=15)
+                    if os.name=='nt':
+                        subprocess.run(['taskkill','/PID',str(PROCESS.pid),'/T','/F'],check=True,
+                            capture_output=True,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+                    else:PROCESS.terminate()
+                    PROCESS.wait(timeout=15)
                     status = model.read_json(directory/"status.json")
                     status.update(state="cancelled", message="Stopped by user; completed cases retained.")
                     model.write_json(directory/"status.json", status)

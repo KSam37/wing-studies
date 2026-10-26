@@ -300,6 +300,7 @@ def shape_grid(raw,settings,budget):
         if len(base["requested_sections"])!=n:
             raise ValueError("The sweep baseline must have one section for every chord range.")
         baseline={"name":base["design_name"],"sections":base["requested_sections"]}
+        if base.get("outline_function"):baseline["outline_function"]=base["outline_function"]
         span=2*baseline["sections"][-1]["y_m"]+settings["gap_m"]
     decreasing=raw.get("decreasing",False)
     if not isinstance(decreasing,bool):raise ValueError("Decreasing chord selection must be true/false.")
@@ -346,6 +347,9 @@ def shape_combinations(grid):
 def plan(config):
     if not isinstance(config, dict):
         raise ValueError("Study settings must be an object.")
+    if config.get("workflow")=="root_torque":
+        import torque_study
+        config=torque_study.prepare(sys.modules[__name__],config)
     name = str(config.get("name", "")).strip()
     if not name or len(name) > 80:
         raise ValueError("Give the study a name of 1–80 characters.")
@@ -460,7 +464,10 @@ def plan(config):
                 sections=[{**s,"chord_m":chord} for s,chord in zip(shape_spec["baseline"]["sections"],chords)]
             if (min_chord is not None and min(v for v in chords if v>0)<min_chord or max_chord is not None and max(chords)>max_chord):
                 skipped+=1;continue
-            case=custom_case({"name":f"Shape {len(cases)+1:04d}","sections":sections},settings)
+            design={"name":f"Shape {len(cases)+1:04d}","sections":sections}
+            if shape_spec["baseline"] and shape_spec["baseline"].get("outline_function"):
+                design["outline_function"]=shape_spec["baseline"]["outline_function"]
+            case=custom_case(design,settings)
             case.update(id=f"case_{len(cases)+1:04d}",search_mode="shape_sweep",chord_count=len(chords),reference_grid_span_m=shape_spec["span_m"])
             case.update({f"chord_{i+1}_m":v for i,v in enumerate(chords)})
             cases.append(case)
@@ -500,7 +507,7 @@ def plan(config):
                  tail_pitch_deg=settings["tail"].get("pitch_deg",0.))
         c.update(waveform_signature=waveform_signature(waveform),waveform=waveform)
     return {"name": name, "settings": settings, "cases": cases, "skipped": skipped,
-            "objective":OBJECTIVE,"shape_grid":{k:v for k,v in shape_spec.items() if k not in ("levels","suffix")} if shape_spec else None,
+            "objective":"single_wing_mean_thrust_N" if config.get("workflow")=="root_torque" else OBJECTIVE,"shape_grid":{k:v for k,v in shape_spec.items() if k not in ("levels","suffix")} if shape_spec else None,
             "motion_preview":motion_preview(waveform,settings["frequency_hz"],settings["amplitude_deg"]),
             "tail":tail_preview,
             "case_count": len(cases), "duplicate_geometry_count":duplicate_count, "panels_per_case": n_panels, "max_steps": max_steps,
@@ -1221,6 +1228,11 @@ def write_summary(study, rows):
     write_json(study/"results.json", rows)
     manifest=read_json(study/"manifest.json") if (study/"manifest.json").exists() else {}
     ranked = sorted((r for r in rows if shape_eligible(r)),key=lambda r:r[OBJECTIVE],reverse=True)[:10]
+    if manifest.get("config",{}).get("workflow")=="root_torque":
+        import torque_study
+        limit=manifest["config"]["optimization"]["max_root_moment_nm"]
+        report=torque_study.rank(rows,limit)
+        ranked=[{k:v for k,v in r.items() if k in keys} for r in report['rows'] if r['thrust_rank'] is not None][:10]
     dest = study/"comparisons"; dest.mkdir(exist_ok=True)
     with (dest/"top_performers.csv").open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["shape_rank", *keys])
@@ -1238,6 +1250,7 @@ def worker(study):
     study = Path(study)
     manifest = read_json(study/"manifest.json")
     rows = []
+    catalog_metric="single_wing_mean_thrust_N" if manifest.get("config",{}).get("workflow")=="root_torque" else catalog.OBJECTIVE
     def state(**kw):
         write_json(study/"status.json", {"total": len(manifest["cases"]), "completed": len(rows), **kw})
     state(state="running", message="Preparing first case")
@@ -1265,13 +1278,16 @@ def worker(study):
         catalog.record(sys.modules[__name__],manifest,study.name,row)
         rows.append(row)
         write_summary(study, rows)
-        catalog.export(sys.modules[__name__],browser_url=manifest.get("browser_url","http://127.0.0.1:8765"),force=False)
+        catalog.export(sys.modules[__name__],metric=catalog_metric,browser_url=manifest.get("browser_url","http://127.0.0.1:8765"),force=False)
     failed = sum(r["status"] != "ok" for r in rows)
-    if any(shape_eligible(r,False) for r in rows):
+    if manifest.get("config",{}).get("workflow")=="root_torque":
+        import torque_study
+        torque_study.results(sys.modules[__name__],study,export=True)
+    elif any(shape_eligible(r,False) for r in rows):
         shape_comparison(study,export=True)
         shape_landscape(study,repeat_only=any(shape_eligible(r) for r in rows),export=True)
     state(state="complete" if not failed else "complete_with_errors", message=f"Finished; {failed} failed cases")
-    catalog.export(sys.modules[__name__],browser_url=manifest.get("browser_url","http://127.0.0.1:8765"))
+    catalog.export(sys.modules[__name__],metric=catalog_metric,browser_url=manifest.get("browser_url","http://127.0.0.1:8765"))
 
 
 METRIC_LABELS = {"mean_thrust_N": "Mean thrust (N)", "peak_thrust_N": "Peak forward thrust (N)",

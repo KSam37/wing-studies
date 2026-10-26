@@ -1,3 +1,21 @@
+# Current workflow: maximum thrust within a root-moment limit
+
+Enter an allowable **single-wing root moment**, sweep chord widths, and choose the largest settled mean thrust among rigid designs whose final-cycle **peak absolute root roll moment** is at or below the cap. Equality passes. Failed, unsettled, non-propulsive, legacy paired-wing and aeroelastic cases cannot win. If none passes, the app reports no feasible design. Thrust/moment ratio and gearbox torque are not the optimization objective.
+
+Editable new-study defaults: **0.625 N m peak per wing**, **0.12–0.20 m root chord**, **0.8 m reference total span**, **1 Hz**, and **−26° to +34°** (4° center, 30° half-stroke). The span includes the hinge gap; with the default 0.04 m gap, the isolated wing is 0.38 m from root to tip. A periodic cubic representation of the biased sinusoid uses stock Ptera's custom-motion callable, with phase selected to start at zero as native validation requires. The root cap is user-defined after their own drivetrain calculation. New runs always use rigid UVLM, one wing, no tail. Root moment is hydrodynamic moment; structural inertia and drivetrain loads are outside this screening criterion.
+
+The active interface is `workflow.html` / `workflow.js`: constraint → chord sweep → fixed motion → feasible thrust ranking. Water/numerical inputs are collapsed. **Refine this shape** creates fixed chord ranges at a saved design's stations; widen selected ranges to explore nearby designs. Saved runs, native plots/animations, SVG profiles and master catalog reuse remain. The older multi-tool interface is no longer loaded.
+
+The cap is stored outside physical solver settings, so changing it re-ranks data without invalidating cached simulations. The lightweight study list avoids per-case filesystem probes. Comparison exports are `thrust_under_root_limit.png` and `.csv`; CSV includes rejected cases/reasons, moment margins, geometry and driving conditions. `top_performers.csv` ranks eligible designs by thrust. No ratio landscape or 3D export is automatically produced for new root-limited studies. The master workbook remains a history of all parameter sets, not a claim that different motion conditions are comparable.
+
+Verification covers the constraint boundary, no-feasible behavior, ranking higher thrust instead of higher ratio, exclusions, cache identity when the cap changes, and native Ptera construction with the new motion defaults.
+
+Release verification: 73 Python tests and 56 JavaScript checks passed. The real GUI study `20261026-193410-195850_verification-root-torque-workflow` completed two rigid four-cycle cases at 1 Hz, −26°/+34°, 0.5 m/s, dt=0.02 s and a 4×2 mesh with prescribed two-cycle wake retention. Both cases passed repeatability, saved all seven case files and decoded all 400 animation frames; the shared history has 400 rows. Thrust/root-peak pairs were 0.562624 N / 0.319018 N m and 0.612700 N / 0.377518 N m. A 0.35 N m cap selects the first, 1 N m selects the second, and 0.1 N m yields no feasible winner. Re-planning with a changed cap reports both cases cached and zero new solves. The native physics fingerprint matches the preceding release. This is workflow/integration verification, not independent physical validation.
+
+## Historical capabilities and file formats
+
+The sections below describe retained historical code and data formats. They are not extra steps in the current workflow.
+
 # Master run catalog (v3.2.0)
 
 Double-click **Run Master Catalog.cmd**, or open **04 Master runs** to browse the compiled catalog, select a ranking metric and direction, find a permanent case number, inspect driving settings, and open the originating study or native output files. Default: single-wing mean thrust divided by peak absolute root roll moment. Historical simulation modes are explicitly separated in the browser.

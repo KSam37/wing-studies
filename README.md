@@ -1,15 +1,16 @@
 # Wing Studies
 
-Private Windows research app for Ptera-based wing geometry studies in water. Set up chord-based shape sweeps or custom single wings, compare thrust to root roll moment, inspect native time histories and animations, and browse a persistent master run catalog with filtered 3D comparisons.
+Private Windows app for rigid-wing geometry sweeps in water. Set a maximum single-wing root moment, sweep chord widths, and find the highest mean thrust among settled designs within the limit. The root limit is supplied by the user; no gearbox conversion or aeroelastic calculation is applied. Default motion: 1 Hz, −26° to +34°.
+
+Editable defaults: 0.625 N m peak root moment per wing, root chord 0.12–0.20 m, and 0.8 m reference total span (including the hinge gap).
 
 ## Daily use
 
 | Open this | For |
 | --- | --- |
 | **Run Wing Studies.cmd** | Create and run wing studies |
-| **Run Master Catalog.cmd** | Filter and compare every recorded wing |
+| **Run Master Catalog.cmd** | Open saved studies in the comparison view |
 | **Open Master Excel.cmd** | Open the two-sheet master workbook |
-| **Open Results.cmd** | Browse saved studies and outputs |
 | **Setup Windows.cmd** | First setup, or a dependency update |
 
 `outputs/studies` holds your runs; `outputs/master_runs.xlsx` is the generated workbook and `outputs/master_runs.sqlite3` is the durable catalog. Keep these together. `outputs/provenance` retains compact solver/dependency evidence for old runs, so obsolete application ZIPs can be removed without losing reuse checks. Verification reports and recovery backups live in `outputs/maintenance`; temporary authoring files live in `outputs/cache`. Superseded releases, the unused partial environment, and old ZIP build tools are recoverable in `outputs/archive`; they are not used by the application.
