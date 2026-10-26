@@ -23,6 +23,7 @@ class TorqueChecks(unittest.TestCase):
         self.assertEqual(c['shape_sweep']['span_m'],.8)
         self.assertEqual(c['shape_sweep']['ranges'][0],{'min_m':.12,'max_m':.2,'count':3})
         self.assertEqual(c['settings']['frequency_hz'],1)
+        self.assertEqual(c['settings']['amplitude_deg'],30)
         self.assertEqual(c['motion_range'],{'minimum_deg':-26,'maximum_deg':34})
         self.assertEqual(model.DEFAULT,original)
         self.assertGreater(model.plan(c)['case_count'],0)
