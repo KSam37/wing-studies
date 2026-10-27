@@ -43,6 +43,10 @@ def prepare(model,config):
         c['waveform']={'mode':'custom','points':points}
         c['settings']['amplitude_deg']=model.FlapWave(c['waveform']).scale
     c['motion_range']={'minimum_deg':lo,'maximum_deg':hi}
+    if c.get('refinement',{}).get('enabled'):
+        import refinement
+        c['designs']=refinement.designs(model,c)
+        c['mode']='custom'
     return c
 
 

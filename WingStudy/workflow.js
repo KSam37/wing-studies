@@ -3,6 +3,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const fmt=value=>Number.isFinite(value)?Number(value.toPrecision(5)):'—';
 let defaults,baseConfig,baseline=null,planData=null,studies=[],report=null,currentStudy='',page=0;
 let previewSerial=0,resultSerial=0,timer,indexBusy=false,exportBusy=false,toastTimer;
+let refinementSource=null,refinementActive=false,nodeSerial=0;
 const numerical={hingeGap:'gap_m',density:'rho',viscosity:'nu',timeStep:'dt_s',cycleCount:'cycles',spanPanels:'span_panels',chordPanels:'chord_panels',settlingTolerance:'cycle_tolerance_pct',caseBudget:'case_budget',wake:'wake_model',wakeCycles:'wake_cycles'};
 async function api(path,data){
  const response=await fetch('/api/'+path,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -16,11 +17,17 @@ function renderRanges(ranges){
  $('ranges').innerHTML=ranges.map((r,i)=>`<tr><td>${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</td><td>${fmt(baseline?baseline.sections[i].y_m:half*i/(ranges.length-1))}</td>${['min_m','max_m','count'].map(key=>`<td><input aria-label="Chord ${i+1} ${key}" data-key="${key}" type="number" step="${key==='count'?'1':'any'}" min="${key==='count'?'1':'0'}" value="${esc(r[key])}"></td>`).join('')}</tr>`).join('');
 }
 function updateBaseline(){
- for(const id of ['totalSpan','nodeCount','applyNodes'])$(id).disabled=!!baseline;
+ $('totalSpan').disabled=!!baseline;
+ $('nodeCount').disabled=false;$('applyNodes').disabled=false;
  $('regularGrid').classList.toggle('hidden',!baseline);
- $('baselineNote').textContent=baseline?`Baseline: ${baseline.name}. Section positions and angles remain fixed; edit chord ranges to search around this shape.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
+ $('refinementControls').classList.toggle('hidden',!refinementActive);
+ $('baselineNote').textContent=refinementActive?`Local refinement of ${baseline.name}: add nodes, apply interpolation, and edit the chord bounds below. The candidate count limits the search; this does not enumerate a full Cartesian grid.`:baseline?`Baseline: ${baseline.name}. Edit node count to interpolate more sections.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
+ $('samplesHeading').classList.toggle('hidden',refinementActive);
+ $('ranges').querySelectorAll('tr').forEach(row=>row.lastElementChild.classList.toggle('hidden',refinementActive));
+ $('gridHelp').textContent=refinementActive?'Min/max bounds apply at each interpolated node and must include the baseline chord. Equal bounds hold a node fixed. Candidate count controls the local search size; per-node samples apply only to the regular grid.':'Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. Zeros are allowed only as an outboard suffix; at least two positive sections remain. No imposed span maximum.';
 }
-function configuration(){
+function configuration(allowPendingNodes=false){
+ if(refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
  const c=structuredClone(baseConfig||defaults);c.workflow='root_torque';c.mode='shape_sweep';c.name=$('studyName').value;
  c.limits={};c.designs=[];
  c.optimization={max_root_moment_nm:Number($('maximumMoment').value)};
@@ -30,12 +37,18 @@ function configuration(){
  Object.assign(c.settings,{frequency_hz:Number($('frequency').value),speed_mps:Number($('speed').value),aeroelastic_enabled:false,save_solver:false});
  c.tail={enabled:false};c.shape_sweep={span_m:Number($('totalSpan').value),chord_count:Number($('nodeCount').value),decreasing:$('decreasing').checked,
   sweep_deg:0,incidence_deg:0,ranges:readRanges(),baseline:baseline?structuredClone(baseline):null};
+ if(refinementActive){c.mode='local_refinement';c.refinement={enabled:true,candidates:Number($('localCandidates').value),seed:Number($('localSeed').value),variation_pct:Number($('localVariation').value),source:structuredClone(refinementSource)};}
+ else delete c.refinement;
  return c;
 }
 function fill(c,initial=false){
  baseConfig=structuredClone(c);const settings={...defaults.settings,...c.settings};
  const shape=c.shape_sweep||defaults.shape_sweep;baseline=shape.baseline?structuredClone(shape.baseline):null;
  if(c.mode==='custom'&&c.designs?.length){baseline=structuredClone(c.designs[0]);}
+ refinementActive=!!c.refinement?.enabled;
+ refinementSource=refinementActive?structuredClone(c.refinement.source||shape.baseline):null;
+ if(refinementActive)baseline=structuredClone(shape.baseline);
+ $('localCandidates').value=c.refinement?.candidates??41;$('localVariation').value=c.refinement?.variation_pct??5;$('localSeed').value=c.refinement?.seed??7;
  $('studyName').value=initial?'Thrust under root moment limit':c.name||'Thrust under root moment limit';
  $('maximumMoment').value=c.optimization?.max_root_moment_nm??$('maximumMoment').value;
  $('totalSpan').value=baseline?2*baseline.sections.at(-1).y_m+Number(settings.gap_m):shape.span_m;
@@ -45,7 +58,7 @@ function fill(c,initial=false){
  $('flapMinimum').value=c.motion_range?.minimum_deg??(initial?-26:-Number(settings.amplitude_deg));
  $('flapMaximum').value=c.motion_range?.maximum_deg??(initial?34:Number(settings.amplitude_deg));
  if(initial){$('wake').value='prescribed';$('wakeCycles').value='2';}
- renderRanges(c.mode==='custom'&&baseline?baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})):shape.ranges);
+ renderRanges(c.mode==='custom'&&baseline&&!refinementActive?baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})):shape.ranges);
  updateBaseline();preview();
 }
 function outline(row,large=false){
@@ -72,6 +85,7 @@ async function preview(){
   $('caseCount').textContent=p.case_count;$('validation').innerHTML='';$('runStudy').disabled=false;
   $('runStudy').textContent=p.cached_case_count?`Run ${p.new_simulation_count} new · reuse ${p.cached_case_count}`:`Run ${p.case_count} case${p.case_count===1?'':'s'}`;
   $('previewStatus').textContent=`${p.case_count} unique geometries · ${p.shape_grid?.pruned_count||0} pruned combinations · ${p.cached_case_count||0} exact cached results · ${p.max_steps} time steps per case.`;
+  if(refinementActive)$('previewStatus').textContent+=` Smooth local search: up to ${$('localCandidates').value} candidates, including the interpolated baseline; fixed bounds or taper constraints may reduce this count.`;
   const seconds=p.runtime_estimate?.case_seconds*(p.new_simulation_count??p.case_count)+(p.cached_case_count||0);
   $('runtime').textContent=seconds?`Runtime estimate: ${Math.max(1,Math.round(seconds*.5/60))}–${Math.max(1,Math.ceil(seconds*2/60))} min; updates from completed cases.`:'Runtime estimate calibrates from completed cases.';
   drawPreview();
@@ -89,6 +103,7 @@ async function refreshIndex(){
  }catch(error){notify(error.message);}finally{indexBusy=false;}
 }
 function renderProgress(study){
+ $('keepBest').classList.add('hidden');
  $('masterSources').classList.toggle('hidden',currentStudy!=='master');$('useStudy').disabled=currentStudy==='master';
  $('stopStudy').classList.add('hidden');
  if(currentStudy==='master'){$('progress').textContent='Select Current, Old, or both. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
@@ -105,8 +120,11 @@ async function evaluate(exportFiles=false){
    ...(id==='master'?{generations:['current','old'].filter(g=>$(g+'Master').checked)}:{})});
   if(serial!==resultSerial||id!==currentStudy)return;
   report=result;$('exportComparison').disabled=false;renderResults();
+  const study=studies.find(s=>s.id===id);
+  $('keepBest').classList.toggle('hidden',!(study?.config.refinement?.enabled&&result.winner&&['complete','complete_with_errors'].includes(study.status.state)&&study.case_count>1));
   if(result.generations)for(const g of ['current','old'])$(g+'Count').textContent=`(${result.generations[g]} cases)`;
   if(result.files)$('exportLinks').innerHTML=result.files.map(file=>`<a class="button" href="/files/${file}" download>${file.endsWith('.png')?'Comparison PNG':'Ranked results CSV'}</a>`).join('');
+  if(study?.retention){if(!result.files)$('exportLinks').innerHTML='';$('exportLinks').innerHTML+=`<a class="button" href="/files/${esc(id)}/best_wing_settings.json" download>Saved best wing settings</a>`;}
  }catch(error){if(serial!==resultSerial)return;report=null;$('winnerBody').innerHTML=`<p class="error">${esc(error.message)}</p>`;$('rankedRows').innerHTML='';}
  finally{if(exportFiles){exportBusy=false;$('exportComparison').disabled=!report;}}
 }
@@ -133,21 +151,37 @@ function renderResults(){
  document.querySelectorAll('[data-refine]').forEach(button=>button.onclick=()=>refine(report.rows.find(r=>rowKey(r)===button.dataset.refine)));
  $('pageLabel').textContent=`Page ${page+1} of ${Math.max(1,Math.ceil(rows.length/25))}`;$('previousPage').disabled=page===0;$('nextPage').disabled=(page+1)*25>=rows.length;
 }
-function refine(row){
- const sections=row.requested_sections||row.sections;if(!sections?.length){notify('This historical case lacks editable section geometry.');return;}
- baseline={name:row.design_name||row.id,sections:structuredClone(sections)};
- if(row.outline_function)baseline.outline_function=structuredClone(row.outline_function);
- $('totalSpan').value=2*sections.at(-1).y_m+Number($('hingeGap').value);$('nodeCount').value=sections.length;
+async function applyRefinementNodes(){
+ const serial=++nodeSerial;
+ try{
+  const design=refinementSource||baseline;
+  const result=await api('refinement-nodes',{design,count:Number($('nodeCount').value),variation_pct:Number($('localVariation').value),settings:configuration(true).settings});
+  if(serial!==nodeSerial)return;
+  refinementSource=structuredClone(design);refinementActive=true;baseline=result.baseline;
+  $('spanPanels').value=result.required_span_panels;
+  $('nodeCount').value=baseline.sections.length;
+  $('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);
+  renderRanges(result.ranges);updateBaseline();preview();
+ }catch(error){notify(error.message);}
+}
+async function refine(row){
+ const sections=row.sections||row.requested_sections;if(!sections?.length){notify('This historical case lacks editable section geometry.');return;}
+ const sourceStudy=studies.find(s=>s.id===(row._study||currentStudy));
+ if(sourceStudy){fill(sourceStudy.config);}
+ refinementSource={name:row.design_name||row.id,sections:structuredClone(sections),source_study:row._study||currentStudy,source_case:row.id};
+ baseline=structuredClone(refinementSource);refinementActive=true;
+ $('nodeCount').value=Math.max(16,sections.length);$('localVariation').value=5;$('localCandidates').value=41;$('localSeed').value=7;
  $('decreasing').checked=sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m);
- renderRanges(sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();
  if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
- $('studyName').value=(baseline.name+' refinement').slice(0,80);show('setup');preview();notify('Baseline loaded. Widen selected chord ranges and increase samples to search around it. Current motion stays as entered.');
+ $('studyName').value=(baseline.name+' refinement').slice(0,80);updateBaseline();show('setup');await applyRefinementNodes();notify('Smooth local refinement loaded. Adjust node count, chord variation and candidate count; Apply node count rebuilds the local bounds.');
 }
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
 $('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline)$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;
-$('applyNodes').onclick=()=>{const n=Number($('nodeCount').value);if(!Number.isInteger(n)||n<2||n>64){notify('Use 2–64 chord nodes.');return;}const old=readRanges();renderRanges(Array.from({length:n},(_,i)=>old[i]||{min_m:.06,max_m:.14,count:3}));preview();};
-$('regularGrid').onclick=()=>{baseline=null;updateBaseline();renderRanges(readRanges());preview();};
+$('applyNodes').onclick=()=>{const n=Number($('nodeCount').value);if(!Number.isInteger(n)||n<2||n>64){notify('Use 2–64 chord nodes.');return;}if(baseline){applyRefinementNodes();return;}const old=readRanges();renderRanges(Array.from({length:n},(_,i)=>old[i]||{min_m:.06,max_m:.14,count:3}));preview();};
+$('regularGrid').onclick=()=>{baseline=null;refinementSource=null;refinementActive=false;renderRanges(readRanges().map(r=>({...r,count:r.min_m===r.max_m?1:3})));updateBaseline();preview();};
+$('applyLocalBounds').onclick=applyRefinementNodes;
+$('keepBest').onclick=async()=>{if(!report?.winner||currentStudy==='master')return;try{$('keepBest').disabled=true;const r=await api('keep-best',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),winner_id:report.winner.id});$('exportLinks').innerHTML=`<a class="button" href="/files/${esc(r.settings_file)}" download>Saved best wing settings</a>`;notify(`Saved ${r.kept_case}; discarded ${r.discarded_count} cases. ${r.cleanup}`);await refreshIndex();}catch(error){notify(error.message);}finally{$('keepBest').disabled=false;}};
 $('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await api('start',configuration());currentStudy=r.id;$('resultsLimit').value=$('maximumMoment').value;show('results');}catch(error){notify(error.message);preview();}};
 $('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;renderProgress(study);evaluate();};
 $('resultsLimit').oninput=()=>{page=0;$('exportLinks').innerHTML='';clearTimeout(timer);timer=setTimeout(evaluate,350);};

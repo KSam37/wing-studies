@@ -72,7 +72,7 @@ def sweep_studies():
             if status.get('state')=='running' and not pid_alive(manifest.get('worker_pid')):
                 status={**status,'state':'interrupted','message':'Worker stopped; completed results retained.'}
             result.append({'id':p.name,'name':manifest['name'],'created':manifest['created'],
-                'config':manifest['config'],'status':status,'case_count':manifest['case_count'],
+                'config':manifest['config'],'status':status,'case_count':manifest['case_count'],'retention':manifest.get('retention'),
                 'rigid':not manifest['settings'].get('aeroelastic_enabled',False),
                 'isolated':manifest['settings'].get('simulation_mode')==model.SIMULATION_MODE})
         except (OSError,ValueError,KeyError):continue
@@ -226,6 +226,16 @@ class Handler(BaseHTTPRequestHandler):
                 spec=model.plan(data)
                 spec.update(catalog.preview(model,spec))
                 return self.send(spec)
+            if path == "/api/refinement-nodes":
+                import refinement
+                return self.send(refinement.resample(model,data['design'],data['count'],data['variation_pct'],data['settings']))
+            if path == "/api/keep-best":
+                import refinement
+                with LOCK:
+                    directory=study_path(data['study'])
+                    if any(s['status']['state']=='running' for s in sweep_studies()):
+                        raise ValueError('Wait for active simulations to finish before cleaning up a refinement study.')
+                    return self.send(refinement.keep_best(model,directory,data['maximum_root_moment_nm'],data['winner_id']))
             if path == "/api/master-results":
                 import torque_study
                 with LOCK:
