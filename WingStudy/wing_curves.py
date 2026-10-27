@@ -7,6 +7,47 @@ import copy
 import ast
 
 
+def export_smooth_profiles(model,study,case_id):
+    """Fabrication-only conversion: no planning, meshing, solve or catalog edit."""
+    from pathlib import Path
+    import json
+    import re
+    import os
+    import tempfile
+    import xml.etree.ElementTree as ET
+    import curve_profiles
+    study=Path(study)
+    if not re.fullmatch(r'case_\d{4,}',case_id):raise ValueError('Choose a valid saved case.')
+    manifest=model.read_json(study/'manifest.json')
+    case=next((c for c in manifest['cases'] if c['id']==case_id),None)
+    if not case or not case.get('sections'):raise ValueError('This case has no saved chord-section geometry to smooth.')
+    destination=study/case_id
+    if not destination.is_dir():raise ValueError('The case output folder does not exist yet.')
+    anchors=copy.deepcopy(case.get('outline_function',{}).get('anchors',case['sections']))
+    anchors[-1]['chord_m']=0.  # Preserve the established smooth zero-tip template.
+    y=np.array([s['y_m'] for s in anchors]);t=y/y[-1]
+    leading,leading_info=fit_profile(t,[s['x_m'] for s in anchors])
+    chord,chord_info=fit_profile(t,[s['chord_m'] for s in anchors])
+    function={'version':1,'span_m':float(y[-1]),'leading':pack_curve(leading),'chord':pack_curve(chord),
+        'anchors':anchors,'sample_sections':copy.deepcopy(anchors)}
+    export_case={**case,'outline_function':function}
+    names=['wing_smooth_left.svg','wing_smooth_right.svg'];ns='http://www.w3.org/2000/svg'
+    with tempfile.TemporaryDirectory(prefix='.smooth-',dir=destination) as temp:
+        result=curve_profiles.save(export_case,temp,prefix='wing_smooth')
+        for name in names:
+            path=Path(temp)/name;tree=ET.parse(path);root=tree.getroot()
+            meta=root.find(f'{{{ns}}}metadata');record=json.loads(meta.text)
+            record.update(export_only_smoothing=True,simulated=False,source_study=study.name,source_case=case_id,
+                source_sections=case['sections'],tip_chord_set_to_zero=True)
+            meta.text=json.dumps(record)
+            root.find(f'{{{ns}}}desc').text+=' Export-only smoothing; force results describe the original sectioned geometry, not this curve.'
+            tree.write(path,encoding='utf-8',xml_declaration=True)
+        for name in names:os.replace(Path(temp)/name,destination/name)
+    return {**result,'files':[f'{study.name}/{case_id}/{name}' for name in names],
+        'fit':{'leading_edge':leading_info,'chord_profile':chord_info},
+        'note':'Smooth SVGs exported at 1:1 scale with a zero-width tip. Simulation results and original SVGs are unchanged. '+result['profile_note']}
+
+
 def fit_profile(t, values):
     """Lowest global degree 0..3 fitting every anchor without interval overshoot.
 

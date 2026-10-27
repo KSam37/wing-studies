@@ -4,6 +4,7 @@ const fmt=value=>Number.isFinite(value)?Number(value.toPrecision(5)):'—';
 let defaults,baseConfig,baseline=null,planData=null,studies=[],report=null,currentStudy='',page=0;
 let previewSerial=0,resultSerial=0,timer,indexBusy=false,exportBusy=false,toastTimer;
 let refinementSource=null,refinementActive=false,nodeSerial=0;
+const smoothExports=new Map();
 const numerical={hingeGap:'gap_m',density:'rho',viscosity:'nu',timeStep:'dt_s',cycleCount:'cycles',spanPanels:'span_panels',chordPanels:'chord_panels',settlingTolerance:'cycle_tolerance_pct',caseBudget:'case_budget',wake:'wake_model',wakeCycles:'wake_cycles'};
 async function api(path,data){
  const response=await fetch('/api/'+path,data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -133,7 +134,8 @@ async function evaluate(exportFiles=false){
 function links(row){
  if(row.status!=='ok')return '';
  const base='/files/'+(row._study||currentStudy)+'/'+row.id+'/';
- return `<a href="${base}water_wing_forces.png" target="_blank">Ptera forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Ptera moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · <a href="${base}wing_left.svg" download>Left SVG</a> · <a href="${base}wing_right.svg" download>Right SVG</a>`;
+ const smooth=row.sections?.length?smoothExports.get(`${row._study||currentStudy}/${row.id}`)||[]:[];
+ return `<a href="${base}water_wing_forces.png" target="_blank">Ptera forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Ptera moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · <a href="${base}wing_left.svg" download>Left SVG</a> · <a href="${base}wing_right.svg" download>Right SVG</a>${row.sections?.length?`<button data-smooth-svg="${esc(rowKey(row))}">Convert to smooth SVG</button><span class="smooth-links">${smooth.map((file,i)=>`<a href="/files/${esc(file)}" download>Smooth ${i?'right':'left'} SVG</a>`).join(' · ')}</span>`:''}`;
 }
 function values(row){return `<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong> · remaining margin ${fmt(row.root_moment_margin_Nm)} N m</p>`;}
 function rowKey(row){return row.comparison_key||row.id;}
@@ -151,6 +153,14 @@ function renderResults(){
  page=Math.max(0,Math.min(page,Math.ceil(rows.length/25)-1));
  $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.thrust_rank??'—'}</div>${outline(r)}<div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${sourceNote(r)}${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(rowKey(r))}">Refine this shape</button>${links(r)}</div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
  document.querySelectorAll('[data-refine]').forEach(button=>button.onclick=()=>refine(report.rows.find(r=>rowKey(r)===button.dataset.refine)));
+ document.querySelectorAll('[data-smooth-svg]').forEach(button=>button.onclick=async()=>{
+  const row=report.rows.find(r=>rowKey(r)===button.dataset.smoothSvg);if(!row)return;const study=row._study||currentStudy;
+  try{button.disabled=true;const result=await api('smooth-svg',{study,case:row.id});
+   smoothExports.set(`${study}/${row.id}`,result.files);
+   button.nextElementSibling.innerHTML=result.files.map((file,i)=>`<a href="/files/${esc(file)}" download>Smooth ${i?'right':'left'} SVG</a>`).join(' · ');
+   notify(result.note);
+  }catch(error){notify(error.message);}finally{button.disabled=false;}
+ });
  $('pageLabel').textContent=`Page ${page+1} of ${Math.max(1,Math.ceil(rows.length/25))}`;$('previousPage').disabled=page===0;$('nextPage').disabled=(page+1)*25>=rows.length;
 }
 async function applyRefinementNodes(){

@@ -231,6 +231,13 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/refinement-nodes":
                 import refinement
                 return self.send(refinement.resample(model,data['design'],data['count'],data['variation_pct'],data['settings'],linspace=data.get('search_method')=='linspace'))
+            if path == "/api/smooth-svg":
+                import wing_curves
+                with LOCK:
+                    directory=study_path(data['study'])
+                    if model.read_json(directory/'status.json').get('state')=='running':
+                        raise ValueError('Wait for this study to finish or stop it before exporting smooth profiles.')
+                    return self.send(wing_curves.export_smooth_profiles(model,directory,data['case']))
             if path == "/api/thrust-landscape":
                 import thrust_landscape
                 if data.get('study')!='master':study_path(data['study'])

@@ -9,9 +9,41 @@ import xml.etree.ElementTree as ET
 import json
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 
 class CurveChecks(unittest.TestCase):
+    def test_export_only_smoothing_preserves_simulation_and_original_files(self):
+        from wing_curves import export_smooth_profiles
+        with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
+            study=Path(temp)/'study';folder=study/'case_0001';folder.mkdir(parents=True)
+            case={'id':'case_0001',**self.wing([.2,.15,.11,.06])}
+            case['design_name']=case.pop('name')
+            model.write_json(study/'manifest.json',{'cases':[case]})
+            model.write_json(study/'results.json',[{'id':'case_0001','single_wing_mean_thrust_N':2.}])
+            (folder/'wing_left.svg').write_text('Original left')
+            (folder/'wing_right.svg').write_text('Original right')
+            originals={p:p.read_bytes() for p in study.rglob('*') if p.is_file()}
+            with patch.object(model,'build_solver',side_effect=AssertionError('No meshing')),patch.object(model,'run_case',side_effect=AssertionError('No solve')),patch.object(model,'plan',side_effect=AssertionError('No study planning')):
+                result=export_smooth_profiles(model,study,'case_0001')
+            for path,data in originals.items():self.assertEqual(path.read_bytes(),data)
+            self.assertEqual(sorted(p.name for p in folder.iterdir()),['wing_left.svg','wing_right.svg','wing_smooth_left.svg','wing_smooth_right.svg'])
+            ns={'s':'http://www.w3.org/2000/svg'}
+            for name in ('wing_smooth_left.svg','wing_smooth_right.svg'):
+                root=ET.parse(folder/name).getroot()
+                self.assertTrue(root.get('width').endswith('mm'))
+                self.assertIn('C',root.find('s:path',ns).get('d'))
+                meta=json.loads(root.find('s:metadata',ns).text)
+                self.assertTrue(meta['export_only_smoothing']);self.assertFalse(meta['simulated'])
+                self.assertEqual(meta['source_sections'][-1]['chord_m'],.06)
+                curve=unpack_curve(meta['function']['chord'])
+                self.assertAlmostEqual(float(curve(1)),0)
+                for s in case['sections'][:-1]:self.assertAlmostEqual(float(curve(s['y_m']/.3)),s['chord_m'])
+            self.assertEqual(len(result['files']),2)
+            # Repeat conversion replaces the same two exports without new folders.
+            export_smooth_profiles(model,study,'case_0001')
+            self.assertEqual(len(list(folder.iterdir())),4)
+
     def wing(self,chords):
         return {'name':'Test wing','sections':[{'y_m':.3*i/(len(chords)-1),'x_m':0.,
             'chord_m':c,'pitch_deg':0.,'roll_deg':0.} for i,c in enumerate(chords)]}
