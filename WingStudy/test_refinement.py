@@ -18,6 +18,38 @@ class RefinementChecks(unittest.TestCase):
     setUp=test_catalog.CatalogChecks.setUp
     tearDown=test_catalog.CatalogChecks.tearDown
 
+    def test_linspace_refines_only_selected_chords_and_matches_original_grid(self):
+        c=self.configuration(16,41);baseline=c['shape_sweep']['baseline']['sections']
+        c['mode']='shape_sweep';c['refinement']['search_method']='linspace'
+        c['shape_sweep'].update(decreasing=False,ranges=[{'min_m':s['chord_m'],'max_m':s['chord_m'],'count':1} for s in baseline])
+        for i,count in [(7,3),(8,5)]:
+            chord=baseline[i]['chord_m'];c['shape_sweep']['ranges'][i]={'min_m':chord*.95,'max_m':chord*1.05,'count':count}
+        result=model.plan(c)
+        self.assertEqual(result['case_count'],15)
+        self.assertEqual(result['shape_grid']['unconstrained_count'],15)
+        for case in result['cases']:
+            for i,s in enumerate(case['sections']):
+                if i not in (7,8):self.assertEqual(s,baseline[i])
+        for i,count in [(7,3),(8,5)]:
+            actual={case['sections'][i]['chord_m'] for case in result['cases']};bounds=c['shape_sweep']['ranges'][i]
+            self.assertEqual(actual,set(np.linspace(bounds['min_m'],bounds['max_m'],count)))
+        direct=copy.deepcopy(c);direct.pop('refinement')
+        self.assertEqual(result['cases'],model.plan(direct)['cases'])
+        self.assertEqual(result['cases'],model.plan(result['config'])['cases'])
+        c['settings']['case_budget']=14
+        with self.assertRaisesRegex(ValueError,'budget'):model.plan(c)
+
+    def test_new_linspace_nodes_start_fixed_and_bounds_can_exclude_baseline(self):
+        c=self.configuration();source=c['refinement']['source']
+        nodes=refinement.resample(model,source,32,5,c['settings'],linspace=True)
+        self.assertTrue(all(r['count']==1 and r['min_m']==r['max_m']==s['chord_m'] for r,s in zip(nodes['ranges'],nodes['baseline']['sections'])))
+        c['refinement']['search_method']='linspace';c['shape_sweep'].update(baseline=nodes['baseline'],ranges=nodes['ranges'],chord_count=32,decreasing=False)
+        c['settings']['span_panels']=nodes['required_span_panels']
+        self.assertEqual(model.plan(c)['case_count'],1)
+        chord=nodes['baseline']['sections'][10]['chord_m']
+        c['shape_sweep']['ranges'][10]={'min_m':chord*1.1,'max_m':chord*1.2,'count':4}
+        self.assertEqual(model.plan(c)['case_count'],4)
+
     def configuration(self,n=16,count=21):
         c=torque_study.default_config(model);source={'name':'Source','sections':self.spec['cases'][0]['sections']}
         nodes=refinement.resample(model,source,n,5,c['settings'])

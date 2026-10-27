@@ -12,7 +12,7 @@ assert.equal(c.motion_range.minimum_deg,-26);assert.equal(c.motion_range.maximum
 assert.equal(context.baseConfig.settings.aeroelastic_enabled,true);
 Object.assign(inputs,{localCandidates:{value:'41'},localSeed:{value:'7'},localVariation:{value:'5'}});
 context.refinementActive=true;context.refinementSource={name:'Source',sections:[]};
-const local=context.configuration();assert.equal(local.mode,'local_refinement');assert.equal(local.refinement.candidates,41);assert.equal(local.refinement.seed,7);assert.equal(local.refinement.variation_pct,5);
+const local=context.configuration();assert.equal(local.mode,'shape_sweep');assert.equal(local.refinement.search_method,'linspace');assert.equal(local.refinement.candidates,undefined);assert.equal(local.refinement.variation_pct,5);
 context.refinementActive=false;
 const requests=[],payloads=[];context.api=(path,data)=>new Promise(resolve=>{payloads.push({path,data});requests.push(resolve);});let renders=0;context.renderResults=()=>renders++;
 context.esc=String;vm.runInContext("let currentStudy='a',resultSerial=0,report=null,exportBusy=false;"+source.slice(source.indexOf('async function evaluate('),source.indexOf('function links(')),context);

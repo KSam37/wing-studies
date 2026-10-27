@@ -181,6 +181,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send((model.HERE/"ui.js").read_bytes(), kind="application/javascript; charset=utf-8")
             if path == "/workflow.js":
                 return self.send((model.HERE/"workflow.js").read_bytes(), kind="application/javascript; charset=utf-8")
+            if path == "/landscape.js":
+                return self.send((model.HERE/"landscape.js").read_bytes(), kind="application/javascript; charset=utf-8")
             if path == "/api/defaults":
                 import torque_study
                 return self.send({"config":torque_study.default_config(model), "fields":model.FIELDS, "families":model.FAMILIES,
@@ -228,7 +230,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(spec)
             if path == "/api/refinement-nodes":
                 import refinement
-                return self.send(refinement.resample(model,data['design'],data['count'],data['variation_pct'],data['settings']))
+                return self.send(refinement.resample(model,data['design'],data['count'],data['variation_pct'],data['settings'],linspace=data.get('search_method')=='linspace'))
+            if path == "/api/thrust-landscape":
+                import thrust_landscape
+                if data.get('study')!='master':study_path(data['study'])
+                with LOCK:return self.send(thrust_landscape.generate(model,data))
             if path == "/api/keep-best":
                 import refinement
                 with LOCK:

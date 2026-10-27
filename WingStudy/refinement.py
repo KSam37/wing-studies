@@ -12,7 +12,7 @@ import shutil
 import uuid
 
 
-def resample(model,design,count,variation_pct,settings):
+def resample(model,design,count,variation_pct,settings,linspace=False):
     import numpy as np
     from scipy.interpolate import PchipInterpolator
     count=model.number(count,'Refinement chord nodes',2,64,True)
@@ -23,7 +23,7 @@ def resample(model,design,count,variation_pct,settings):
     fields={key:PchipInterpolator(y,[s[key] for s in source])(new_y) for key in ('x_m','chord_m','pitch_deg','roll_deg')}
     sections=[{'y_m':float(v),**{key:float(values[i]) for key,values in fields.items()}} for i,v in enumerate(new_y)]
     return {'baseline':{'name':design.get('name','Refined wing'),'sections':sections},
-        'ranges':[{'min_m':s['chord_m']*(1-variation),'max_m':s['chord_m']*(1+variation),'count':1} for s in sections],
+        'ranges':[{'min_m':s['chord_m']*(1 if linspace else 1-variation),'max_m':s['chord_m']*(1 if linspace else 1+variation),'count':1} for s in sections],
         'required_span_panels':max(settings['span_panels'],count-1)}
 
 

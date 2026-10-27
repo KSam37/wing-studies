@@ -1340,63 +1340,8 @@ def shape_landscape_data(rows,settings,repeat_only=True):
             "single_wing_mean_thrust_N":row["single_wing_mean_thrust_N"],
             "single_wing_peak_abs_roll_moment_Nm":row["single_wing_peak_abs_roll_moment_Nm"]})
     if not points:raise ValueError("No valid single-wing ratios with wing area and thrust. Rerun legacy cases or review the repeatability filter.")
-    xy=np.array([p["coords"][:2] for p in points]);scales=np.maximum(np.max(np.abs(xy),axis=0),1e-12)
-    groups={}
-    for i,p in enumerate(points):groups.setdefault(tuple(np.round(xy[i]/scales,10)),[]).append(i)
-    selected=[max(group,key=lambda i:points[i]["value"]) for group in groups.values()]
-    vertices=np.array([points[i]["coords"] for i in selected]);triangles=[];curve=[];kind="points"
-    from scipy.interpolate import PchipInterpolator,CloughTocher2DInterpolator
-    def smooth_curve(knots,values):
-        steps=max(2,min(32,2000//len(knots)))
-        samples=np.r_[np.concatenate([np.linspace(a,b,steps,endpoint=False) for a,b in zip(knots,knots[1:])]),knots[-1]]
-        return samples,PchipInterpolator(knots,values,axis=0,extrapolate=False)(samples)
-    if len(vertices)>=2:
-        extent=np.ptp(vertices[:,:2],axis=0);origin=vertices[:,:2].min(axis=0)
-        norm=(vertices[:,:2]-origin)/np.where(extent>0,extent,1.)
-        if len(vertices)>=3 and np.linalg.matrix_rank(norm-norm.mean(axis=0),tol=1e-10)==2:
-            from scipy.spatial import Delaunay,QhullError
-            try:
-                base=Delaunay(norm)
-                interpolator=CloughTocher2DInterpolator(base,vertices[:,2],tol=1e-10,maxiter=1000)
-                # Sample each original triangle barycentrically: shared edge
-                # vertices stay shared and no point extends outside the hull.
-                subdivisions=max(1,min(14,int(math.sqrt(2400/len(base.simplices)))))
-                dense=[];bounded_values=[];lookup={};faces=[]
-                # Cubic Bezier controls stay between measured endpoint values.
-                # Shared edge controls make adjacent patches continuous.
-                gradients=interpolator.grad[:,0,:]
-                for tri in base.simplices:
-                    local={}
-                    heights=vertices[tri,2];controls={}
-                    for a in range(3):
-                        for b in range(3):
-                            if a!=b:
-                                estimate=heights[a]+np.dot(gradients[tri[a]],norm[tri[b]]-norm[tri[a]])/3
-                                controls[a,b]=float(np.clip(estimate,min(heights[a],heights[b]),max(heights[a],heights[b])))
-                    center=float(np.mean(list(controls.values())))
-                    for i in range(subdivisions+1):
-                        for j in range(subdivisions+1-i):
-                            uv=((subdivisions-i-j)*norm[tri[0]]+i*norm[tri[1]]+j*norm[tri[2]])/subdivisions
-                            key=tuple(np.round(uv,13))
-                            if key not in lookup:
-                                weights=np.array([subdivisions-i-j,i,j],dtype=float)/subdivisions
-                                value=float(np.dot(heights,weights**3))
-                                value+=sum(3*weights[a]**2*weights[b]*v for (a,b),v in controls.items())
-                                value+=6*float(np.prod(weights))*center
-                                lookup[key]=len(dense);dense.append(uv);bounded_values.append(value)
-                            local[i,j]=lookup[key]
-                    for i in range(subdivisions):
-                        for j in range(subdivisions-i):
-                            faces.append([local[i,j],local[i+1,j],local[i,j+1]])
-                            if i+j<subdivisions-1:faces.append([local[i+1,j],local[i+1,j+1],local[i,j+1]])
-                dense=np.array(dense);values=np.asarray(bounded_values)
-                if not np.all(np.isfinite(values)):raise ValueError("Cubic interpolation returned non-finite values.")
-                vertices=np.column_stack((origin+dense*extent,values));triangles=faces;kind="bounded_cubic_surface"
-            except QhullError:pass
-        if not triangles:
-            axis=int(np.argmax(extent/scales));order=np.argsort(vertices[:,axis]);vertices=vertices[order];selected=[selected[i] for i in order]
-            distance=np.r_[0.,np.cumsum(np.linalg.norm(np.diff(norm[order],axis=0),axis=1))]
-            _,values=smooth_curve(distance,vertices);curve=values.tolist();kind="smooth_sampled_curve"
+    from landscape_interpolation import interpolate
+    vertices,triangles,curve,kind,selected=interpolate(points)
     note=("Bounded cubic surface inside the measured perimeter only; no extrapolation. Each patch stays within its measured corner values, with shared continuous edges. Rankings use measured values only." if triangles else
           "Smooth shape-preserving cubic curve through the sampled locations." if curve else "Measured points only.")
     if len(selected)==2:note+=" Two sample locations only constrain a straight thrust trend; more samples are needed to determine curvature."
@@ -1441,14 +1386,14 @@ def shape_landscape(study,repeat_only=True,export=True,*,selected_rows=None,sele
     for setter,label in zip((ax.set_xlabel,ax.set_ylabel,ax.set_zlabel),spec["axis_labels"]):setter(label,labelpad=9)
     ax.auto_scale_xyz(rendered[:,0],rendered[:,1],rendered[:,2]);ax.view_init(elev=25,azim=-55)
     from matplotlib.cm import ScalarMappable
-    fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label="Thrust / moment (1/m)",shrink=.65,pad=.1)
+    fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label=spec.get("color_label","Thrust / moment (1/m)"),shrink=.65,pad=.1)
     ax.set_title("Wing-shape landscape · measured wings + smooth "+("surface" if spec["triangles"] else "curve" if spec["curve"] else "points only"),fontsize=9)
     dest=study/"comparisons";dest.mkdir(parents=True,exist_ok=True)
-    tag="repeatable" if repeat_only else "all";stem=dest/f"wing_shape_landscape_{tag}"
+    tag="repeatable" if repeat_only else "all";stem=dest/spec.get("export_stem",f"wing_shape_landscape_{tag}")
     save_figure(fig,stem);plt.close(fig)
     by_id={r["id"]:r for r in rows}
     with stem.with_suffix('.csv').open('w',newline='',encoding='utf-8') as f:
-        records=[{"case_id":p["case_id"],"area_m2":p["coords"][0],"aspect_ratio":p["aspect_ratio"],OBJECTIVE:p["value"],
+        records=[{"case_id":p["case_id"],"area_m2":p["coords"][0],"aspect_ratio":p["aspect_ratio"],spec.get("value_key",OBJECTIVE):p["value"],
             "single_wing_mean_thrust_N":p["single_wing_mean_thrust_N"],"single_wing_peak_abs_roll_moment_Nm":p["single_wing_peak_abs_roll_moment_Nm"],
             "cycle_repeatable":p["repeatable"],"used_for_interpolation":p["case_id"] in spec["vertex_case_ids"],
             "interpolation_kind":spec["interpolation_kind"],"sections":json.dumps(by_id[p["case_id"]].get("sections",[])),

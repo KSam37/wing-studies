@@ -11,20 +11,19 @@ async function api(path,data){
 }
 function notify(message){$('toast').textContent=message;$('toast').classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.add('hidden'),6500);}
 function show(name){$('setup').classList.toggle('hidden',name!=='setup');$('results').classList.toggle('hidden',name!=='results');window.scrollTo(0,0);if(name==='results')refreshIndex();}
-function readRanges(){return [...$('ranges').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,Number(input.value)])));}
+function readRanges(){return [...$('ranges').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input[data-key]')].map(input=>[input.dataset.key,Number(input.value)])));}
 function renderRanges(ranges){
  const half=baseline?.sections.at(-1).y_m??(Number($('totalSpan').value)-Number($('hingeGap').value))/2;
- $('ranges').innerHTML=ranges.map((r,i)=>`<tr><td>${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</td><td>${fmt(baseline?baseline.sections[i].y_m:half*i/(ranges.length-1))}</td>${['min_m','max_m','count'].map(key=>`<td><input aria-label="Chord ${i+1} ${key}" data-key="${key}" type="number" step="${key==='count'?'1':'any'}" min="${key==='count'?'1':'0'}" value="${esc(r[key])}"></td>`).join('')}</tr>`).join('');
+ $('ranges').innerHTML=ranges.map((r,i)=>`<tr><td>${refinementActive?`<input type="checkbox" data-vary="${i}" aria-label="Select chord ${i+1} for variation">`:''}${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</td><td>${fmt(baseline?baseline.sections[i].y_m:half*i/(ranges.length-1))}</td>${['min_m','max_m','count'].map(key=>`<td><input aria-label="Chord ${i+1} ${key}" data-key="${key}" type="number" step="${key==='count'?'1':'any'}" min="${key==='count'?'1':'0'}" value="${esc(r[key])}"></td>`).join('')}</tr>`).join('');
 }
 function updateBaseline(){
  $('totalSpan').disabled=!!baseline;
  $('nodeCount').disabled=false;$('applyNodes').disabled=false;
  $('regularGrid').classList.toggle('hidden',!baseline);
  $('refinementControls').classList.toggle('hidden',!refinementActive);
- $('baselineNote').textContent=refinementActive?`Local refinement of ${baseline.name}: add nodes, apply interpolation, and edit the chord bounds below. The candidate count limits the search; this does not enumerate a full Cartesian grid.`:baseline?`Baseline: ${baseline.name}. Edit node count to interpolate more sections.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
- $('samplesHeading').classList.toggle('hidden',refinementActive);
- $('ranges').querySelectorAll('tr').forEach(row=>row.lastElementChild.classList.toggle('hidden',refinementActive));
- $('gridHelp').textContent=refinementActive?'Min/max bounds apply at each interpolated node and must include the baseline chord. Equal bounds hold a node fixed. Candidate count controls the local search size; per-node samples apply only to the regular grid.':'Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. Zeros are allowed only as an outboard suffix; at least two positive sections remain. No imposed span maximum.';
+ $('baselineNote').textContent=refinementActive?`Refinement of ${baseline.name}: each chord has its own inclusive linspace. Hold most chords fixed and vary only the region you want to explore.`:baseline?`Baseline: ${baseline.name}. Edit node count to interpolate more sections.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
+ $('samplesHeading').classList.remove('hidden');
+ $('gridHelp').textContent='Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. All admissible combinations are explored, subject to the case budget and optional decreasing-chord constraint. Zeros are allowed only as an outboard suffix; at least two positive sections remain.';
 }
 function configuration(allowPendingNodes=false){
  if(refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
@@ -37,7 +36,7 @@ function configuration(allowPendingNodes=false){
  Object.assign(c.settings,{frequency_hz:Number($('frequency').value),speed_mps:Number($('speed').value),aeroelastic_enabled:false,save_solver:false});
  c.tail={enabled:false};c.shape_sweep={span_m:Number($('totalSpan').value),chord_count:Number($('nodeCount').value),decreasing:$('decreasing').checked,
   sweep_deg:0,incidence_deg:0,ranges:readRanges(),baseline:baseline?structuredClone(baseline):null};
- if(refinementActive){c.mode='local_refinement';c.refinement={enabled:true,candidates:Number($('localCandidates').value),seed:Number($('localSeed').value),variation_pct:Number($('localVariation').value),source:structuredClone(refinementSource)};}
+ if(refinementActive){c.mode='shape_sweep';c.refinement={enabled:true,search_method:'linspace',variation_pct:Number($('localVariation').value),source:structuredClone(refinementSource)};}
  else delete c.refinement;
  return c;
 }
@@ -48,7 +47,7 @@ function fill(c,initial=false){
  refinementActive=!!c.refinement?.enabled;
  refinementSource=refinementActive?structuredClone(c.refinement.source||shape.baseline):null;
  if(refinementActive)baseline=structuredClone(shape.baseline);
- $('localCandidates').value=c.refinement?.candidates??41;$('localVariation').value=c.refinement?.variation_pct??5;$('localSeed').value=c.refinement?.seed??7;
+ $('localVariation').value=c.refinement?.variation_pct??5;
  $('studyName').value=initial?'Thrust under root moment limit':c.name||'Thrust under root moment limit';
  $('maximumMoment').value=c.optimization?.max_root_moment_nm??$('maximumMoment').value;
  $('totalSpan').value=baseline?2*baseline.sections.at(-1).y_m+Number(settings.gap_m):shape.span_m;
@@ -58,7 +57,8 @@ function fill(c,initial=false){
  $('flapMinimum').value=c.motion_range?.minimum_deg??(initial?-26:-Number(settings.amplitude_deg));
  $('flapMaximum').value=c.motion_range?.maximum_deg??(initial?34:Number(settings.amplitude_deg));
  if(initial){$('wake').value='prescribed';$('wakeCycles').value='2';}
- renderRanges(c.mode==='custom'&&baseline&&!refinementActive?baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})):shape.ranges);
+ const legacySample=refinementActive&&c.refinement.search_method!=='linspace';
+ renderRanges((c.mode==='custom'&&baseline&&!refinementActive)||legacySample?baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})):shape.ranges);
  updateBaseline();preview();
 }
 function outline(row,large=false){
@@ -85,7 +85,7 @@ async function preview(){
   $('caseCount').textContent=p.case_count;$('validation').innerHTML='';$('runStudy').disabled=false;
   $('runStudy').textContent=p.cached_case_count?`Run ${p.new_simulation_count} new · reuse ${p.cached_case_count}`:`Run ${p.case_count} case${p.case_count===1?'':'s'}`;
   $('previewStatus').textContent=`${p.case_count} unique geometries · ${p.shape_grid?.pruned_count||0} pruned combinations · ${p.cached_case_count||0} exact cached results · ${p.max_steps} time steps per case.`;
-  if(refinementActive)$('previewStatus').textContent+=` Smooth local search: up to ${$('localCandidates').value} candidates, including the interpolated baseline; fixed bounds or taper constraints may reduce this count.`;
+  if(refinementActive)$('previewStatus').textContent+=' Exact per-chord linspace refinement; fixed chords remain unchanged.';
   const seconds=p.runtime_estimate?.case_seconds*(p.new_simulation_count??p.case_count)+(p.cached_case_count||0);
   $('runtime').textContent=seconds?`Runtime estimate: ${Math.max(1,Math.round(seconds*.5/60))}–${Math.max(1,Math.ceil(seconds*2/60))} min; updates from completed cases.`:'Runtime estimate calibrates from completed cases.';
   drawPreview();
@@ -113,6 +113,7 @@ function renderProgress(study){
 }
 async function evaluate(exportFiles=false){
  const serial=++resultSerial,id=currentStudy,limit=Number($('resultsLimit').value);
+ if(typeof invalidateLandscape==='function')invalidateLandscape();
  if(!id||!Number.isFinite(limit)||limit<=0){report=null;$('winnerBody').textContent='Enter your maximum wing-root moment to rank these results.';$('rankedRows').innerHTML='';$('exportComparison').disabled=true;return;}
  try{
   if(exportFiles){exportBusy=true;$('exportComparison').disabled=true;}
@@ -120,6 +121,7 @@ async function evaluate(exportFiles=false){
    ...(id==='master'?{generations:['current','old'].filter(g=>$(g+'Master').checked)}:{})});
   if(serial!==resultSerial||id!==currentStudy)return;
   report=result;$('exportComparison').disabled=false;renderResults();
+  if(typeof syncLandscapeSources==='function')syncLandscapeSources();
   const study=studies.find(s=>s.id===id);
   $('keepBest').classList.toggle('hidden',!(study?.config.refinement?.enabled&&result.winner&&['complete','complete_with_errors'].includes(study.status.state)&&study.case_count>1));
   if(result.generations)for(const g of ['current','old'])$(g+'Count').textContent=`(${result.generations[g]} cases)`;
@@ -155,7 +157,7 @@ async function applyRefinementNodes(){
  const serial=++nodeSerial;
  try{
   const design=refinementSource||baseline;
-  const result=await api('refinement-nodes',{design,count:Number($('nodeCount').value),variation_pct:Number($('localVariation').value),settings:configuration(true).settings});
+  const result=await api('refinement-nodes',{design,count:Number($('nodeCount').value),variation_pct:Number($('localVariation').value),settings:configuration(true).settings,search_method:'linspace'});
   if(serial!==nodeSerial)return;
   refinementSource=structuredClone(design);refinementActive=true;baseline=result.baseline;
   $('spanPanels').value=result.required_span_panels;
@@ -170,17 +172,52 @@ async function refine(row){
  if(sourceStudy){fill(sourceStudy.config);}
  refinementSource={name:row.design_name||row.id,sections:structuredClone(sections),source_study:row._study||currentStudy,source_case:row.id};
  baseline=structuredClone(refinementSource);refinementActive=true;
- $('nodeCount').value=Math.max(16,sections.length);$('localVariation').value=5;$('localCandidates').value=41;$('localSeed').value=7;
+ $('nodeCount').value=Math.max(16,sections.length);$('localVariation').value=5;
  $('decreasing').checked=sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m);
  if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
- $('studyName').value=(baseline.name+' refinement').slice(0,80);updateBaseline();show('setup');await applyRefinementNodes();notify('Smooth local refinement loaded. Adjust node count, chord variation and candidate count; Apply node count rebuilds the local bounds.');
+ $('studyName').value=(baseline.name+' refinement').slice(0,80);updateBaseline();show('setup');await applyRefinementNodes();notify('Refinement loaded with all chords fixed. Set min/max/samples only on the chords you want to vary, or select rows and apply the variation preset.');
 }
+let landscapeSerial=0;
+function landscapeRows(){
+ let rows=(report?.rows||[]).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&Number.isFinite(r.aspect_ratio)&&r.aspect_ratio>0);
+ if($('plotFeasible').checked)rows=rows.filter(r=>r.torque_status==='Within limit');
+ if($('plotStudy').value)rows=rows.filter(r=>(r._study||currentStudy)===$('plotStudy').value);
+ for(const [key,prefix] of [['area_m2','Area'],['aspect_ratio','Aspect']])for(const bound of ['Min','Max']){
+  const value=$('plot'+prefix+bound).value;
+  if(value!==''){const limit=Number(value);rows=rows.filter(r=>bound==='Min'?r[key]>=limit:r[key]<=limit);}
+ }
+ rows.sort((a,b)=>b.single_wing_mean_thrust_N-a.single_wing_mean_thrust_N||rowKey(a).localeCompare(rowKey(b)));
+ const count=Number($('plotCount').value);return count?rows.slice(0,count):rows;
+}
+function invalidateLandscape(){
+ landscapeSerial++;$('landscapeResult').innerHTML='';$('makeLandscape').disabled=!report;
+ $('landscapeStatus').textContent=report?'Selection changed. Generate the 3D comparison to update it.':'Select a study or master catalog, then generate the 3D comparison.';
+}
+function syncLandscapeSources(){
+ const old=$('plotStudy').value,sources=[...new Set((report?.rows||[]).map(r=>r._study||currentStudy))];
+ $('plotStudy').innerHTML='<option value="">All included studies</option>'+sources.map(id=>`<option value="${esc(id)}">${esc(studies.find(s=>s.id===id)?.name||id)} · ${esc(id.slice(0,15))}</option>`).join('');
+ $('plotStudy').value=sources.includes(old)?old:'';$('makeLandscape').disabled=!landscapeRows().length;
+ $('landscapeStatus').textContent=`${landscapeRows().length} matching measured wings. Generate to view wing area × aspect ratio × mean thrust.`;
+}
+$('makeLandscape').onclick=async()=>{
+ const serial=++landscapeSerial,rows=landscapeRows();if(!rows.length){notify('No settled wings match the 3D filters.');return;}
+ try{
+  $('makeLandscape').disabled=true;$('landscapeStatus').textContent=`Building the 3D view and PNG/CSV for ${rows.length} measured wings…`;
+  const data=await api('thrust-landscape',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),
+   generations:['current','old'].filter(g=>$(g+'Master').checked),case_keys:rows.map(rowKey)});
+  if(serial!==landscapeSerial)return;
+  renderLandscape(data);$('landscapeStatus').textContent=data.note;
+ }catch(error){if(serial===landscapeSerial)$('landscapeStatus').textContent=error.message;}
+ finally{if(serial===landscapeSerial)$('makeLandscape').disabled=false;}
+};
+for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotAspectMin','plotAspectMax'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
 $('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline)$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;
 $('applyNodes').onclick=()=>{const n=Number($('nodeCount').value);if(!Number.isInteger(n)||n<2||n>64){notify('Use 2–64 chord nodes.');return;}if(baseline){applyRefinementNodes();return;}const old=readRanges();renderRanges(Array.from({length:n},(_,i)=>old[i]||{min_m:.06,max_m:.14,count:3}));preview();};
 $('regularGrid').onclick=()=>{baseline=null;refinementSource=null;refinementActive=false;renderRanges(readRanges().map(r=>({...r,count:r.min_m===r.max_m?1:3})));updateBaseline();preview();};
-$('applyLocalBounds').onclick=applyRefinementNodes;
+$('applyLocalBounds').onclick=()=>{const rows=[...$('ranges').querySelectorAll('tr')],chosen=rows.filter(r=>r.querySelector('[data-vary]')?.checked);if(!chosen.length){notify('Select the chord rows you want to vary first, or edit their min/max/samples directly.');return;}const pct=Number($('localVariation').value)/100;if(!Number.isFinite(pct)||pct<0||pct>1){notify('Use a variation between 0 and 100%.');return;}rows.forEach((row,i)=>{if(!row.querySelector('[data-vary]')?.checked)return;const chord=baseline.sections[i].chord_m;row.querySelector('[data-key="min_m"]').value=Number((chord*(1-pct)).toPrecision(12));row.querySelector('[data-key="max_m"]').value=Number((chord*(1+pct)).toPrecision(12));row.querySelector('[data-key="count"]').value=pct?3:1;});preview();};
+$('fixAllChords').onclick=()=>{if(!baseline)return;renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();preview();};
 $('keepBest').onclick=async()=>{if(!report?.winner||currentStudy==='master')return;try{$('keepBest').disabled=true;const r=await api('keep-best',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),winner_id:report.winner.id});$('exportLinks').innerHTML=`<a class="button" href="/files/${esc(r.settings_file)}" download>Saved best wing settings</a>`;notify(`Saved ${r.kept_case}; discarded ${r.discarded_count} cases. ${r.cleanup}`);await refreshIndex();}catch(error){notify(error.message);}finally{$('keepBest').disabled=false;}};
 $('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await api('start',configuration());currentStudy=r.id;$('resultsLimit').value=$('maximumMoment').value;show('results');}catch(error){notify(error.message);preview();}};
 $('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;renderProgress(study);evaluate();};
