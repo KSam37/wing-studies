@@ -6,6 +6,7 @@ Existing physical results can be re-ranked without a new Ptera solve.
 import copy
 import csv
 import math
+from wing_dimensions import dimensions
 from pathlib import Path
 
 WORKFLOW='root_torque'
@@ -69,7 +70,7 @@ def classify(row,limit,repeat_only=True,aeroelastic=False):
 def rank(rows,limit,repeat_only=True,aeroelastic=False):
     if not isinstance(limit,(int,float)) or isinstance(limit,bool) or not math.isfinite(limit) or limit<=0:
         raise ValueError('Enter a positive maximum root moment in N m.')
-    evaluated=[{**r,'torque_status':classify(r,limit,repeat_only,aeroelastic)} for r in rows]
+    evaluated=[{**r,**dimensions(r),'torque_status':classify(r,limit,repeat_only,aeroelastic)} for r in rows]
     eligible=sorted((r for r in evaluated if r['torque_status']=='Within limit'),
         key=lambda r:(-r['single_wing_mean_thrust_N'],r['single_wing_peak_abs_roll_moment_Nm'],r['id']))
     ranks={r.get('comparison_key',r['id']):i for i,r in enumerate(eligible,1)}

@@ -137,7 +137,7 @@ function links(row){
  const smooth=row.sections?.length?smoothExports.get(`${row._study||currentStudy}/${row.id}`)||[]:[];
  return `<a href="${base}water_wing_forces.png" target="_blank">Ptera forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Ptera moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · <a href="${base}wing_left.svg" download>Left SVG</a> · <a href="${base}wing_right.svg" download>Right SVG</a>${row.sections?.length?`<button data-smooth-svg="${esc(rowKey(row))}">Convert to smooth SVG</button><span class="smooth-links">${smooth.map((file,i)=>`<a href="/files/${esc(file)}" download>Smooth ${i?'right':'left'} SVG</a>`).join(' · ')}</span>`:''}`;
 }
-function values(row){return `<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong> · remaining margin ${fmt(row.root_moment_margin_Nm)} N m</p>`;}
+function values(row){return `<p>Actual span: <strong>${fmt(row.single_wing_span_m)} m per wing</strong> (root to tip) · <strong>${fmt(row.effective_total_span_m??row.span_m)} m total</strong> (both wings + hinge gap)</p>${row.span_shortened_by_zero_chords?`<p class="help">Shortened from ${fmt(row.reference_total_span_m)} m reference total span: ${row.omitted_zero_chord_count} trailing zero-chord nodes removed.</p>`:''}<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong> · remaining margin ${fmt(row.root_moment_margin_Nm)} N m</p><p>Thrust / peak root torque: <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm>0?row.single_wing_mean_thrust_N/row.single_wing_peak_abs_roll_moment_Nm:null)} 1/m</strong></p>`;}
 function rowKey(row){return row.comparison_key||row.id;}
 function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':'Current')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
 function renderResults(){
@@ -189,10 +189,10 @@ async function refine(row){
 }
 let landscapeSerial=0;
 function landscapeRows(){
- let rows=(report?.rows||[]).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&Number.isFinite(r.aspect_ratio)&&r.aspect_ratio>0);
+ let rows=(report?.rows||[]).map(r=>({...r,plot_ratio:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null})).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&Number.isFinite(r.plot_ratio));
  if($('plotFeasible').checked)rows=rows.filter(r=>r.torque_status==='Within limit');
  if($('plotStudy').value)rows=rows.filter(r=>(r._study||currentStudy)===$('plotStudy').value);
- for(const [key,prefix] of [['area_m2','Area'],['aspect_ratio','Aspect']])for(const bound of ['Min','Max']){
+ for(const [key,prefix] of [['area_m2','Area'],['plot_ratio','Ratio']])for(const bound of ['Min','Max']){
   const value=$('plot'+prefix+bound).value;
   if(value!==''){const limit=Number(value);rows=rows.filter(r=>bound==='Min'?r[key]>=limit:r[key]<=limit);}
  }
@@ -207,7 +207,7 @@ function syncLandscapeSources(){
  const old=$('plotStudy').value,sources=[...new Set((report?.rows||[]).map(r=>r._study||currentStudy))];
  $('plotStudy').innerHTML='<option value="">All included studies</option>'+sources.map(id=>`<option value="${esc(id)}">${esc(studies.find(s=>s.id===id)?.name||id)} · ${esc(id.slice(0,15))}</option>`).join('');
  $('plotStudy').value=sources.includes(old)?old:'';$('makeLandscape').disabled=!landscapeRows().length;
- $('landscapeStatus').textContent=`${landscapeRows().length} matching measured wings. Generate to view wing area × aspect ratio × mean thrust.`;
+ $('landscapeStatus').textContent=`${landscapeRows().length} matching measured wings. Generate to view wing area × thrust/peak root torque × mean thrust.`;
 }
 $('makeLandscape').onclick=async()=>{
  const serial=++landscapeSerial,rows=landscapeRows();if(!rows.length){notify('No settled wings match the 3D filters.');return;}
@@ -220,7 +220,7 @@ $('makeLandscape').onclick=async()=>{
  }catch(error){if(serial===landscapeSerial)$('landscapeStatus').textContent=error.message;}
  finally{if(serial===landscapeSerial)$('makeLandscape').disabled=false;}
 };
-for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotAspectMin','plotAspectMax'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
+for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
 $('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline)$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;
