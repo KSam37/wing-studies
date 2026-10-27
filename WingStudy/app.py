@@ -192,9 +192,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(sweep_studies())
             if path == "/api/catalog":
                 return self.send(catalog.listing(model))
-            if path == "/master_runs.xlsx":
-                file=catalog.root(model)/"master_runs.xlsx"
-                if not file.is_file():catalog.export(model,browser_url=f"http://127.0.0.1:{SERVER.server_port}")
+            if path in ("/master_runs.xlsx","/master_runs_old.xlsx"):
+                file=catalog.root(model)/path.lstrip('/')
+                if not file.is_file() and path=="/master_runs.xlsx":catalog.export(model,browser_url=f"http://127.0.0.1:{SERVER.server_port}")
                 return self.send(file.read_bytes(),kind="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             if path.startswith("/api/case/"):
                 _, _, _, name, case_id = path.split("/")
@@ -226,6 +226,12 @@ class Handler(BaseHTTPRequestHandler):
                 spec=model.plan(data)
                 spec.update(catalog.preview(model,spec))
                 return self.send(spec)
+            if path == "/api/master-results":
+                import torque_study
+                with LOCK:
+                    catalog.sync(model)
+                    return self.send(torque_study.master_results(model,data.get('generations',['current']),
+                        data['maximum_root_moment_nm'],export=bool(data.get('export',False))))
             if path == "/api/torque-results":
                 import torque_study
                 limit=model.number(data.get('maximum_root_moment_nm'),'Maximum root moment',1e-12)

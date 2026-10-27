@@ -81,14 +81,17 @@ async function refreshIndex(){
  if(indexBusy||exportBusy)return;indexBusy=true;
  try{
   const list=await api('sweep-studies');studies=list;
-  if(!currentStudy||!list.some(s=>s.id===currentStudy))currentStudy=(list.find(s=>s.rigid&&s.isolated)||list[0])?.id||'';
-  $('studySelect').innerHTML=list.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${esc(s.created.slice(0,16).replace('T',' '))}${s.rigid?'':' · historical aeroelastic'}</option>`).join('');$('studySelect').value=currentStudy;
+  if(!currentStudy||(currentStudy!=='master'&&!list.some(s=>s.id===currentStudy)))currentStudy='master';
+  $('studySelect').innerHTML='<option value="master">Master comparison</option>'+list.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${esc(s.created.slice(0,16).replace('T',' '))}${s.rigid?'':' · historical aeroelastic'}</option>`).join('');$('studySelect').value=currentStudy;
   const study=list.find(s=>s.id===currentStudy);
   if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;
   renderProgress(study);await evaluate();
  }catch(error){notify(error.message);}finally{indexBusy=false;}
 }
 function renderProgress(study){
+ $('masterSources').classList.toggle('hidden',currentStudy!=='master');$('useStudy').disabled=currentStudy==='master';
+ $('stopStudy').classList.add('hidden');
+ if(currentStudy==='master'){$('progress').textContent='Select Current, Old, or both. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
  if(!study){$('progress').textContent='No saved studies yet.';return;}
  const s=study.status;$('progress').innerHTML=`<p>${esc(s.message||s.state)} · ${s.completed||0} / ${s.total||study.case_count}</p><div class="progress"><div style="width:${100*(s.completed||0)/Math.max(1,s.total||study.case_count)}%"></div></div>`;
  $('stopStudy').classList.toggle('hidden',s.state!=='running');
@@ -98,30 +101,36 @@ async function evaluate(exportFiles=false){
  if(!id||!Number.isFinite(limit)||limit<=0){report=null;$('winnerBody').textContent='Enter your maximum wing-root moment to rank these results.';$('rankedRows').innerHTML='';$('exportComparison').disabled=true;return;}
  try{
   if(exportFiles){exportBusy=true;$('exportComparison').disabled=true;}
-  const result=await api('torque-results',{study:id,maximum_root_moment_nm:limit,export:exportFiles});
+  const result=await api(id==='master'?'master-results':'torque-results',{study:id,maximum_root_moment_nm:limit,export:exportFiles,
+   ...(id==='master'?{generations:['current','old'].filter(g=>$(g+'Master').checked)}:{})});
   if(serial!==resultSerial||id!==currentStudy)return;
   report=result;$('exportComparison').disabled=false;renderResults();
+  if(result.generations)for(const g of ['current','old'])$(g+'Count').textContent=`(${result.generations[g]} cases)`;
   if(result.files)$('exportLinks').innerHTML=result.files.map(file=>`<a class="button" href="/files/${file}" download>${file.endsWith('.png')?'Comparison PNG':'Ranked results CSV'}</a>`).join('');
  }catch(error){if(serial!==resultSerial)return;report=null;$('winnerBody').innerHTML=`<p class="error">${esc(error.message)}</p>`;$('rankedRows').innerHTML='';}
  finally{if(exportFiles){exportBusy=false;$('exportComparison').disabled=!report;}}
 }
 function links(row){
  if(row.status!=='ok')return '';
- const base='/files/'+currentStudy+'/'+row.id+'/';
+ const base='/files/'+(row._study||currentStudy)+'/'+row.id+'/';
  return `<a href="${base}water_wing_forces.png" target="_blank">Ptera forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Ptera moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · <a href="${base}wing_left.svg" download>Left SVG</a> · <a href="${base}wing_right.svg" download>Right SVG</a>`;
 }
 function values(row){return `<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong> · remaining margin ${fmt(row.root_moment_margin_Nm)} N m</p>`;}
+function rowKey(row){return row.comparison_key||row.id;}
+function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':'Current')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
 function renderResults(){
  if(!report)return;
  const winner=report.winner;
- $('winnerBody').innerHTML=winner?`${outline(winner,true)}<h3>${esc(winner.design_name||winner.id)} · ${esc(winner.id)}</h3>${values(winner)}<div class="actions"><button data-refine="${esc(winner.id)}">Refine this shape</button>${links(winner)}</div>`:'<p class="note">No feasible design meets the root-moment limit and settling requirement. No winner is selected. Review rejected cases, change the geometry ranges, or enter a different allowable root moment.</p>';
+ $('winnerBody').innerHTML=winner?`${outline(winner,true)}<h3>${esc(winner.design_name||winner.id)} · ${esc(winner.id)}</h3>${sourceNote(winner)}${values(winner)}<div class="actions"><button data-refine="${esc(rowKey(winner))}">Refine this shape</button>${links(winner)}</div>`:'<p class="note">No feasible design meets the root-moment limit and settling requirement. No winner is selected. Review rejected cases, change the geometry ranges, or enter a different allowable root moment.</p>';
+ if(currentStudy==='master'&&!report.total_count)$('winnerBody').textContent=report.selected?.length?'This master has no cases yet. New studies will appear in Current; check Old to view previous results.':'No masters selected. Check Current, Old, or both to compare results.';
  const rows=report.rows.filter(r=>$('showRejected').checked||r.torque_status==='Within limit');
  $('resultSummary').textContent=`${report.feasible_count} feasible of ${report.total_count} cases · limit ${report.maximum_root_moment_nm} N m per wing · ordered by single-wing mean thrust.`;
  const study=studies.find(s=>s.id===currentStudy),s=study?.config.settings;
+ if(currentStudy==='master')$('resultSummary').textContent+=' Selected masters: '+(report.selected?.join(' + ')||'none')+'. Driving conditions may differ between studies.';
  if(s)$('resultSummary').textContent+=` Study motion: ${s.frequency_hz} Hz, speed ${s.speed_mps} m/s; ${study.config.motion_range?study.config.motion_range.minimum_deg+'° to '+study.config.motion_range.maximum_deg+'°':'half-stroke '+s.amplitude_deg+'°'}.`;
  page=Math.max(0,Math.min(page,Math.ceil(rows.length/25)-1));
- $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.thrust_rank??'—'}</div>${outline(r)}<div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(r.id)}">Refine this shape</button>${links(r)}</div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
- document.querySelectorAll('[data-refine]').forEach(button=>button.onclick=()=>refine(report.rows.find(r=>r.id===button.dataset.refine)));
+ $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.thrust_rank??'—'}</div>${outline(r)}<div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${sourceNote(r)}${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(rowKey(r))}">Refine this shape</button>${links(r)}</div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
+ document.querySelectorAll('[data-refine]').forEach(button=>button.onclick=()=>refine(report.rows.find(r=>rowKey(r)===button.dataset.refine)));
  $('pageLabel').textContent=`Page ${page+1} of ${Math.max(1,Math.ceil(rows.length/25))}`;$('previousPage').disabled=page===0;$('nextPage').disabled=(page+1)*25>=rows.length;
 }
 function refine(row){
@@ -143,10 +152,11 @@ $('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await ap
 $('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;renderProgress(study);evaluate();};
 $('resultsLimit').oninput=()=>{page=0;$('exportLinks').innerHTML='';clearTimeout(timer);timer=setTimeout(evaluate,350);};
 $('refreshResults').onclick=refreshIndex;$('exportComparison').onclick=()=>evaluate(true);$('showRejected').onchange=()=>{page=0;renderResults();};
+for(const g of ['current','old'])$(g+'Master').onchange=()=>{page=0;$('exportLinks').innerHTML='';evaluate();};
 $('previousPage').onclick=()=>{page--;renderResults();};$('nextPage').onclick=()=>{page++;renderResults();};
 $('useStudy').onclick=()=>{const s=studies.find(s=>s.id===currentStudy);if(s){fill(s.config);if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;show('setup');preview();notify('Study settings loaded for a new rigid sweep. Review the motion range.');}};
 $('stopStudy').onclick=async()=>{try{await api('stop',{id:currentStudy});refreshIndex();}catch(error){notify(error.message);}};
 $('exportSettings').onclick=async()=>{try{const prepared=await api('preview',configuration());const url=URL.createObjectURL(new Blob([JSON.stringify(prepared.config,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='wing-study-settings.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){notify(error.message);}};
 $('importSettings').onclick=()=>$('settingsFile').click();$('settingsFile').onchange=async()=>{try{fill(JSON.parse(await $('settingsFile').files[0].text()));notify('Settings loaded. This workflow runs rigid geometry sweeps.');}catch(error){notify(error.message);}finally{$('settingsFile').value='';}};
-async function init(){try{const d=await api('defaults');defaults=d.config;fill(defaults,true);$('resultsLimit').value=$('maximumMoment').value;await refreshIndex();if(location.hash.startsWith('#catalog')||location.hash==='#results')show('results');setInterval(()=>{if(!$('results').classList.contains('hidden')&&studies.find(s=>s.id===currentStudy)?.status.state==='running')refreshIndex();},4000);}catch(error){notify(error.message);}}
+async function init(){try{const d=await api('defaults');defaults=d.config;fill(defaults,true);$('resultsLimit').value=$('maximumMoment').value;await refreshIndex();if(location.hash.startsWith('#catalog')||location.hash==='#results')show('results');setInterval(()=>{if(!$('results').classList.contains('hidden')&&(currentStudy==='master'?studies.some(s=>s.status.state==='running'):studies.find(s=>s.id===currentStudy)?.status.state==='running'))refreshIndex();},4000);}catch(error){notify(error.message);}}
 init();

@@ -52,9 +52,9 @@ class ClosingConnection(sqlite3.Connection):
     def __exit__(self,*args):
         try:return super().__exit__(*args)
         finally:self.close()
-def connect(model):
+def connect(model,filename="master_runs.sqlite3"):
     root(model).mkdir(parents=True,exist_ok=True)
-    db=sqlite3.connect(root(model)/"master_runs.sqlite3",timeout=30,factory=ClosingConnection)
+    db=sqlite3.connect(root(model)/filename,timeout=30,factory=ClosingConnection)
     db.row_factory=sqlite3.Row
     db.executescript("""CREATE TABLE IF NOT EXISTS cases (
         case_no INTEGER PRIMARY KEY AUTOINCREMENT, signature TEXT UNIQUE NOT NULL,
@@ -65,6 +65,63 @@ def connect(model):
       CREATE TABLE IF NOT EXISTS imports (study TEXT PRIMARY KEY, revision TEXT);
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT);""")
     return db
+
+def old_connection(model):
+    path=root(model)/"master_runs_old.sqlite3"
+    db=sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,factory=ClosingConnection)
+    db.row_factory=sqlite3.Row
+    return db
+
+def start_fresh(model):
+    """Explicit, one-time archive; existing studies and case numbers stay intact."""
+    with connect(model) as db:
+        if db.execute("SELECT value FROM meta WHERE key='archive_studies'").fetchone():return False
+    sync(model)
+    directory=root(model);old=directory/"master_runs_old.sqlite3"
+    if old.exists() or (directory/"master_runs_old.xlsx").exists():
+        raise ValueError("An Old master already exists. Preserve it before starting another generation.")
+    if not (directory/"master_runs.xlsx").exists():export(model)
+    # Copy the existing workbook verbatim and use SQLite's consistent backup API.
+    shutil.copy2(directory/"master_runs.xlsx",directory/"master_runs_old.xlsx")
+    with connect(model) as db,sqlite3.connect(old,factory=ClosingConnection) as backup:
+        db.backup(backup)
+        maximum=db.execute("SELECT COALESCE(MAX(case_no),0) FROM cases").fetchone()[0]
+    studies=[p.name for p in model.OUTPUTS.iterdir() if (p/"manifest.json").is_file()]
+    staged="master_runs_new.sqlite3"
+    with connect(model,staged) as fresh:
+        fresh.execute("INSERT INTO meta VALUES('archive_studies',?)",(compact(studies),))
+        fresh.execute("INSERT INTO meta VALUES('generation_started',?)",(stamp(),))
+        fresh.execute("INSERT INTO sqlite_sequence(name,seq) VALUES('cases',?)",(maximum,))
+    os.replace(directory/staged,directory/"master_runs.sqlite3")
+    export(model,metric="single_wing_mean_thrust_N")
+    return True
+
+def cache_entries(model,signatures):
+    """Both generations remain available for exact physical-result reuse."""
+    entries={}
+    if (root(model)/"master_runs_old.sqlite3").exists():
+        with old_connection(model) as db:
+            entries.update({r["signature"]:r for r in db.execute("SELECT * FROM cases WHERE state='ok'") if r['signature'] in signatures and available(model,r)})
+    with connect(model) as db:
+        entries.update({r["signature"]:r for r in db.execute("SELECT * FROM cases WHERE state='ok'") if r['signature'] in signatures and available(model,r)})
+    return entries
+
+def generations(model,selected=("current",)):
+    if not isinstance(selected,(list,tuple)) or any(v not in ("current","old") for v in selected):
+        raise ValueError("Choose Current and/or Old master.")
+    rows=[];counts={};seen=set()
+    for name in ("current","old"):
+        if name=='old' and not (root(model)/"master_runs_old.sqlite3").exists():
+            counts[name]=0;continue
+        with (connect(model) if name=='current' else old_connection(model)) as db:
+            counts[name]=db.execute("SELECT COUNT(*) FROM cases").fetchone()[0]
+            data=listing(model,_db=db,check_outputs=False) if name in selected else {"rows":[]}
+        for row in data['rows']:
+            if row['_signature'] in seen:continue
+            seen.add(row['_signature'])
+            rows.append({**row,'catalog_generation':name,'comparison_key':f"{name}:{row['global_case_no']}",
+                'aeroelastic_enabled':row['_settings'].get('aeroelastic_enabled',False)})
+    return {'rows':rows,'generations':counts,'selected':list(selected)}
 
 AEROELASTIC_KEYS={"aeroelastic_enabled","spring_constant_rad","wing_density","damping_constant_rad","step_discards"}
 
@@ -165,7 +222,10 @@ def sync(model):
     """Import/reconcile existing studies without modifying their historical files."""
     if not model.OUTPUTS.exists():return
     with connect(model) as db:
+        boundary=db.execute("SELECT value FROM meta WHERE key='archive_studies'").fetchone()
+        archived=set(json.loads(boundary[0])) if boundary else set()
         for study in sorted(model.OUTPUTS.iterdir()):
+            if study.name in archived:continue
             manifest_path=study/"manifest.json";result_path=study/"results.json"
             if not manifest_path.is_file():continue
             status_path=study/"status.json"
@@ -218,8 +278,8 @@ def available(model,entry):
 
 def reuse(model,case,settings,directory):
     import numpy as np
-    with connect(model) as db:
-        entry=db.execute("SELECT * FROM cases WHERE signature=?",(signature(model,case,settings),)).fetchone()
+    sig=signature(model,case,settings)
+    entry=cache_entries(model,{sig}).get(sig)
     if not entry or not available(model,entry):return None
     source=model.OUTPUTS/entry["origin_study"]
     if source.resolve()==directory.parent.resolve() and entry["origin_case"]==case["id"]:return None
@@ -246,12 +306,12 @@ def reuse(model,case,settings,directory):
     return metrics
 
 def preview(model,spec):
-    with connect(model) as db:
-        existing={r["signature"]:r for r in db.execute("SELECT * FROM cases WHERE state='ok'")}
-    reused=sum(available(model,existing[sig]) for c in spec["cases"] if (sig:=signature(model,c,spec["settings"])) in existing)
+    signatures=[signature(model,c,spec['settings']) for c in spec['cases']]
+    existing=cache_entries(model,set(signatures))
+    reused=sum(sig in existing for sig in signatures)
     return {"cached_case_count":reused,"new_simulation_count":len(spec["cases"])-reused}
 
-def listing(model,metric=OBJECTIVE,descending=True,_db=None):
+def listing(model,metric=OBJECTIVE,descending=True,_db=None,check_outputs=True):
     if metric not in METRICS:raise ValueError("Choose a supported ranking metric.")
     db=_db or connect(model)
     try:
@@ -271,7 +331,7 @@ def listing(model,metric=OBJECTIVE,descending=True,_db=None):
         rows.append({**case,**geometry,**result,"global_case_no":e["case_no"],"catalog_state":e["state"],
             "_study":e["origin_study"],"_studyName":payload["study_name"],"_settings":payload["settings"],
             "_ptera_version":payload.get("ptera_version"),"_signature":e["signature"],"_recorded":e["recorded"],
-            "_verified":payload.get("reuse_verified",False),"outputs_available":available(model,e),
+            "_verified":payload.get("reuse_verified",False),"outputs_available":available(model,e) if check_outputs else None,
             "occurrences":[dict(o) for o in occurrences if o["case_no"]==e["case_no"]]})
     def valid(r):return isinstance(r.get(metric),(int,float)) and math.isfinite(r[metric]) and r.get("status")=="ok"
     rows.sort(key=lambda r:(not valid(r),(-r[metric] if descending else r[metric]) if valid(r) else 0,r["global_case_no"]))

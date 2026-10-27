@@ -64,9 +64,9 @@ def rank(rows,limit,repeat_only=True,aeroelastic=False):
     evaluated=[{**r,'torque_status':classify(r,limit,repeat_only,aeroelastic)} for r in rows]
     eligible=sorted((r for r in evaluated if r['torque_status']=='Within limit'),
         key=lambda r:(-r['single_wing_mean_thrust_N'],r['single_wing_peak_abs_roll_moment_Nm'],r['id']))
-    ranks={r['id']:i for i,r in enumerate(eligible,1)}
+    ranks={r.get('comparison_key',r['id']):i for i,r in enumerate(eligible,1)}
     for r in evaluated:
-        r['thrust_rank']=ranks.get(r['id']);r['root_moment_limit_Nm']=limit
+        r['thrust_rank']=ranks.get(r.get('comparison_key',r['id']));r['root_moment_limit_Nm']=limit
         if isinstance(r.get('single_wing_peak_abs_roll_moment_Nm'),(int,float)):
             r['root_moment_margin_Nm']=limit-r['single_wing_peak_abs_roll_moment_Nm']
     evaluated.sort(key=lambda r:(r['thrust_rank'] is None,r['thrust_rank'] or 0,r['id']))
@@ -81,11 +81,28 @@ def results(model,study,limit=None,repeat_only=True,export=False):
     rows=model.read_json(study/'results.json') if (study/'results.json').exists() else []
     report=rank(rows,limit,repeat_only,manifest['settings'].get('aeroelastic_enabled',False))
     if not export:return report
+    return export_report(model,study,report,manifest['settings'])
+
+
+def master_results(model,selected,limit,export=False):
+    import catalog
+    data=catalog.generations(model,selected)
+    report={**rank(data['rows'],limit),**{k:v for k,v in data.items() if k!='rows'}}
+    if export:
+        import hashlib
+        name='compiled-master-'+hashlib.sha256(catalog.compact(sorted(selected)).encode()).hexdigest()[:8]
+        study=model.OUTPUTS/name;study.mkdir(exist_ok=True)
+        export_report(model,study,report,{})
+    return report
+
+
+def export_report(model,study,report,settings):
+    limit=report['maximum_root_moment_nm']
     dest=study/'comparisons';dest.mkdir(exist_ok=True)
     name='thrust_under_root_limit';csv_path=dest/(name+'.csv')
-    exported=[{**r,'study':study.name,**{k:manifest['settings'].get(k) for k in
+    exported=[{**r,'study':r.get('_study',study.name),**{k:r.get('_settings',settings).get(k) for k in
         ('frequency_hz','amplitude_deg','speed_mps','rho','nu','dt_s','cycles','span_panels','chord_panels','wake_model','wake_cycles')},
-        'waveform':manifest['settings'].get('waveform')} for r in report['rows']]
+        'waveform':r.get('_settings',settings).get('waveform')} for r in report['rows']]
     keys=list(dict.fromkeys(['thrust_rank','id','torque_status','root_moment_limit_Nm','root_moment_margin_Nm',
         'single_wing_mean_thrust_N','estimated_two_wing_mean_thrust_N','single_wing_peak_abs_roll_moment_Nm',
         *[k for r in exported for k in r]]))

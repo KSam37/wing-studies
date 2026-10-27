@@ -12,6 +12,42 @@ import model
 import catalog
 
 class CatalogChecks(unittest.TestCase):
+    def test_old_and_current_masters_preserve_reuse_and_identity(self):
+        import hashlib
+        import torque_study
+        spec,source,row=self.saved()
+        catalog.export(model)
+        original=(self.out.parent/'master_runs.xlsx').read_bytes()
+        self.assertTrue(catalog.start_fresh(model))
+        old=self.out.parent/'master_runs_old.sqlite3'
+        digest=hashlib.sha256(old.read_bytes()).hexdigest()
+        self.assertEqual(original,(self.out.parent/'master_runs_old.xlsx').read_bytes())
+        self.assertFalse(catalog.start_fresh(model))
+        catalog.sync(model);catalog.sync(model)
+        self.assertEqual(catalog.listing(model)['case_count'],0)
+        self.assertEqual(catalog.generations(model,['old'])['generations'],{'current':0,'old':1})
+        self.assertEqual(catalog.preview(model,spec)['cached_case_count'],1)
+        second=copy.deepcopy(self.spec);catalog.prepare(model,second,'new-study')
+        self.assertGreater(second['cases'][0]['global_case_no'],row['global_case_no'])
+        directory=self.out/'new-study'/'case_0001';directory.mkdir(parents=True)
+        metrics=catalog.reuse(model,second['cases'][0],second['settings'],directory)
+        self.assertEqual(metrics['reused_from']['study'],'source')
+        newrow={**second['cases'][0],**metrics,'status':'ok'}
+        catalog.record(model,second,'new-study',newrow)
+        self.assertEqual(len(catalog.generations(model,['current'])['rows']),1)
+        self.assertEqual(len(catalog.generations(model,['old'])['rows']),1)
+        combined=catalog.generations(model,['current','old'])
+        self.assertEqual(len(combined['rows']),1)
+        self.assertEqual(combined['rows'][0]['catalog_generation'],'current')
+        self.assertEqual(catalog.generations(model,[])['rows'],[])
+        self.assertEqual(torque_study.master_results(model,[],.625)['total_count'],0)
+        self.assertEqual(hashlib.sha256(old.read_bytes()).hexdigest(),digest)
+        # Local IDs repeat across studies. Master ranking must use global identity.
+        a={**newrow,'comparison_key':'current:100','single_wing_mean_thrust_N':4.}
+        b={**newrow,'comparison_key':'old:1','single_wing_mean_thrust_N':2.}
+        ranked=torque_study.rank([a,b],2.)
+        self.assertEqual([r['thrust_rank'] for r in ranked['rows']],[1,2])
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(dir=model.HERE)
         self.out=Path(self.temp.name)/"studies";self.out.mkdir()

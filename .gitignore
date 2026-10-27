@@ -36,4 +36,6 @@ WingStudy/tmp*/
 !/outputs/provenance/
 !/outputs/master_runs.xlsx
 !/outputs/master_runs.sqlite3
+!/outputs/master_runs_old.xlsx
+!/outputs/master_runs_old.sqlite3
 outputs/studies/**/*.tmp
