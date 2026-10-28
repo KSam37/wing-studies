@@ -17,6 +17,21 @@ def row(name,thrust,moment,**extra):
 
 
 class TorqueChecks(unittest.TestCase):
+    def test_full_range_overview_has_no_cutoff_or_single_winner(self):
+        with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
+            root=Path(temp);study=root/'study';study.mkdir()
+            model.write_json(study/'manifest.json',{'settings':{},'config':{'optimization':{'max_root_moment_nm':.1}}})
+            model.write_json(study/'results.json',[row('low',1,.1),row('dominated',.9,.3),row('high',5,10)])
+            with patch.object(model,'OUTPUTS',root):
+                result=torque.overview(model,'study')
+            self.assertEqual(result['eligible_count'],3)
+            self.assertEqual(result['frontier_count'],2)
+            self.assertNotIn('maximum_root_moment_nm',result)
+            self.assertNotIn('winner',result)
+            self.assertEqual(result['rows'][0]['id'],'high')
+            self.assertEqual({r['id'] for r in result['rows'] if r['is_frontier']},{'low','high'})
+            self.assertEqual({r['torque_status'] for r in result['rows']},{'Eligible','Frontier'})
+
     def test_editable_workflow_defaults(self):
         original=copy.deepcopy(model.DEFAULT);c=torque.default_config(model)
         self.assertEqual(c['optimization']['max_root_moment_nm'],.625)

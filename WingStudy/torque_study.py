@@ -117,6 +117,41 @@ def master_results(model,selected,limit,export=False,model_mode='rigid'):
     return report
 
 
+def overview(model,study,selected=('current',),model_mode='rigid',export=False):
+    """Full-range result view. No optimization constraint or implied winner."""
+    import catalog
+    import torque_frontier
+    if study=='master':
+        data=catalog.generations(model,selected)
+        rows=select_model(data['rows'],model_mode)
+        extra={k:v for k,v in data.items() if k!='rows'}
+    else:
+        directory=model.OUTPUTS/study;manifest=model.read_json(directory/'manifest.json')
+        model_mode='aeroelastic' if manifest['settings'].get('aeroelastic_enabled',False) else 'rigid'
+        rows=model.read_json(directory/'results.json') if (directory/'results.json').exists() else []
+        rows=[{**r,'_study':study,'_settings':manifest['settings']} for r in rows]
+        extra={}
+    eligible,frontier=torque_frontier.envelope(rows,allow_aeroelastic=model_mode=='aeroelastic')
+    key=lambda r:r.get('comparison_key',r['id'])
+    frontier_keys={key(r) for r in frontier}
+    ranked=sorted(eligible,key=lambda r:(-r['single_wing_mean_thrust_N'],r['single_wing_peak_abs_roll_moment_Nm'],key(r)))
+    ranks={key(r):i for i,r in enumerate(ranked,1)}
+    evaluated=[]
+    for row in rows:
+        status=classify(row,float('inf'),allow_aeroelastic=model_mode=='aeroelastic')
+        on_frontier=key(row) in frontier_keys
+        evaluated.append({**row,**dimensions(row),'is_frontier':on_frontier,'thrust_rank':ranks.get(key(row)),
+            'torque_status':('Frontier' if on_frontier else 'Eligible') if status=='Within limit' else status})
+    evaluated.sort(key=lambda r:(r['thrust_rank'] is None,r['thrust_rank'] or 0,key(r)))
+    report={**extra,'model_mode':model_mode,'rows':evaluated,'total_count':len(rows),
+        'eligible_count':len(eligible),'frontier_count':len(frontier),'full_range':True,
+        'note':'All eligible measured designs across peak root torque. No single torque cutoff; the frontier is the best observed thrust at or below each torque.'}
+    if export:
+        if not frontier:raise ValueError('No eligible designs to export for this comparison.')
+        report['files']=torque_frontier.generate(model,{'study':study,'generations':list(selected),'model_mode':model_mode})['files']
+    return report
+
+
 def export_report(model,study,report,settings):
     limit=report['maximum_root_moment_nm']
     dest=study/'comparisons';dest.mkdir(exist_ok=True)

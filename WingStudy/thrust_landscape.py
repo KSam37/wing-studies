@@ -29,7 +29,7 @@ def data(model,rows,axes=None):
         values={**row,**dimensions(row),catalog.OBJECTIVE:ratio}
         if any(not isinstance(values.get(k),(int,float)) or isinstance(values[k],bool) or not math.isfinite(values[k]) for k in axes):
             raise ValueError('A selected axis value is missing or undefined (thrust/torque requires positive peak root torque).')
-        if row.get('torque_status') not in ('Within limit','Over limit','No positive thrust'):
+        if row.get('torque_status') not in ('Within limit','Over limit','No positive thrust','Eligible','Frontier'):
             raise ValueError('Select settled single-wing cases for the chosen native model with valid forces and moments.')
         key=row.get('comparison_key',row['id']);settings=row['_settings']
         points.append({'case_id':key,'coords':[values[k] for k in axes],'value':values[axes[2]],'area_m2':area,'aspect_ratio':row.get('aspect_ratio'),
@@ -56,8 +56,13 @@ def data(model,rows,axes=None):
 
 
 def generate(model,request):
-    limit=request['maximum_root_moment_nm'];study=request.get('study')
-    if study=='master':
+    limit=request.get('maximum_root_moment_nm');study=request.get('study')
+    if request.get('full_range',False):
+        report=torque_study.overview(model,study,request.get('generations',['current']),request.get('model_mode','rigid'))
+        if study!='master':
+            manifest=model.read_json(model.OUTPUTS/study/'manifest.json');verified=catalog.verified_import(model,manifest)
+            for row in report['rows']:row['_verified']=verified
+    elif study=='master':
         report=torque_study.master_results(model,request.get('generations',['current']),limit,model_mode=request.get('model_mode','rigid'))
     else:
         # The route resolves/validates the study path before entering this function.

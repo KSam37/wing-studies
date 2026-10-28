@@ -269,6 +269,12 @@ class Handler(BaseHTTPRequestHandler):
                     if any(s['status']['state']=='running' for s in sweep_studies()):
                         raise ValueError('Wait for active simulations to finish before cleaning up a refinement study.')
                     return self.send(refinement.keep_best(model,directory,data['maximum_root_moment_nm'],data['winner_id']))
+            if path == "/api/tradeoff-results":
+                import torque_study
+                if data.get('study')!='master':study_path(data['study'])
+                with LOCK:
+                    if data.get('study')=='master':catalog.sync(model)
+                    return self.send(torque_study.overview(model,data['study'],data.get('generations',['current']),data.get('model_mode','rigid'),bool(data.get('export',False))))
             if path == "/api/master-results":
                 import torque_study
                 with LOCK:

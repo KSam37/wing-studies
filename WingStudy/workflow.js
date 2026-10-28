@@ -141,14 +141,12 @@ async function refreshIndex(){
   if(!currentStudy||(currentStudy!=='master'&&!list.some(s=>s.id===currentStudy)))currentStudy='master';
   $('studySelect').innerHTML='<option value="master">Master comparison</option>'+list.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${esc(s.created.slice(0,16).replace('T',' '))}${s.rigid?'':s.config.adaptive_search?.enabled?' · native aeroelastic':' · historical aeroelastic'}</option>`).join('');$('studySelect').value=currentStudy;
   const study=list.find(s=>s.id===currentStudy);
-  if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;
   $('resultsModel').disabled=currentStudy!=='master';if(study)$('resultsModel').value=study.config.settings.aeroelastic_enabled?'aeroelastic':'rigid';
   $('evolutionCard').classList.toggle('hidden',!study?.config.adaptive_search?.enabled);
   renderProgress(study);await evaluate();
  }catch(error){notify(error.message);}finally{indexBusy=false;}
 }
 function renderProgress(study){
- $('keepBest').classList.add('hidden');
  $('masterSources').classList.toggle('hidden',currentStudy!=='master');$('useStudy').disabled=currentStudy==='master';
  $('stopStudy').classList.add('hidden');
  if(currentStudy==='master'){$('progress').textContent='Select Current, Old, and/or Adaptive. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
@@ -157,23 +155,22 @@ function renderProgress(study){
  $('stopStudy').classList.toggle('hidden',s.state!=='running');
 }
 async function evaluate(exportFiles=false){
- const serial=++resultSerial,id=currentStudy,limit=Number($('resultsLimit').value);
+ const serial=++resultSerial,id=currentStudy;
  if(typeof invalidateLandscape==='function')invalidateLandscape();
  if(typeof checkFrontierSelection==='function')checkFrontierSelection();
- if(!id||!Number.isFinite(limit)||limit<=0){report=null;$('winnerBody').textContent='Enter your maximum wing-root moment to rank these results.';$('rankedRows').innerHTML='';$('exportComparison').disabled=true;return;}
+ if(!id){report=null;$('rankedRows').innerHTML='';$('exportComparison').disabled=true;return;}
  try{
   if(exportFiles){exportBusy=true;$('exportComparison').disabled=true;}
-  const result=await api(id==='master'?'master-results':'torque-results',{study:id,maximum_root_moment_nm:limit,export:exportFiles,model_mode:$('resultsModel')?.value||'rigid',
+  const result=await api('tradeoff-results',{study:id,export:exportFiles,model_mode:$('resultsModel')?.value||'rigid',
    ...(id==='master'?{generations:['current','old','adaptive'].filter(g=>$(g+'Master')?.checked)}:{})});
   if(serial!==resultSerial||id!==currentStudy)return;
   report=result;$('exportComparison').disabled=false;renderResults();
   if(typeof syncLandscapeSources==='function')syncLandscapeSources();
   const study=studies.find(s=>s.id===id);
-  $('keepBest').classList.toggle('hidden',!(study?.config.refinement?.enabled&&result.winner&&['complete','complete_with_errors'].includes(study.status.state)&&study.case_count>1));
   if(result.generations)for(const g of ['current','old','adaptive'])if($(g+'Count'))$(g+'Count').textContent=`(${result.generations[g]} cases)`;
-  if(result.files)$('exportLinks').innerHTML=result.files.map(file=>`<a class="button" href="/files/${file}" download>${file.endsWith('.png')?'Comparison PNG':'Ranked results CSV'}</a>`).join('');
+  if(result.files)$('exportLinks').innerHTML=result.files.map(file=>`<a class="button" href="/files/${file}" download>${file.endsWith('.png')?'Torque–thrust PNG':'All eligible designs CSV'}</a>`).join('');
   if(study?.retention){if(!result.files)$('exportLinks').innerHTML='';$('exportLinks').innerHTML+=`<a class="button" href="/files/${esc(id)}/best_wing_settings.json" download>Saved best wing settings</a>`;}
- }catch(error){if(serial!==resultSerial)return;report=null;$('winnerBody').innerHTML=`<p class="error">${esc(error.message)}</p>`;$('rankedRows').innerHTML='';}
+ }catch(error){if(serial!==resultSerial)return;report=null;$('resultSummary').textContent=error.message;$('rankedRows').innerHTML='';}
  finally{if(exportFiles){exportBusy=false;$('exportComparison').disabled=!report;}}
 }
 function links(row){
@@ -182,16 +179,13 @@ function links(row){
  const smooth=row.sections?.length?smoothExports.get(`${row._study||currentStudy}/${row.id}`)||[]:[];
  return `<a href="${base}water_wing_forces.png" target="_blank">Ptera forces</a> · <a href="${base}water_wing_moments.png" target="_blank">Ptera moments</a> · <a href="${base}animation.webp" target="_blank">Animation</a> · <a href="${base}wing_left.svg" download>Left SVG</a> · <a href="${base}wing_right.svg" download>Right SVG</a>${row.sections?.length?`<button data-smooth-svg="${esc(rowKey(row))}">Convert to smooth SVG</button><span class="smooth-links">${smooth.map((file,i)=>`<a href="/files/${esc(file)}" download>Smooth ${i?'right':'left'} SVG</a>`).join(' · ')}</span>`:''}`;
 }
-function values(row){return `${row.aeroelastic_enabled?`<p class="help">Native aeroelastic · peak twist ${fmt(row.peak_abs_native_twist_deg)}° · damping ${fmt(row.damping_constant_rad)} N m s/rad</p>`:''}<p>Actual span: <strong>${fmt(row.single_wing_span_m)} m per wing</strong> (root to tip) · <strong>${fmt(row.effective_total_span_m??row.span_m)} m total</strong> (both wings + hinge gap)</p>${row.span_shortened_by_zero_chords?`<p class="help">Shortened from ${fmt(row.reference_total_span_m)} m reference total span: ${row.omitted_zero_chord_count} trailing zero-chord nodes removed.</p>`:''}<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong> · remaining margin ${fmt(row.root_moment_margin_Nm)} N m</p><p>Thrust / peak root torque: <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm>0?row.single_wing_mean_thrust_N/row.single_wing_peak_abs_roll_moment_Nm:null)} 1/m</strong></p>`;}
+function values(row){return `${row.aeroelastic_enabled?`<p class="help">Native aeroelastic · peak twist ${fmt(row.peak_abs_native_twist_deg)}° · damping ${fmt(row.damping_constant_rad)} N m s/rad</p>`:''}<p>Actual span: <strong>${fmt(row.single_wing_span_m)} m per wing</strong> (root to tip) · <strong>${fmt(row.effective_total_span_m??row.span_m)} m total</strong> (both wings + hinge gap)</p>${row.span_shortened_by_zero_chords?`<p class="help">Shortened from ${fmt(row.reference_total_span_m)} m reference total span: ${row.omitted_zero_chord_count} trailing zero-chord nodes removed.</p>`:''}<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong></p><p>Thrust / peak root torque: <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm>0?row.single_wing_mean_thrust_N/row.single_wing_peak_abs_roll_moment_Nm:null)} 1/m</strong></p>`;}
 function rowKey(row){return row.comparison_key||row.id;}
 function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':row.catalog_generation==='adaptive'?'Adaptive':'Current')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
 function renderResults(){
  if(!report)return;
- const winner=report.winner;
- $('winnerBody').innerHTML=winner?`${outline(winner,true)}<h3>${esc(winner.design_name||winner.id)} · ${esc(winner.id)}</h3>${sourceNote(winner)}${values(winner)}<div class="actions"><button data-refine="${esc(rowKey(winner))}">Refine this shape</button><button data-resize="${esc(rowKey(winner))}">Resize span</button>${links(winner)}</div>`:'<p class="note">No feasible design meets the root-moment limit and settling requirement. No winner is selected. Review rejected cases, change the geometry ranges, or enter a different allowable root moment.</p>';
- if(currentStudy==='master'&&!report.total_count)$('winnerBody').textContent=report.selected?.length?'This master has no cases yet. New studies will appear in Current; check Old to view previous results.':'No masters selected. Check Current, Old, or both to compare results.';
- const rows=report.rows.filter(r=>$('showRejected').checked||r.torque_status==='Within limit');
- $('resultSummary').textContent=`${report.feasible_count} feasible of ${report.total_count} cases · limit ${report.maximum_root_moment_nm} N m per wing · ordered by single-wing mean thrust.`;
+ const rows=report.rows.filter(r=>$('showRejected').checked||['Eligible','Frontier'].includes(r.torque_status));
+ $('resultSummary').textContent=`${report.frontier_count} frontier designs · ${report.eligible_count} eligible of ${report.total_count} cases · full peak-torque range, with no single cutoff. Listed by mean single-wing thrust.`;
  const study=studies.find(s=>s.id===currentStudy),s=study?.config.settings;
  if(currentStudy==='master')$('resultSummary').textContent+=' Selected masters: '+(report.selected?.join(' + ')||'none')+'. Driving conditions may differ between studies.';
  if(report.model_mode)$('resultSummary').textContent+=` Model: ${report.model_mode==='aeroelastic'?'native aeroelastic':'rigid'}.`;
@@ -232,7 +226,6 @@ async function refine(row){
  $('searchMode').value='grid';updateSearchMode();$('spanSearch').checked=false;
  $('nodeCount').value=Math.max(16,sections.length);$('localVariation').value=5;
  $('decreasing').checked=sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m);
- if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
  $('studyName').value=(baseline.name+' refinement').slice(0,80);updateBaseline();show('setup');await applyRefinementNodes();notify('Refinement loaded with all chords fixed. Set min/max/samples only on the chords you want to vary, or select rows and apply the variation preset.');
 }
 function loadSpanResize(row){
@@ -244,7 +237,6 @@ function loadSpanResize(row){
  $('nodeCount').value=baseline.sections.length;$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);
  $('spanMinimum').value=$('totalSpan').value;$('spanMaximum').value=$('totalSpan').value;$('spanSamples').value=5;
  $('studyName').value=(baseline.name+' span study').slice(0,80);
- if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
  renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();show('setup');preview();
  notify('Exact saved chords loaded and fixed. Enable span search and enter minimum, maximum, and samples; or apply one new span. Then Run sweep.');
 }
@@ -262,7 +254,7 @@ function checkFrontierSelection(){
  const selection=JSON.stringify([currentStudy,$('resultsModel')?.value||'rigid',...['current','old','adaptive'].map(g=>!!$(g+'Master')?.checked)]);
  if(selection!==frontierSelection){invalidateFrontier();frontierSelection=selection;}
 }
-function invalidateFrontier(){frontierSerial++;frontierData=null;$('frontierResult').innerHTML='';$('frontierStatus').textContent='Generate the full curve for this comparison; no single torque cutoff is applied.';$('makeFrontier').disabled=false;}
+function invalidateFrontier(){frontierSerial++;frontierData=null;$('frontierResult').innerHTML='';$('frontierStatus').textContent='Generate the wing plot to explore the best observed designs across peak root torque.';$('makeFrontier').disabled=false;}
 function inspectFrontier(){
  if(!frontierData)return;
  const cap=Number($('frontierTorque').value),point=frontierData.points.findLast(r=>r.single_wing_peak_abs_roll_moment_Nm<=cap+1e-12*Math.max(1,Math.abs(cap)));
@@ -281,7 +273,7 @@ $('makeFrontier').onclick=async()=>{
   $('frontierResult').innerHTML=`<img src="/files/${esc(data.files[0])}" alt="Wing silhouettes showing maximum thrust available versus allowable root torque" style="width:100%;max-width:760px"><div class="actions">${data.files.map(f=>`<a href="/files/${esc(f)}" download>${f.endsWith('.png')?'Wing plot PNG':'Frontier designs CSV'}</a>`).join('')}</div><label>Explore allowable root torque <output id="frontierTorqueValue"></output><input id="frontierTorque" type="range" min="${min}" max="${max}" step="any" value="${min}" style="width:100%"></label><label>Frontier design<select id="frontierPoint">${data.points.map((r,i)=>r.single_wing_peak_abs_roll_moment_Nm<=max?`<option value="${i}">${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m → ${fmt(r.single_wing_mean_thrust_N)} N · ${esc(r.design_name||r.id)}</option>`:'').join('')}</select></label><div id="frontierWing"></div>`;
   $('frontierTorque').oninput=inspectFrontier;
   $('frontierPoint').onchange=()=>{$('frontierTorque').value=data.points[Number($('frontierPoint').value)].single_wing_peak_abs_roll_moment_Nm;inspectFrontier();};
-  $('frontierStatus').textContent=`${data.model_mode==='aeroelastic'?'Native aeroelastic':'Rigid'} · ${data.eligible_count} eligible designs · ${data.plotted_count} frontier wings + ${data.background_count} sampled other designs (${data.range_count} frontier designs in range) · minimum spacing ${fmt(data.minimum_spacing_nm)} N m. Color: thrust / torque (1/m). Frontier wings 50% larger; no connecting lines. Plot range is independent of the ranking limit. Mixed study driving conditions may differ.`;
+  $('frontierStatus').textContent=`${data.model_mode==='aeroelastic'?'Native aeroelastic':'Rigid'} · ${data.eligible_count} eligible designs · ${data.plotted_count} frontier wings + ${data.background_count} sampled other designs (${data.range_count} frontier designs in range) · minimum spacing ${fmt(data.minimum_spacing_nm)} N m. Color: thrust / torque (1/m). Frontier wings 50% larger; no connecting lines. Plot range affects display only; all eligible data remain available. Mixed study driving conditions may differ.`;
   inspectFrontier();
  }catch(error){if(serial===frontierSerial)$('frontierStatus').textContent=error.message;}
  finally{if(serial===frontierSerial)$('makeFrontier').disabled=false;}
@@ -292,8 +284,8 @@ function plotAxes(){return ['X','Y','Z'].map(axis=>$('plotAxis'+axis).value);}
 function landscapeRows(){
  const axes=plotAxes();
  let rows=(report?.rows||[]).map(r=>({...r,plot_ratio:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null,
-  single_wing_thrust_roll_ratio_1pm:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null})).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&axes.every(key=>Number.isFinite(r[key])));
- if($('plotFeasible').checked)rows=rows.filter(r=>r.torque_status==='Within limit');
+  single_wing_thrust_roll_ratio_1pm:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null})).filter(r=>['Eligible','Frontier'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&axes.every(key=>Number.isFinite(r[key])));
+ if($('plotFrontierOnly').checked)rows=rows.filter(r=>r.is_frontier);
  if($('plotStudy').value)rows=rows.filter(r=>(r._study||currentStudy)===$('plotStudy').value);
  for(const [key,prefix] of [['area_m2','Area'],['plot_ratio','Ratio']])for(const bound of ['Min','Max']){
   const value=$('plot'+prefix+bound).value;
@@ -317,14 +309,14 @@ $('makeLandscape').onclick=async()=>{
  if(new Set(plotAxes()).size!==3){notify('Choose three different axis parameters.');return;}
  try{
   $('makeLandscape').disabled=true;$('landscapeStatus').textContent=`Building the 3D view and PNG/CSV for ${rows.length} measured wings…`;
-  const data=await api('thrust-landscape',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),
+  const data=await api('thrust-landscape',{study:currentStudy,full_range:true,
    model_mode:$('resultsModel')?.value||'rigid',generations:['current','old','adaptive'].filter(g=>$(g+'Master')?.checked),case_keys:rows.map(rowKey),axes:plotAxes()});
   if(serial!==landscapeSerial)return;
   renderLandscape(data);$('landscapeStatus').textContent=data.note;
  }catch(error){if(serial===landscapeSerial)$('landscapeStatus').textContent=error.message;}
  finally{if(serial===landscapeSerial)$('makeLandscape').disabled=false;}
 };
-for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax','plotAxisX','plotAxisY','plotAxisZ'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
+for(const id of ['plotStudy','plotFrontierOnly','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax','plotAxisX','plotAxisY','plotAxisZ'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
 $('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(event.target.id==='spanSearch')updateBaseline();if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline&&event.target.id==='hingeGap')$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());updateBaseline();}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;
@@ -332,7 +324,6 @@ $('applyNodes').onclick=()=>{const n=Number($('nodeCount').value);if(!Number.isI
 $('regularGrid').onclick=()=>{$('spanSearch').checked=false;baseline=null;refinementSource=null;refinementActive=false;renderRanges(readRanges().map(r=>({...r,count:r.min_m===r.max_m?1:3})));updateBaseline();preview();};
 $('applyLocalBounds').onclick=()=>{const rows=[...$('ranges').querySelectorAll('tr')],chosen=rows.filter(r=>r.querySelector('[data-vary]')?.checked);if(!chosen.length){notify('Select the chord rows you want to vary first, or edit their min/max/samples directly.');return;}const pct=Number($('localVariation').value)/100;if(!Number.isFinite(pct)||pct<0||pct>1){notify('Use a variation between 0 and 100%.');return;}rows.forEach((row,i)=>{if(!row.querySelector('[data-vary]')?.checked)return;const chord=baseline.sections[i].chord_m;row.querySelector('[data-key="min_m"]').value=Number((chord*(1-pct)).toPrecision(12));row.querySelector('[data-key="max_m"]').value=Number((chord*(1+pct)).toPrecision(12));row.querySelector('[data-key="count"]').value=pct?3:1;});preview();};
 $('fixAllChords').onclick=()=>{if(!baseline)return;renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();preview();};
-$('keepBest').onclick=async()=>{if(!report?.winner||currentStudy==='master')return;try{$('keepBest').disabled=true;const r=await api('keep-best',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),winner_id:report.winner.id});$('exportLinks').innerHTML=`<a class="button" href="/files/${esc(r.settings_file)}" download>Saved best wing settings</a>`;notify(`Saved ${r.kept_case}; discarded ${r.discarded_count} cases. ${r.cleanup}`);await refreshIndex();}catch(error){notify(error.message);}finally{$('keepBest').disabled=false;}};
 $('adaptiveElastic').onchange=()=>{updateSearchMode();preview();};
 $('nativeDampingPreset').onclick=()=>{$('nativeDamping').value=10;preview();};
 $('searchMode').onchange=()=>{updateSearchMode();preview();};
@@ -346,16 +337,15 @@ $('loadEvolution').onclick=async()=>{
  $('evolutionJob').onchange=()=>{$('evolutionFrame').value=0;inspect();};$('evolutionFrame').oninput=inspect;inspect();}
  }catch(error){notify(error.message);}
 };
-$('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await api('start',configuration());currentStudy=r.id;$('resultsLimit').value=$('maximumMoment').value;show('results');}catch(error){notify(error.message);preview();}};
+$('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await api('start',configuration());currentStudy=r.id;show('results');}catch(error){notify(error.message);preview();}};
 $('resultsModel').onchange=()=>{page=0;evaluate();};
-$('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;$('resultsModel').disabled=currentStudy!=='master';if(study)$('resultsModel').value=study.config.settings.aeroelastic_enabled?'aeroelastic':'rigid';$('evolutionCard').classList.toggle('hidden',!study?.config.adaptive_search?.enabled);$('evolutionResult').innerHTML='';renderProgress(study);evaluate();};
-$('resultsLimit').oninput=()=>{page=0;$('exportLinks').innerHTML='';clearTimeout(timer);timer=setTimeout(evaluate,350);};
+$('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);$('resultsModel').disabled=currentStudy!=='master';if(study)$('resultsModel').value=study.config.settings.aeroelastic_enabled?'aeroelastic':'rigid';$('evolutionCard').classList.toggle('hidden',!study?.config.adaptive_search?.enabled);$('evolutionResult').innerHTML='';renderProgress(study);evaluate();};
 $('refreshResults').onclick=refreshIndex;$('exportComparison').onclick=()=>evaluate(true);$('showRejected').onchange=()=>{page=0;renderResults();};
 for(const g of ['current','old','adaptive'])$(g+'Master').onchange=()=>{page=0;$('exportLinks').innerHTML='';evaluate();};
 $('previousPage').onclick=()=>{page--;renderResults();};$('nextPage').onclick=()=>{page++;renderResults();};
-$('useStudy').onclick=()=>{const s=studies.find(s=>s.id===currentStudy);if(s){fill(s.config);if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;show('setup');preview();notify('Study settings loaded. Review the selected native model and motion range.');}};
+$('useStudy').onclick=()=>{const s=studies.find(s=>s.id===currentStudy);if(s){fill(s.config);show('setup');preview();notify('Study settings loaded. Review the selected native model and motion range.');}};
 $('stopStudy').onclick=async()=>{try{await api('stop',{id:currentStudy});refreshIndex();}catch(error){notify(error.message);}};
 $('exportSettings').onclick=async()=>{try{const prepared=await api('preview',configuration());const url=URL.createObjectURL(new Blob([JSON.stringify(prepared.config,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='wing-study-settings.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(error){notify(error.message);}};
 $('importSettings').onclick=()=>$('settingsFile').click();$('settingsFile').onchange=async()=>{try{fill(JSON.parse(await $('settingsFile').files[0].text()));notify('Settings loaded. Review the selected native model before starting.');}catch(error){notify(error.message);}finally{$('settingsFile').value='';}};
-async function init(){try{const d=await api('defaults');defaults=d.config;fill(defaults,true);$('resultsLimit').value=$('maximumMoment').value;await refreshIndex();if(location.hash.startsWith('#catalog')||location.hash==='#results')show('results');setInterval(()=>{if(!$('results').classList.contains('hidden')&&(currentStudy==='master'?studies.some(s=>s.status.state==='running'):studies.find(s=>s.id===currentStudy)?.status.state==='running'))refreshIndex();},4000);}catch(error){notify(error.message);}}
+async function init(){try{const d=await api('defaults');defaults=d.config;fill(defaults,true);await refreshIndex();if(location.hash.startsWith('#catalog')||location.hash==='#results')show('results');setInterval(()=>{if(!$('results').classList.contains('hidden')&&(currentStudy==='master'?studies.some(s=>s.status.state==='running'):studies.find(s=>s.id===currentStudy)?.status.state==='running'))refreshIndex();},4000);}catch(error){notify(error.message);}}
 init();

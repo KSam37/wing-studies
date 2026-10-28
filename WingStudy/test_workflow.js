@@ -27,10 +27,10 @@ context.esc=String;vm.runInContext("let currentStudy='a',resultSerial=0,report=n
  const first=context.evaluate();vm.runInContext("currentStudy='b'",context);const second=context.evaluate();
  requests[1]({winner:{id:'b'}});await second;requests[0]({winner:{id:'a'}});await first;
  assert.equal(vm.runInContext('report.winner.id',context),'b');assert.equal(renders,1);
- assert.equal(requests.length,2);
+ assert.equal(requests.length,2);assert.equal(payloads[0].path,'tradeoff-results');assert.equal(payloads[0].data.maximum_root_moment_nm,undefined);
  Object.assign(inputs,{currentMaster:{checked:true},oldMaster:{checked:false},currentCount:{},oldCount:{}});
  vm.runInContext("currentStudy='master'",context);
- const current=context.evaluate();assert.equal(payloads[2].path,'master-results');assert.deepEqual(Array.from(payloads[2].data.generations),['current']);
+ const current=context.evaluate();assert.equal(payloads[2].path,'tradeoff-results');assert.deepEqual(Array.from(payloads[2].data.generations),['current']);
  requests[2]({generations:{current:0,old:12}});await current;assert.equal(inputs.oldCount.textContent,'(12 cases)');
  inputs.oldMaster.checked=true;const both=context.evaluate();assert.deepEqual(Array.from(payloads[3].data.generations),['current','old']);requests[3]({});await both;
  inputs.currentMaster.checked=false;inputs.oldMaster.checked=false;const neither=context.evaluate();assert.equal(payloads[4].data.generations.length,0);requests[4]({});await neither;
