@@ -18,6 +18,31 @@ class RefinementChecks(unittest.TestCase):
     setUp=test_catalog.CatalogChecks.setUp
     tearDown=test_catalog.CatalogChecks.tearDown
 
+    def test_resize_span_preserves_chords_offsets_and_angles_and_changes_identity(self):
+        case=self.spec['cases'][0];settings=self.spec['settings']
+        design={'name':'Saved wing','sections':copy.deepcopy(case['sections'])}
+        design['sections'][1].update(x_m=.01,pitch_deg=3.,roll_deg=5.)
+        original=copy.deepcopy(design);target=2*design['sections'][-1]['y_m']*1.5+settings['gap_m']
+        r=refinement.resize_span(model,design,target,settings)
+        self.assertEqual(design,original)
+        self.assertAlmostEqual(r['span_scale_factor'],1.5)
+        for old,new in zip(design['sections'],r['baseline']['sections']):
+            self.assertAlmostEqual(new['y_m'],old['y_m']*1.5)
+            for key in ('chord_m','x_m','pitch_deg','roll_deg'):self.assertEqual(new[key],old[key])
+        old=model.custom_case(design,settings);new=model.custom_case(r['baseline'],settings)
+        self.assertNotEqual(catalog.signature(model,old,settings),catalog.signature(model,new,settings))
+        self.assertEqual([s['chord_m'] for s in old['sections']],[s['chord_m'] for s in new['sections']])
+        self.assertIsNotNone(model.build_solver({**new,'id':'resized'},settings))
+
+    def test_resize_span_uses_active_tip_and_rejects_span_smaller_than_gap(self):
+        settings=self.spec['settings'];design={'name':'Shortened','sections':[{'y_m':0,'chord_m':.2},{'y_m':.1,'chord_m':.1},{'y_m':.2,'chord_m':0}]}
+        result=refinement.resize_span(model,design,.44,settings)
+        self.assertEqual(len(result['baseline']['sections']),2)
+        self.assertAlmostEqual(result['single_wing_span_m'],(.44-settings['gap_m'])/2)
+        self.assertAlmostEqual(result['baseline']['sections'][-1]['y_m'],result['single_wing_span_m'])
+        for value in [0,settings['gap_m'],float('nan')]:
+            with self.assertRaises(ValueError):refinement.resize_span(model,design,value,settings)
+
     def test_linspace_refines_only_selected_chords_and_matches_original_grid(self):
         c=self.configuration(16,41);baseline=c['shape_sweep']['baseline']['sections']
         c['mode']='shape_sweep';c['refinement']['search_method']='linspace'

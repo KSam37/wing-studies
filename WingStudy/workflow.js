@@ -18,9 +18,10 @@ function renderRanges(ranges){
  $('ranges').innerHTML=ranges.map((r,i)=>`<tr><td>${refinementActive?`<input type="checkbox" data-vary="${i}" aria-label="Select chord ${i+1} for variation">`:''}${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</td><td>${fmt(baseline?baseline.sections[i].y_m:half*i/(ranges.length-1))}</td>${['min_m','max_m','count'].map(key=>`<td><input aria-label="Chord ${i+1} ${key}" data-key="${key}" type="number" step="${key==='count'?'1':'any'}" min="${key==='count'?'1':'0'}" value="${esc(r[key])}"></td>`).join('')}</tr>`).join('');
 }
 function updateBaseline(){
- $('totalSpan').disabled=!!baseline;
+ $('totalSpan').disabled=false;
  $('nodeCount').disabled=false;$('applyNodes').disabled=false;
  $('regularGrid').classList.toggle('hidden',!baseline);
+ $('applySpan').classList.toggle('hidden',!baseline);
  $('refinementControls').classList.toggle('hidden',!refinementActive);
  $('baselineNote').textContent=refinementActive?`Refinement of ${baseline.name}: each chord has its own inclusive linspace. Hold most chords fixed and vary only the region you want to explore.`:baseline?`Baseline: ${baseline.name}. Edit node count to interpolate more sections.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
  $('samplesHeading').classList.remove('hidden');
@@ -28,6 +29,7 @@ function updateBaseline(){
 }
 function configuration(allowPendingNodes=false){
  if(refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
+ if(baseline&&!allowPendingNodes&&Math.abs(Number($('totalSpan').value)-(2*baseline.sections.at(-1).y_m+Number($('hingeGap').value)))>1e-10)throw Error('Apply span to resize the saved wing before previewing or running. Chord lengths will stay unchanged.');
  const c=structuredClone(baseConfig||defaults);c.workflow='root_torque';c.mode='shape_sweep';c.name=$('studyName').value;
  c.limits={};c.designs=[];
  c.optimization={max_root_moment_nm:Number($('maximumMoment').value)};
@@ -143,7 +145,7 @@ function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(ro
 function renderResults(){
  if(!report)return;
  const winner=report.winner;
- $('winnerBody').innerHTML=winner?`${outline(winner,true)}<h3>${esc(winner.design_name||winner.id)} · ${esc(winner.id)}</h3>${sourceNote(winner)}${values(winner)}<div class="actions"><button data-refine="${esc(rowKey(winner))}">Refine this shape</button>${links(winner)}</div>`:'<p class="note">No feasible design meets the root-moment limit and settling requirement. No winner is selected. Review rejected cases, change the geometry ranges, or enter a different allowable root moment.</p>';
+ $('winnerBody').innerHTML=winner?`${outline(winner,true)}<h3>${esc(winner.design_name||winner.id)} · ${esc(winner.id)}</h3>${sourceNote(winner)}${values(winner)}<div class="actions"><button data-refine="${esc(rowKey(winner))}">Refine this shape</button><button data-resize="${esc(rowKey(winner))}">Resize span</button>${links(winner)}</div>`:'<p class="note">No feasible design meets the root-moment limit and settling requirement. No winner is selected. Review rejected cases, change the geometry ranges, or enter a different allowable root moment.</p>';
  if(currentStudy==='master'&&!report.total_count)$('winnerBody').textContent=report.selected?.length?'This master has no cases yet. New studies will appear in Current; check Old to view previous results.':'No masters selected. Check Current, Old, or both to compare results.';
  const rows=report.rows.filter(r=>$('showRejected').checked||r.torque_status==='Within limit');
  $('resultSummary').textContent=`${report.feasible_count} feasible of ${report.total_count} cases · limit ${report.maximum_root_moment_nm} N m per wing · ordered by single-wing mean thrust.`;
@@ -151,8 +153,9 @@ function renderResults(){
  if(currentStudy==='master')$('resultSummary').textContent+=' Selected masters: '+(report.selected?.join(' + ')||'none')+'. Driving conditions may differ between studies.';
  if(s)$('resultSummary').textContent+=` Study motion: ${s.frequency_hz} Hz, speed ${s.speed_mps} m/s; ${study.config.motion_range?study.config.motion_range.minimum_deg+'° to '+study.config.motion_range.maximum_deg+'°':'half-stroke '+s.amplitude_deg+'°'}.`;
  page=Math.max(0,Math.min(page,Math.ceil(rows.length/25)-1));
- $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.thrust_rank??'—'}</div>${outline(r)}<div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${sourceNote(r)}${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(rowKey(r))}">Refine this shape</button>${links(r)}</div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
+ $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.thrust_rank??'—'}</div>${outline(r)}<div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${sourceNote(r)}${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(rowKey(r))}">Refine this shape</button><button data-resize="${esc(rowKey(r))}">Resize span</button>${links(r)}</div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
  document.querySelectorAll('[data-refine]').forEach(button=>button.onclick=()=>refine(report.rows.find(r=>rowKey(r)===button.dataset.refine)));
+ document.querySelectorAll('[data-resize]').forEach(button=>button.onclick=()=>loadSpanResize(report.rows.find(r=>rowKey(r)===button.dataset.resize)));
  document.querySelectorAll('[data-smooth-svg]').forEach(button=>button.onclick=async()=>{
   const row=report.rows.find(r=>rowKey(r)===button.dataset.smoothSvg);if(!row)return;const study=row._study||currentStudy;
   try{button.disabled=true;const result=await api('smooth-svg',{study,case:row.id});
@@ -187,6 +190,26 @@ async function refine(row){
  if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
  $('studyName').value=(baseline.name+' refinement').slice(0,80);updateBaseline();show('setup');await applyRefinementNodes();notify('Refinement loaded with all chords fixed. Set min/max/samples only on the chords you want to vary, or select rows and apply the variation preset.');
 }
+function loadSpanResize(row){
+ if(!row?.sections?.length){notify('Choose a saved sectioned wing.');return;}
+ const study=studies.find(s=>s.id===(row._study||currentStudy));if(study)fill(study.config);
+ refinementSource={name:row.design_name||row.id,sections:structuredClone(row.sections),source_study:row._study||currentStudy,source_case:row.id};
+ baseline=structuredClone(refinementSource);refinementActive=true;
+ $('nodeCount').value=baseline.sections.length;$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);
+ $('studyName').value=(baseline.name+' span study').slice(0,80);
+ if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
+ renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();show('setup');preview();
+ notify('Exact saved chords loaded and fixed. Enter a new total span, Apply span, then Run sweep.');
+}
+$('applySpan').onclick=async()=>{
+ if(!baseline)return;const serial=++nodeSerial;
+ try{$('applySpan').disabled=true;
+  const ranges=readRanges();const result=await api('resize-span',{design:baseline,source:refinementSource,total_span_m:Number($('totalSpan').value),settings:configuration(true).settings});
+  if(serial!==nodeSerial)return;baseline=result.baseline;refinementSource=result.source;
+  $('totalSpan').value=result.total_span_m;renderRanges(ranges);updateBaseline();preview();
+  notify(`Span updated to ${fmt(result.single_wing_span_m)} m per wing (${fmt(result.total_span_m)} m including both wings and gap). Every chord length is unchanged.`);
+ }catch(error){notify(error.message);}finally{$('applySpan').disabled=false;}
+};
 let landscapeSerial=0;
 function landscapeRows(){
  let rows=(report?.rows||[]).map(r=>({...r,plot_ratio:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null})).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&Number.isFinite(r.plot_ratio));
@@ -222,7 +245,7 @@ $('makeLandscape').onclick=async()=>{
 };
 for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
-$('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline)$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
+$('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline&&event.target.id==='hingeGap')$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;
 $('applyNodes').onclick=()=>{const n=Number($('nodeCount').value);if(!Number.isInteger(n)||n<2||n>64){notify('Use 2–64 chord nodes.');return;}if(baseline){applyRefinementNodes();return;}const old=readRanges();renderRanges(Array.from({length:n},(_,i)=>old[i]||{min_m:.06,max_m:.14,count:3}));preview();};
 $('regularGrid').onclick=()=>{baseline=null;refinementSource=null;refinementActive=false;renderRanges(readRanges().map(r=>({...r,count:r.min_m===r.max_m?1:3})));updateBaseline();preview();};

@@ -231,6 +231,11 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/refinement-nodes":
                 import refinement
                 return self.send(refinement.resample(model,data['design'],data['count'],data['variation_pct'],data['settings'],linspace=data.get('search_method')=='linspace'))
+            if path == "/api/resize-span":
+                import refinement
+                result=refinement.resize_span(model,data['design'],data['total_span_m'],data['settings'])
+                result['source']=refinement.resize_span(model,data.get('source') or data['design'],data['total_span_m'],data['settings'])['baseline']
+                return self.send(result)
             if path == "/api/smooth-svg":
                 import wing_curves
                 with LOCK:

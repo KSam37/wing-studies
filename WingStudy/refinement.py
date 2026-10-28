@@ -12,6 +12,19 @@ import shutil
 import uuid
 
 
+def resize_span(model,design,total_span_m,settings):
+    """Stretch only spanwise positions; preserve every active chord exactly."""
+    gap=model.number(settings.get('gap_m'),'Hinge gap',0)
+    total=model.number(total_span_m,'Total span',gap+1e-12)
+    original=model.custom_case(design,{**settings,'span_panels':max(settings['span_panels'],len(design.get('sections',[]))-1)})
+    sections=original['sections'];factor=(total-gap)/(2*sections[-1]['y_m'])
+    resized={**copy.deepcopy(design),'name':design.get('name','Resized wing'),
+        'sections':[{**s,'y_m':s['y_m']*factor} for s in sections]}
+    resized.pop('outline_function',None);resized.pop('curve_fit',None)
+    model.custom_case(resized,{**settings,'span_panels':max(settings['span_panels'],len(sections)-1)})
+    return {'baseline':resized,'total_span_m':total,'single_wing_span_m':(total-gap)/2,'span_scale_factor':factor}
+
+
 def resample(model,design,count,variation_pct,settings,linspace=False):
     import numpy as np
     from scipy.interpolate import PchipInterpolator
