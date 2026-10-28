@@ -130,6 +130,7 @@ function renderProgress(study){
 async function evaluate(exportFiles=false){
  const serial=++resultSerial,id=currentStudy,limit=Number($('resultsLimit').value);
  if(typeof invalidateLandscape==='function')invalidateLandscape();
+ if(typeof checkFrontierSelection==='function')checkFrontierSelection();
  if(!id||!Number.isFinite(limit)||limit<=0){report=null;$('winnerBody').textContent='Enter your maximum wing-root moment to rank these results.';$('rankedRows').innerHTML='';$('exportComparison').disabled=true;return;}
  try{
   if(exportFiles){exportBusy=true;$('exportComparison').disabled=true;}
@@ -225,6 +226,35 @@ $('applySpan').onclick=async()=>{
   $('totalSpan').value=result.total_span_m;renderRanges(ranges);updateBaseline();preview();
   notify(`Span updated to ${fmt(result.single_wing_span_m)} m per wing (${fmt(result.total_span_m)} m including both wings and gap). Every chord length is unchanged.`);
  }catch(error){notify(error.message);}finally{$('applySpan').disabled=false;}
+};
+let frontierSerial=0,frontierData=null,frontierSelection='';
+function checkFrontierSelection(){
+ const selection=JSON.stringify([currentStudy,...['current','old'].map(g=>$(g+'Master').checked)]);
+ if(selection!==frontierSelection){invalidateFrontier();frontierSelection=selection;}
+}
+function invalidateFrontier(){frontierSerial++;frontierData=null;$('frontierResult').innerHTML='';$('frontierStatus').textContent='Generate the full curve for this comparison; no single torque cutoff is applied.';$('makeFrontier').disabled=false;}
+function inspectFrontier(){
+ if(!frontierData)return;
+ const cap=Number($('frontierTorque').value),point=frontierData.points.findLast(r=>r.single_wing_peak_abs_roll_moment_Nm<=cap+1e-12*Math.max(1,Math.abs(cap)));
+ $('frontierTorqueValue').textContent=fmt(cap)+' N m allowable';
+ if(point)$('frontierPoint').value=frontierData.points.indexOf(point);
+ $('frontierWing').innerHTML=point?`${outline(point,true)}<h3>${esc(point.design_name||point.id)} · ${esc(point.id)}</h3><p>Best available mean thrust: <strong>${fmt(point.single_wing_mean_thrust_N)} N</strong> per wing · peak root torque: <strong>${fmt(point.single_wing_peak_abs_roll_moment_Nm)} N m</strong></p><p>Span: ${fmt(point.single_wing_span_m)} m per wing · ${fmt(point.effective_total_span_m)} m total</p><p class="help">${esc(point._study||currentStudy)} / ${esc(point.id)}${point.global_case_no?' · case #'+esc(point.global_case_no):''}</p>`:'No eligible design at this allowable torque.';
+}
+$('makeFrontier').onclick=async()=>{
+ if(!currentStudy){notify('Select a study or master comparison first.');return;}
+ const serial=++frontierSerial;
+ try{
+  $('makeFrontier').disabled=true;$('frontierStatus').textContent='Building the full torque–thrust frontier…';
+  const data=await api('torque-frontier',{study:currentStudy,generations:['current','old'].filter(g=>$(g+'Master').checked)});
+  if(serial!==frontierSerial)return;frontierData=data;
+  const min=data.points[0].single_wing_peak_abs_roll_moment_Nm,max=data.maximum_torque_nm;
+  $('frontierResult').innerHTML=`<img src="/files/${esc(data.files[0])}" alt="Maximum thrust available versus allowable root torque" style="width:100%;max-width:760px"><div class="actions">${data.files.map(f=>`<a href="/files/${esc(f)}" download>${f.endsWith('.png')?'Curve PNG':'Frontier designs CSV'}</a>`).join('')}</div><label>Explore allowable root torque <output id="frontierTorqueValue"></output><input id="frontierTorque" type="range" min="${min}" max="${max}" step="any" value="${min}" style="width:100%"></label><label>Frontier design<select id="frontierPoint">${data.points.map((r,i)=>`<option value="${i}">${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m → ${fmt(r.single_wing_mean_thrust_N)} N · ${esc(r.design_name||r.id)}</option>`).join('')}</select></label><div id="frontierWing"></div>`;
+  $('frontierTorque').oninput=inspectFrontier;
+  $('frontierPoint').onchange=()=>{$('frontierTorque').value=data.points[Number($('frontierPoint').value)].single_wing_peak_abs_roll_moment_Nm;inspectFrontier();};
+  $('frontierStatus').textContent=`${data.eligible_count} eligible designs · ${data.points.length} improving designs. All torques shown, regardless of the ranking limit. Mixed study driving conditions may differ.`;
+  inspectFrontier();
+ }catch(error){if(serial===frontierSerial)$('frontierStatus').textContent=error.message;}
+ finally{if(serial===frontierSerial)$('makeFrontier').disabled=false;}
 };
 let landscapeSerial=0;
 function plotAxes(){return ['X','Y','Z'].map(axis=>$('plotAxis'+axis).value);}

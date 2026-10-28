@@ -243,6 +243,10 @@ class Handler(BaseHTTPRequestHandler):
                     if model.read_json(directory/'status.json').get('state')=='running':
                         raise ValueError('Wait for this study to finish or stop it before exporting smooth profiles.')
                     return self.send(wing_curves.export_smooth_profiles(model,directory,data['case']))
+            if path == "/api/torque-frontier":
+                import torque_frontier
+                if data.get('study')!='master':study_path(data['study'])
+                with LOCK:return self.send(torque_frontier.generate(model,data))
             if path == "/api/thrust-landscape":
                 import thrust_landscape
                 if data.get('study')!='master':study_path(data['study'])
