@@ -12,11 +12,11 @@ import time
 import traceback
 
 
-DEFAULT={'span_min_m':.6,'span_max_m':.8,'span_count':3,'node_count':6,
+DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
     'root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':.2,
-    'initial_step_m':.01,'minimum_step_m':.001,'shrink_factor':.5,
-    'torque_min_nm':.2,'torque_max_nm':1.2,'torque_count':4,
-    'simulation_budget':100,'evaluation_budget':500,'max_passes':20,
+    'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
+    'torque_min_nm':.2,'torque_max_nm':10.,'torque_count':4,
+    'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
     'improvement_pct':.2,'decreasing':True,'paired_moves':True,'bounds':[]}
 
 

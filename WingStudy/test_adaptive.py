@@ -14,11 +14,26 @@ class AdaptiveChecks(unittest.TestCase):
         c['adaptive_search']={**adaptive.DEFAULT,'enabled':True,'span_min_m':.6,'span_max_m':.6,'span_count':1,'node_count':3,'torque_min_nm':.5,'torque_max_nm':.5,'torque_count':1,'decreasing':False}
         return c
 
+    def test_requested_defaults_match_ui_and_form_sixteen_searches(self):
+        import re
+        c=torque_study.default_config(model);c['adaptive_search']={'enabled':True}
+        p=adaptive.plan(model,c)
+        r=p['adaptive_search']
+        self.assertEqual((r['span_min_m'],r['span_max_m'],r['span_count'],r['node_count']),(.4,.8,4,8))
+        self.assertEqual((r['initial_step_m'],r['minimum_step_m']),(.04,.01))
+        self.assertEqual((r['torque_min_nm'],r['torque_max_nm'],r['torque_count']),(.2,10,4))
+        self.assertEqual((r['simulation_budget'],r['evaluation_budget']),(500,1000))
+        self.assertEqual(p['search_job_count'],16)
+        html=(model.HERE/'workflow.html').read_text(encoding='utf-8')
+        for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveMinStep':'minimum_step_m','adaptiveTorqueMax':'torque_max_nm','adaptiveBudget':'simulation_budget','adaptiveEvaluations':'evaluation_budget'}.items():
+            value=re.search('id="'+field+'"[^>]*value="([^"]+)"',html)[1]
+            self.assertEqual(float(value),r[key])
+
     def test_plan_roundtrip_fixed_span_chord_floor_and_native_mesh(self):
         c=self.config();before=copy.deepcopy(c);p=adaptive.plan(model,c)
         self.assertEqual(c,before)
         self.assertEqual(p['cases'],adaptive.plan(model,p['config'])['cases'])
-        self.assertEqual(p['simulation_budget'],100)
+        self.assertEqual(p['simulation_budget'],500)
         case=p['cases'][0]
         self.assertAlmostEqual(case['span_m'],.6)
         self.assertTrue(all(s['chord_m']>=.01 for s in case['sections']))
@@ -88,9 +103,9 @@ class AdaptiveChecks(unittest.TestCase):
                 self.assertIn('adaptive_search',manifest)
                 import catalog
                 self.assertTrue(catalog.verified_import(model,manifest))
-                self.assertEqual(manifest['simulation_budget'],100)
+                self.assertEqual(manifest['simulation_budget'],500)
                 self.assertEqual(manifest['worker_pid'],123)
-                self.assertEqual(model.read_json(out/result['id']/'status.json')['total'],100)
+                self.assertEqual(model.read_json(out/result['id']/'status.json')['total'],500)
                 self.assertIn('--worker',launch.call_args.args[0])
                 self.assertEqual(str(out/result['id']),launch.call_args.args[0][-1])
 
