@@ -5,7 +5,7 @@ values.spanSearch='';values.spanMinimum='.4';values.spanMaximum='.8';values.span
 const inputs=Object.fromEntries(Object.entries(values).map(([id,value])=>[id,{value,checked:id==='decreasing'}]));
 Object.assign(inputs,{resultsLimit:{value:'.5'},exportComparison:{},winnerBody:{},rankedRows:{},exportLinks:{},keepBest:{classList:{toggle(){}}}});
 const context={structuredClone,$:id=>inputs[id],defaults:{settings:{}},baseConfig:{settings:{aeroelastic_enabled:true},tail:{enabled:true}},numerical:{},baseline:null,
- refinementActive:false,refinementSource:null,studies:[],readRanges:()=>[{min_m:.1,max_m:.1,count:1},{min_m:.05,max_m:.05,count:1}]};
+ refinementActive:false,refinementSource:null,studies:[],selectedSpanClass:'all',readRanges:()=>[{min_m:.1,max_m:.1,count:1},{min_m:.05,max_m:.05,count:1}]};
 vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function configuration('),source.indexOf('function fill(')),context);
 const c=context.configuration();assert.equal(c.workflow,'root_torque');assert.equal(c.optimization.max_root_moment_nm,.5);
 assert.equal(c.settings.aeroelastic_enabled,false);assert.equal(c.tail.enabled,false);assert.equal(c.settings.max_root_moment_nm,undefined);

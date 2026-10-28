@@ -120,7 +120,7 @@ def master_results(model,selected,limit,export=False,model_mode='rigid'):
     return report
 
 
-def overview(model,study,selected=('current',),model_mode='rigid',export=False):
+def overview(model,study,selected=('current',),model_mode='rigid',export=False,span_class='all'):
     """Full-range result view. No optimization constraint or implied winner."""
     import catalog
     import torque_frontier
@@ -134,6 +134,13 @@ def overview(model,study,selected=('current',),model_mode='rigid',export=False):
         rows=model.read_json(directory/'results.json') if (directory/'results.json').exists() else []
         rows=[{**r,'_study':study,'_settings':manifest['settings']} for r in rows]
         extra={}
+    from wing_dimensions import span_class as classify_span
+    classes={}
+    for r in rows:
+        k=classify_span(r);classes[k]=classes.get(k,0)+1
+    available=sorted(classes,key=lambda k:float(k) if k!='unknown' else float('inf'))
+    if span_class not in classes:span_class='all'
+    if span_class!='all':rows=[r for r in rows if classify_span(r)==span_class]
     eligible,frontier=torque_frontier.envelope(rows,allow_aeroelastic=model_mode=='aeroelastic')
     key=lambda r:r.get('comparison_key',r['id'])
     frontier_keys={key(r) for r in frontier}
@@ -145,13 +152,17 @@ def overview(model,study,selected=('current',),model_mode='rigid',export=False):
         on_frontier=key(row) in frontier_keys
         evaluated.append({**row,**dimensions(row),'is_frontier':on_frontier,'thrust_rank':ranks.get(key(row)),
             'torque_status':('Frontier' if on_frontier else 'Eligible') if status=='Within limit' else status})
-    evaluated.sort(key=lambda r:(r['thrust_rank'] is None,r['thrust_rank'] or 0,key(r)))
-    report={**extra,'model_mode':model_mode,'rows':evaluated,'total_count':len(rows),
+    def ratio(r):
+        t=r.get('single_wing_mean_thrust_N');m=r.get('single_wing_peak_abs_roll_moment_Nm')
+        return t/m if key(r) in ranks and isinstance(m,(int,float)) and m>1e-9 else None
+    evaluated.sort(key=lambda r:(ratio(r) is None,-ratio(r) if ratio(r) is not None else 0,key(r)))
+    for i,r in enumerate(evaluated,1):r['ratio_rank']=i if ratio(r) is not None else None
+    report={**extra,'model_mode':model_mode,'span_class':span_class,'span_classes':[{'key':k,'count':classes[k]} for k in available],'rows':evaluated,'total_count':len(rows),
         'eligible_count':len(eligible),'frontier_count':len(frontier),'full_range':True,
         'note':'All eligible measured designs across peak root torque. No single torque cutoff; the frontier is the best observed thrust at or below each torque.'}
     if export:
         if not frontier:raise ValueError('No eligible designs to export for this comparison.')
-        report['files']=torque_frontier.generate(model,{'study':study,'generations':list(selected),'model_mode':model_mode})['files']
+        report['files']=torque_frontier.generate(model,{'study':study,'generations':list(selected),'model_mode':model_mode,'span_class':span_class})['files']
     return report
 
 

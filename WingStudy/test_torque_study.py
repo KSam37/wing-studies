@@ -28,9 +28,24 @@ class TorqueChecks(unittest.TestCase):
             self.assertEqual(result['frontier_count'],2)
             self.assertNotIn('maximum_root_moment_nm',result)
             self.assertNotIn('winner',result)
-            self.assertEqual(result['rows'][0]['id'],'high')
+            self.assertEqual(result['rows'][0]['id'],'low')
+            self.assertEqual([r['ratio_rank'] for r in result['rows']],[1,2,3])
             self.assertEqual({r['id'] for r in result['rows'] if r['is_frontier']},{'low','high'})
             self.assertEqual({r['torque_status'] for r in result['rows']},{'Eligible','Frontier'})
+
+    def test_overview_span_tabs_filter_actual_span_and_rank_by_ratio(self):
+        with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
+            root=Path(temp);study=root/'study';study.mkdir()
+            model.write_json(study/'manifest.json',{'settings':{'gap_m':.04}})
+            model.write_json(study/'results.json',[row('a',1,.5,span_m=.4),row('b',5,5,span_m=.4),row('c',2,.1,span_m=.8)])
+            with patch.object(model,'OUTPUTS',root):
+                all_rows=torque.overview(model,'study')
+                selected=torque.overview(model,'study',span_class='0.4')
+            self.assertEqual([r['id'] for r in all_rows['rows']],['c','a','b'])
+            self.assertEqual([r['id'] for r in selected['rows']],['a','b'])
+            self.assertEqual(selected['span_class'],'0.4')
+            self.assertEqual([s['key'] for s in selected['span_classes']],['0.4','0.8'])
+            self.assertEqual(selected['rows'][0]['ratio_rank'],1)
 
     def test_editable_workflow_defaults(self):
         original=copy.deepcopy(model.DEFAULT);c=torque.default_config(model)

@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync(__dirname+'/workflow.js','utf8');
 const inputs={frontierTorque:{value:'.4'},frontierTorqueValue:{},frontierWing:{},frontierPoint:{},frontierResult:{},frontierStatus:{},makeFrontier:{},currentMaster:{checked:true},oldMaster:{checked:false}};
-const ctx={$:id=>inputs[id],fmt:String,esc:String,outline:()=>'<svg/>',currentStudy:'master'};
+const ctx={$:id=>inputs[id],fmt:String,esc:String,outline:()=>'<svg/>',currentStudy:'master',selectedSpanClass:'all'};
 vm.createContext(ctx);
 vm.runInContext(source.slice(source.indexOf('let frontierSerial='),source.indexOf("$('makeFrontier').onclick=")),ctx);
 vm.runInContext("frontierData={points:[{id:'a',single_wing_peak_abs_roll_moment_Nm:.2,single_wing_mean_thrust_N:1},{id:'b',single_wing_peak_abs_roll_moment_Nm:.6,single_wing_mean_thrust_N:3}]}",ctx);

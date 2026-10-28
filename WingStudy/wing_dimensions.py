@@ -29,3 +29,10 @@ def dimensions(row):
     omitted=len(requested)-len(active) if requested else row.get('omitted_zero_chord_count',0)
     return {'single_wing_span_m':span,'leading_edge_length_m':leading_length,'effective_total_span_m':effective,'reference_total_span_m':reference,
         'omitted_zero_chord_count':omitted,'span_shortened_by_zero_chords':bool(omitted and reference>effective+1e-10)}
+
+
+def span_class(row):
+    """Display grouping by actual total span, merging only sub-micron roundoff."""
+    value=dimensions(row).get('effective_total_span_m',row.get('span_m'))
+    if not isinstance(value,(int,float)) or not math.isfinite(value) or value<=0:return 'unknown'
+    return f'{value:.6f}'.rstrip('0').rstrip('.')

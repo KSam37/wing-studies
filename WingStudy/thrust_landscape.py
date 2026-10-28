@@ -58,7 +58,7 @@ def data(model,rows,axes=None):
 def generate(model,request):
     limit=request.get('maximum_root_moment_nm');study=request.get('study')
     if request.get('full_range',False):
-        report=torque_study.overview(model,study,request.get('generations',['current']),request.get('model_mode','rigid'))
+        report=torque_study.overview(model,study,request.get('generations',['current']),request.get('model_mode','rigid'),span_class=request.get('span_class','all'))
         if study!='master':
             manifest=model.read_json(model.OUTPUTS/study/'manifest.json');verified=catalog.verified_import(model,manifest)
             for row in report['rows']:row['_verified']=verified

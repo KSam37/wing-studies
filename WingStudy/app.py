@@ -249,6 +249,10 @@ class Handler(BaseHTTPRequestHandler):
                     if model.read_json(directory/'status.json').get('state')=='running':
                         raise ValueError('Wait for this study to finish or stop it before exporting smooth profiles.')
                     return self.send(wing_curves.export_smooth_profiles(model,directory,data['case']))
+            if path == "/api/evolution-gif":
+                import evolution_export
+                directory=study_path(data['study'])
+                with LOCK:return self.send(evolution_export.export_gif(model,directory,data['case']))
             if path == "/api/adaptive-evolution":
                 directory=study_path(data['study'])
                 events=model.read_json(directory/'evolution.json') if (directory/'evolution.json').exists() else []
@@ -274,7 +278,7 @@ class Handler(BaseHTTPRequestHandler):
                 if data.get('study')!='master':study_path(data['study'])
                 with LOCK:
                     if data.get('study')=='master':catalog.sync(model)
-                    return self.send(torque_study.overview(model,data['study'],data.get('generations',['current']),data.get('model_mode','rigid'),bool(data.get('export',False))))
+                    return self.send(torque_study.overview(model,data['study'],data.get('generations',['current']),data.get('model_mode','rigid'),bool(data.get('export',False)),span_class=data.get('span_class','all')))
             if path == "/api/master-results":
                 import torque_study
                 with LOCK:

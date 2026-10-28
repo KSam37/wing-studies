@@ -58,6 +58,9 @@ def generate(model,data):
     import torque_study
     mode=data.get('model_mode','rigid') if study=='master' else ('aeroelastic' if manifest['settings'].get('aeroelastic_enabled',False) else 'rigid')
     rows=torque_study.select_model(rows,mode)
+    from wing_dimensions import span_class
+    chosen_span=data.get('span_class','all')
+    if chosen_span!='all':rows=[r for r in rows if span_class(r)==chosen_span]
     eligible,points=envelope(rows,allow_aeroelastic=mode=='aeroelastic')
     if not points:raise ValueError('No settled single-wing designs for the selected model with valid positive thrust are available.')
     def bound(key,label):
