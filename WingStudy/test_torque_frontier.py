@@ -8,6 +8,12 @@ import torque_frontier as frontier
 from test_torque_study import row
 
 class FrontierChecks(unittest.TestCase):
+    def test_background_sampling_excludes_frontier_and_preserves_vertical_variety(self):
+        rows=[row('top',10,1),row('mid',5,1),row('near',5.01,1.001),row('bottom',1,1)]
+        sampled=frontier.sample_background(rows,[rows[0]],[rows[0]],.1,0,2)
+        self.assertEqual({r['id'] for r in sampled},{'near','bottom'})
+        self.assertEqual(len(frontier.sample_background(rows,[rows[0]],[rows[0]],0,0,2)),3)
+
     def test_spacing_preserves_best_end_and_full_frontier(self):
         rows=[row(str(i),i+1,t) for i,t in enumerate([.1,.11,.15,.2,.25,.31])]
         original=list(rows);shown=frontier.spaced_points(rows,.1)
