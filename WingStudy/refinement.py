@@ -25,6 +25,27 @@ def resize_span(model,design,total_span_m,settings):
     return {'baseline':resized,'total_span_m':total,'single_wing_span_m':(total-gap)/2,'span_scale_factor':factor}
 
 
+def span_designs(model,config):
+    """Inclusive span-only grid of a saved wing; no chord perturbations."""
+    import numpy as np
+    raw=config['span_search'];base=config.get('shape_sweep',{}).get('baseline')
+    if not isinstance(base,dict):raise ValueError('Choose a saved wing before searching span.')
+    gap=model.number(config['settings'].get('gap_m'),'Hinge gap',0)
+    lo=model.number(raw.get('min_m'),'Minimum total span',gap+1e-12)
+    hi=model.number(raw.get('max_m'),'Maximum total span',lo)
+    count=model.number(raw.get('count'),'Span samples',1,None,True)
+    budget=model.number(config['settings'].get('case_budget',10000),'Case budget',1,None,True)
+    if count==1 and lo!=hi:raise ValueError('Use at least two span samples for different endpoints.')
+    if lo==hi:count=1
+    if count>budget:raise ValueError('Span search exceeds the case budget. Reduce samples or increase the budget.')
+    designs=[]
+    for total in np.linspace(lo,hi,count):
+        result=resize_span(model,base,float(total),config['settings'])['baseline']
+        result['name']=f"{base.get('name','Wing')} - span {total:.9g} m"
+        designs.append(result)
+    return designs
+
+
 def resample(model,design,count,variation_pct,settings,linspace=False):
     import numpy as np
     from scipy.interpolate import PchipInterpolator

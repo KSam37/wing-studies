@@ -44,7 +44,11 @@ def prepare(model,config):
         c['waveform']={'mode':'custom','points':points}
         c['settings']['amplitude_deg']=model.FlapWave(c['waveform']).scale
     c['motion_range']={'minimum_deg':lo,'maximum_deg':hi}
-    if c.get('refinement',{}).get('enabled'):
+    if c.get('span_search',{}).get('enabled'):
+        import refinement
+        c['designs']=refinement.span_designs(model,c)
+        c['mode']='custom'
+    elif c.get('refinement',{}).get('enabled'):
         if c['refinement'].get('search_method')=='linspace':
             # Reuse the original exact grid, taper pruning and case-budget guard.
             c['mode']='shape_sweep';c['designs']=[]

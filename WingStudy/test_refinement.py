@@ -18,6 +18,29 @@ class RefinementChecks(unittest.TestCase):
     setUp=test_catalog.CatalogChecks.setUp
     tearDown=test_catalog.CatalogChecks.tearDown
 
+    def test_span_search_grid_preserves_chords_and_round_trips(self):
+        c=self.configuration(n=7)
+        c['span_search']={'enabled':True,'min_m':.4,'max_m':.8,'count':5}
+        before=copy.deepcopy(c);result=model.plan(c)
+        self.assertEqual(c,before)
+        self.assertEqual(result['case_count'],5)
+        self.assertEqual(result['cases'],model.plan(result['config'])['cases'])
+        original=c['shape_sweep']['baseline']['sections']
+        for total,case in zip(np.linspace(.4,.8,5),result['cases']):
+            self.assertAlmostEqual(2*case['sections'][-1]['y_m']+c['settings']['gap_m'],total)
+            for a,b in zip(original,case['sections']):
+                for key in ('chord_m','x_m','pitch_deg','roll_deg'):self.assertEqual(a[key],b[key])
+        self.assertEqual(len({catalog.signature(model,x,result['settings']) for x in result['cases']}),5)
+        self.assertIsNotNone(model.build_solver(result['cases'][0],result['settings']))
+
+    def test_span_search_bounds_budget_and_equal_endpoint_dedup(self):
+        c=self.configuration(n=4)
+        for lo,hi,count,message in [(0,.8,5,'Minimum'),(.8,.4,5,'Maximum'),(.4,.8,1,'two'),(.4,.8,1.5,'integer'),(.4,.8,10001,'budget')]:
+            c['span_search']={'enabled':True,'min_m':lo,'max_m':hi,'count':count}
+            with self.assertRaises(ValueError):model.plan(c)
+        c['span_search']={'enabled':True,'min_m':.6,'max_m':.6,'count':5}
+        self.assertEqual(model.plan(c)['case_count'],1)
+
     def test_resize_span_preserves_chords_offsets_and_angles_and_changes_identity(self):
         case=self.spec['cases'][0];settings=self.spec['settings']
         design={'name':'Saved wing','sections':copy.deepcopy(case['sections'])}

@@ -18,18 +18,24 @@ function renderRanges(ranges){
  $('ranges').innerHTML=ranges.map((r,i)=>`<tr><td>${refinementActive?`<input type="checkbox" data-vary="${i}" aria-label="Select chord ${i+1} for variation">`:''}${i+1}${i===0?' · root':i===ranges.length-1?' · tip':''}</td><td>${fmt(baseline?baseline.sections[i].y_m:half*i/(ranges.length-1))}</td>${['min_m','max_m','count'].map(key=>`<td><input aria-label="Chord ${i+1} ${key}" data-key="${key}" type="number" step="${key==='count'?'1':'any'}" min="${key==='count'?'1':'0'}" value="${esc(r[key])}"></td>`).join('')}</tr>`).join('');
 }
 function updateBaseline(){
- $('totalSpan').disabled=false;
- $('nodeCount').disabled=false;$('applyNodes').disabled=false;
+ const spanSearch=!!baseline&&$('spanSearch').checked;
+ $('spanSearchControls').classList.toggle('hidden',!baseline);
+ $('spanSearchFields').classList.toggle('hidden',!spanSearch);
+ $('totalSpan').disabled=spanSearch;
+ $('applySpan').disabled=spanSearch;
+ $('ranges').querySelectorAll('input').forEach(input=>input.disabled=spanSearch);
+ $('decreasing').disabled=spanSearch;
+ $('nodeCount').disabled=spanSearch;$('applyNodes').disabled=spanSearch;
  $('regularGrid').classList.toggle('hidden',!baseline);
  $('applySpan').classList.toggle('hidden',!baseline);
- $('refinementControls').classList.toggle('hidden',!refinementActive);
- $('baselineNote').textContent=refinementActive?`Refinement of ${baseline.name}: each chord has its own inclusive linspace. Hold most chords fixed and vary only the region you want to explore.`:baseline?`Baseline: ${baseline.name}. Edit node count to interpolate more sections.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
+ $('refinementControls').classList.toggle('hidden',!refinementActive||spanSearch);
+ $('baselineNote').textContent=spanSearch?`Span search of ${baseline.name}: saved chords remain fixed at every sampled span.`:refinementActive?`Refinement of ${baseline.name}: each chord has its own inclusive linspace. Hold most chords fixed and vary only the region you want to explore.`:baseline?`Baseline: ${baseline.name}. Edit node count to interpolate more sections.`:'Equally spaced root-to-tip nodes. Leading-edge sweep and incidence are zero.';
  $('samplesHeading').classList.remove('hidden');
- $('gridHelp').textContent='Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. All admissible combinations are explored, subject to the case budget and optional decreasing-chord constraint. Zeros are allowed only as an outboard suffix; at least two positive sections remain.';
+ $('gridHelp').textContent=spanSearch?'Chord search is disabled. Each sampled span uses the selected wing’s exact chord lengths.':'Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. All admissible combinations are explored, subject to the case budget and optional decreasing-chord constraint. Zeros are allowed only as an outboard suffix; at least two positive sections remain.';
 }
 function configuration(allowPendingNodes=false){
- if(refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
- if(baseline&&!allowPendingNodes&&Math.abs(Number($('totalSpan').value)-(2*baseline.sections.at(-1).y_m+Number($('hingeGap').value)))>1e-10)throw Error('Apply span to resize the saved wing before previewing or running. Chord lengths will stay unchanged.');
+ if(!$('spanSearch').checked&&refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
+ if(!$('spanSearch').checked&&baseline&&!allowPendingNodes&&Math.abs(Number($('totalSpan').value)-(2*baseline.sections.at(-1).y_m+Number($('hingeGap').value)))>1e-10)throw Error('Apply span to resize the saved wing before previewing or running. Chord lengths will stay unchanged.');
  const c=structuredClone(baseConfig||defaults);c.workflow='root_torque';c.mode='shape_sweep';c.name=$('studyName').value;
  c.limits={};c.designs=[];
  c.optimization={max_root_moment_nm:Number($('maximumMoment').value)};
@@ -41,12 +47,14 @@ function configuration(allowPendingNodes=false){
   sweep_deg:0,incidence_deg:0,ranges:readRanges(),baseline:baseline?structuredClone(baseline):null};
  if(refinementActive){c.mode='shape_sweep';c.refinement={enabled:true,search_method:'linspace',variation_pct:Number($('localVariation').value),source:structuredClone(refinementSource)};}
  else delete c.refinement;
+ if(baseline&&$('spanSearch').checked)c.span_search={enabled:true,min_m:Number($('spanMinimum').value),max_m:Number($('spanMaximum').value),count:Number($('spanSamples').value)};
+ else delete c.span_search;
  return c;
 }
 function fill(c,initial=false){
  baseConfig=structuredClone(c);const settings={...defaults.settings,...c.settings};
  const shape=c.shape_sweep||defaults.shape_sweep;baseline=shape.baseline?structuredClone(shape.baseline):null;
- if(c.mode==='custom'&&c.designs?.length){baseline=structuredClone(c.designs[0]);}
+ if(!c.span_search?.enabled&&c.mode==='custom'&&c.designs?.length){baseline=structuredClone(c.designs[0]);}
  refinementActive=!!c.refinement?.enabled;
  refinementSource=refinementActive?structuredClone(c.refinement.source||shape.baseline):null;
  if(refinementActive)baseline=structuredClone(shape.baseline);
@@ -54,6 +62,10 @@ function fill(c,initial=false){
  $('studyName').value=initial?'Thrust under root moment limit':c.name||'Thrust under root moment limit';
  $('maximumMoment').value=c.optimization?.max_root_moment_nm??$('maximumMoment').value;
  $('totalSpan').value=baseline?2*baseline.sections.at(-1).y_m+Number(settings.gap_m):shape.span_m;
+ $('spanSearch').checked=!!c.span_search?.enabled;
+ $('spanMinimum').value=c.span_search?.min_m??$('totalSpan').value;
+ $('spanMaximum').value=c.span_search?.max_m??$('totalSpan').value;
+ $('spanSamples').value=c.span_search?.count??5;
  $('nodeCount').value=baseline?.sections.length||shape.chord_count;$('decreasing').checked=!!shape.decreasing;
  for(const [id,key] of Object.entries(numerical))$(id).value=settings[key];
  $('frequency').value=initial?1:settings.frequency_hz;$('speed').value=settings.speed_mps;
@@ -88,7 +100,8 @@ async function preview(){
   $('caseCount').textContent=p.case_count;$('validation').innerHTML='';$('runStudy').disabled=false;
   $('runStudy').textContent=p.cached_case_count?`Run ${p.new_simulation_count} new · reuse ${p.cached_case_count}`:`Run ${p.case_count} case${p.case_count===1?'':'s'}`;
   $('previewStatus').textContent=`${p.case_count} unique geometries · ${p.shape_grid?.pruned_count||0} pruned combinations · ${p.cached_case_count||0} exact cached results · ${p.max_steps} time steps per case.`;
-  if(refinementActive)$('previewStatus').textContent+=' Exact per-chord linspace refinement; fixed chords remain unchanged.';
+  if($('spanSearch').checked)$('previewStatus').textContent+=' Span-only linspace; saved chord lengths stay fixed.';
+  else if(refinementActive)$('previewStatus').textContent+=' Exact per-chord linspace refinement; fixed chords remain unchanged.';
   const seconds=p.runtime_estimate?.case_seconds*(p.new_simulation_count??p.case_count)+(p.cached_case_count||0);
   $('runtime').textContent=seconds?`Runtime estimate: ${Math.max(1,Math.round(seconds*.5/60))}–${Math.max(1,Math.ceil(seconds*2/60))} min; updates from completed cases.`:'Runtime estimate calibrates from completed cases.';
   drawPreview();
@@ -185,6 +198,7 @@ async function refine(row){
  if(sourceStudy){fill(sourceStudy.config);}
  refinementSource={name:row.design_name||row.id,sections:structuredClone(sections),source_study:row._study||currentStudy,source_case:row.id};
  baseline=structuredClone(refinementSource);refinementActive=true;
+ $('spanSearch').checked=false;
  $('nodeCount').value=Math.max(16,sections.length);$('localVariation').value=5;
  $('decreasing').checked=sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m);
  if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
@@ -195,11 +209,13 @@ function loadSpanResize(row){
  const study=studies.find(s=>s.id===(row._study||currentStudy));if(study)fill(study.config);
  refinementSource={name:row.design_name||row.id,sections:structuredClone(row.sections),source_study:row._study||currentStudy,source_case:row.id};
  baseline=structuredClone(refinementSource);refinementActive=true;
+ $('spanSearch').checked=false;
  $('nodeCount').value=baseline.sections.length;$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);
+ $('spanMinimum').value=$('totalSpan').value;$('spanMaximum').value=$('totalSpan').value;$('spanSamples').value=5;
  $('studyName').value=(baseline.name+' span study').slice(0,80);
  if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
  renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();show('setup');preview();
- notify('Exact saved chords loaded and fixed. Enter a new total span, Apply span, then Run sweep.');
+ notify('Exact saved chords loaded and fixed. Enable span search and enter minimum, maximum, and samples; or apply one new span. Then Run sweep.');
 }
 $('applySpan').onclick=async()=>{
  if(!baseline)return;const serial=++nodeSerial;
@@ -249,10 +265,10 @@ $('makeLandscape').onclick=async()=>{
 };
 for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax','plotAxisX','plotAxisY','plotAxisZ'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
-$('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline&&event.target.id==='hingeGap')$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
+$('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(event.target.id==='spanSearch')updateBaseline();if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline&&event.target.id==='hingeGap')$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());updateBaseline();}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;
 $('applyNodes').onclick=()=>{const n=Number($('nodeCount').value);if(!Number.isInteger(n)||n<2||n>64){notify('Use 2–64 chord nodes.');return;}if(baseline){applyRefinementNodes();return;}const old=readRanges();renderRanges(Array.from({length:n},(_,i)=>old[i]||{min_m:.06,max_m:.14,count:3}));preview();};
-$('regularGrid').onclick=()=>{baseline=null;refinementSource=null;refinementActive=false;renderRanges(readRanges().map(r=>({...r,count:r.min_m===r.max_m?1:3})));updateBaseline();preview();};
+$('regularGrid').onclick=()=>{$('spanSearch').checked=false;baseline=null;refinementSource=null;refinementActive=false;renderRanges(readRanges().map(r=>({...r,count:r.min_m===r.max_m?1:3})));updateBaseline();preview();};
 $('applyLocalBounds').onclick=()=>{const rows=[...$('ranges').querySelectorAll('tr')],chosen=rows.filter(r=>r.querySelector('[data-vary]')?.checked);if(!chosen.length){notify('Select the chord rows you want to vary first, or edit their min/max/samples directly.');return;}const pct=Number($('localVariation').value)/100;if(!Number.isFinite(pct)||pct<0||pct>1){notify('Use a variation between 0 and 100%.');return;}rows.forEach((row,i)=>{if(!row.querySelector('[data-vary]')?.checked)return;const chord=baseline.sections[i].chord_m;row.querySelector('[data-key="min_m"]').value=Number((chord*(1-pct)).toPrecision(12));row.querySelector('[data-key="max_m"]').value=Number((chord*(1+pct)).toPrecision(12));row.querySelector('[data-key="count"]').value=pct?3:1;});preview();};
 $('fixAllChords').onclick=()=>{if(!baseline)return;renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();preview();};
 $('keepBest').onclick=async()=>{if(!report?.winner||currentStudy==='master')return;try{$('keepBest').disabled=true;const r=await api('keep-best',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),winner_id:report.winner.id});$('exportLinks').innerHTML=`<a class="button" href="/files/${esc(r.settings_file)}" download>Saved best wing settings</a>`;notify(`Saved ${r.kept_case}; discarded ${r.discarded_count} cases. ${r.cleanup}`);await refreshIndex();}catch(error){notify(error.message);}finally{$('keepBest').disabled=false;}};
