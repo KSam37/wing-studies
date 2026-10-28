@@ -27,7 +27,7 @@ class FrontierChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
             root=Path(temp);study=root/'saved';study.mkdir()
             model.write_json(study/'manifest.json',{'settings':{'frequency_hz':1,'speed_mps':.5}})
-            model.write_json(study/'results.json',[row('a',2,.1),row('b',3,2)])
+            model.write_json(study/'results.json',[row('a',2,.1,sections=[{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':0,'chord_m':.2},{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':.3,'chord_m':.1}]),row('b',3,2,sections=[{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':0,'chord_m':.2},{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':.4,'chord_m':.05}])])
             before=(study/'results.json').read_bytes()
             with patch.object(model,'OUTPUTS',root):
                 result=frontier.generate(model,{'study':'saved','maximum_root_moment_nm':.2})
