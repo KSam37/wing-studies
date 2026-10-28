@@ -11,21 +11,23 @@ from test_torque_study import row
 class AdaptiveChecks(unittest.TestCase):
     def config(self):
         c=torque_study.default_config(model)
-        c['adaptive_search']={**adaptive.DEFAULT,'enabled':True,'span_min_m':.6,'span_max_m':.6,'span_count':1,'node_count':3,'torque_min_nm':.5,'torque_max_nm':.5,'torque_count':1,'decreasing':False}
+        c['adaptive_search']={**adaptive.DEFAULT,'enabled':True,'span_min_m':.6,'span_max_m':.6,'span_count':1,'node_count':3,'decreasing':False}
         return c
 
-    def test_requested_defaults_match_ui_and_form_sixteen_searches(self):
+    def test_requested_defaults_match_ui_and_form_four_unconstrained_searches(self):
         import re
         c=torque_study.default_config(model);c['adaptive_search']={'enabled':True}
         p=adaptive.plan(model,c)
         r=p['adaptive_search']
         self.assertEqual((r['span_min_m'],r['span_max_m'],r['span_count'],r['node_count']),(.4,.8,4,8))
         self.assertEqual((r['initial_step_m'],r['minimum_step_m']),(.04,.01))
-        self.assertEqual((r['torque_min_nm'],r['torque_max_nm'],r['torque_count']),(.2,10,4))
+        self.assertNotIn('torque_max_nm',r)
+        self.assertEqual(p['config']['optimization']['constraint'],'none')
+        self.assertNotIn('max_root_moment_nm',p['config']['optimization'])
         self.assertEqual((r['simulation_budget'],r['evaluation_budget']),(500,1000))
-        self.assertEqual(p['search_job_count'],16)
+        self.assertEqual(p['search_job_count'],4)
         html=(model.HERE/'workflow.html').read_text(encoding='utf-8')
-        for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveMinStep':'minimum_step_m','adaptiveTorqueMax':'torque_max_nm','adaptiveBudget':'simulation_budget','adaptiveEvaluations':'evaluation_budget'}.items():
+        for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveMinStep':'minimum_step_m','adaptiveBudget':'simulation_budget','adaptiveEvaluations':'evaluation_budget'}.items():
             value=re.search('id="'+field+'"[^>]*value="([^"]+)"',html)[1]
             self.assertEqual(float(value),r[key])
 
@@ -55,7 +57,7 @@ class AdaptiveChecks(unittest.TestCase):
         self.assertTrue(all(case['aeroelastic_enabled'] for case in p['cases']))
         self.assertNotEqual(catalog.signature(model,p['cases'][0],p['settings']),catalog.signature(model,rigid['cases'][0],rigid['settings']))
         native=row('native',2,.3,aeroelastic_enabled=True)
-        self.assertEqual(adaptive.score(native,.5),(1,2))
+        self.assertEqual(adaptive.score(native),2/.3)
         self.assertEqual(torque_study.classify(native,.5),'Aeroelastic result excluded')
         self.assertEqual(torque_study.rank([native],.5,allow_aeroelastic=True)['winner']['id'],'native')
         for key,value in [('damping_constant_rad',-1),('spring_constant_rad',0),('wing_density',0),('step_discards',100000)]:
@@ -67,7 +69,7 @@ class AdaptiveChecks(unittest.TestCase):
         target=[.15,.1,.05]
         def evaluate(chords,meta):
             self.assertTrue(adaptive.valid(chords,r));evaluations.append(chords)
-            return row(str(len(evaluations)),10-100*sum((c-t)**2 for c,t in zip(chords,target)),sum(chords))
+            return row(str(len(evaluations)),10-100*sum((c-t)**2 for c,t in zip(chords,target)),1.)
         adaptive.run_search(r,evaluate,accepted.append)
         self.assertGreater(len(accepted),2)
         self.assertGreater(accepted[-1]['case']['single_wing_mean_thrust_N'],9.99)
@@ -75,21 +77,28 @@ class AdaptiveChecks(unittest.TestCase):
         thrust=[e['case']['single_wing_mean_thrust_N'] for e in accepted]
         self.assertEqual(thrust,sorted(thrust))
 
-    def test_infeasible_candidates_approach_constraint_before_climbing_thrust(self):
-        self.assertTrue(adaptive.better(row('a',2,.8),row('b',4,1),.5,.001))
-        self.assertTrue(adaptive.better(row('a',1,.5),row('b',4,.6),.5,.001))
-        self.assertFalse(adaptive.better(row('a',10,.6),row('b',1,.4),.5,.001))
-        bad=row('x',100,.1);bad['cycle_repeatable']=False
-        self.assertFalse(adaptive.better(bad,row('b',1,.4),.5,0))
+    def test_ratio_acceptance_has_no_torque_ceiling_or_thrust_only_preference(self):
+        # Higher absolute torque must be accepted when its ratio is better.
+        self.assertTrue(adaptive.better(row('new',20,4),row('old',4,1),.001))
+        # Higher thrust alone must not win when its ratio is lower.
+        self.assertFalse(adaptive.better(row('new',10,10),row('old',2,.5),.001))
+        self.assertTrue(adaptive.better(row('new',2,.4),row('old',4,1),.001))
+        bad=row('bad',100,.1);bad['cycle_repeatable']=False
+        self.assertFalse(adaptive.better(bad,row('old',1,.4),0))
+        for torque in (0,-1,float('nan')):self.assertIsNone(adaptive.score(row('bad',1,torque)))
+        c=self.config();c['adaptive_search'].update(torque_min_nm=-100,torque_max_nm=-1,torque_count=0)
+        p=adaptive.plan(model,c)
+        self.assertNotIn('torque_max_nm',p['adaptive_search'])
+        self.assertNotIn('max_root_moment_nm',p['config']['optimization'])
 
     def test_jobs_are_interleaved_and_decreasing_shapes_stay_valid(self):
-        c=self.config();c['adaptive_search'].update(span_min_m=.5,span_max_m=.7,span_count=2,torque_min_nm=.2,torque_max_nm=.4,torque_count=2,decreasing=True,max_passes=1)
+        c=self.config();c['adaptive_search'].update(span_min_m=.5,span_max_m=.7,span_count=2,decreasing=True,max_passes=1)
         r=adaptive.options(model,c);jobs=[]
         def evaluate(chords,meta):
             self.assertTrue(adaptive.valid(chords,r));jobs.append(meta['job'])
             return row(str(len(jobs)),sum(chords),sum(chords))
         adaptive.run_search(r,evaluate)
-        self.assertEqual(jobs[:4],[1,2,3,4])
+        self.assertEqual(jobs[:2],[1,2])
 
     def test_app_launch_writes_adaptive_manifest_and_budget_for_worker(self):
         import app

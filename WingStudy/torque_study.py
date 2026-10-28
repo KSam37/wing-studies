@@ -24,9 +24,12 @@ def default_config(model):
 
 def prepare(model,config):
     c=copy.deepcopy(config)
-    limit=model.number(c.get('optimization',{}).get('max_root_moment_nm'),'Maximum root moment',1e-12)
-    c['optimization']={'max_root_moment_nm':limit,'objective':'single_wing_mean_thrust_N',
-        'constraint':'final_cycle_peak_absolute_single_wing_root_roll_moment'}
+    if c.get('adaptive_search',{}).get('enabled'):
+        c['optimization']={'objective':'single_wing_thrust_roll_ratio_1pm','constraint':'none'}
+    else:
+        limit=model.number(c.get('optimization',{}).get('max_root_moment_nm'),'Maximum root moment',1e-12)
+        c['optimization']={'max_root_moment_nm':limit,'objective':'single_wing_mean_thrust_N',
+            'constraint':'final_cycle_peak_absolute_single_wing_root_roll_moment'}
     c['settings']['aeroelastic_enabled']=c['settings'].get('aeroelastic_enabled',False) if c.get('adaptive_search',{}).get('enabled') else False
     c['settings']['save_solver']=False
     c['tail']={'enabled':False}

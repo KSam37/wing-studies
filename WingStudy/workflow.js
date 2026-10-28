@@ -33,12 +33,12 @@ function updateBaseline(){
  $('samplesHeading').classList.remove('hidden');
  $('gridHelp').textContent=spanSearch?'Chord search is disabled. Each sampled span uses the selected wing’s exact chord lengths.':'Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. All admissible combinations are explored, subject to the case budget and optional decreasing-chord constraint. Zeros are allowed only as an outboard suffix; at least two positive sections remain.';
 }
-const adaptiveFields={adaptiveSpanMin:'span_min_m',adaptiveSpanMax:'span_max_m',adaptiveSpanCount:'span_count',adaptiveNodes:'node_count',adaptiveRoot:'root_chord_m',adaptiveTip:'tip_chord_m',adaptiveChordMin:'minimum_chord_m',adaptiveChordMax:'maximum_chord_m',adaptiveStep:'initial_step_m',adaptiveMinStep:'minimum_step_m',adaptiveShrink:'shrink_factor',adaptiveImprovement:'improvement_pct',adaptiveTorqueMin:'torque_min_nm',adaptiveTorqueMax:'torque_max_nm',adaptiveTorqueCount:'torque_count',adaptiveBudget:'simulation_budget',adaptiveEvaluations:'evaluation_budget',adaptivePasses:'max_passes'};
+const adaptiveFields={adaptiveSpanMin:'span_min_m',adaptiveSpanMax:'span_max_m',adaptiveSpanCount:'span_count',adaptiveNodes:'node_count',adaptiveRoot:'root_chord_m',adaptiveTip:'tip_chord_m',adaptiveChordMin:'minimum_chord_m',adaptiveChordMax:'maximum_chord_m',adaptiveStep:'initial_step_m',adaptiveMinStep:'minimum_step_m',adaptiveShrink:'shrink_factor',adaptiveImprovement:'improvement_pct',adaptiveBudget:'simulation_budget',adaptiveEvaluations:'evaluation_budget',adaptivePasses:'max_passes'};
 function adaptiveConfiguration(c){
  c.adaptive_search={enabled:true,...Object.fromEntries(Object.entries(adaptiveFields).map(([id,key])=>[key,Number($(id).value)])),decreasing:$('adaptiveDecreasing').checked,paired_moves:$('adaptivePaired').checked,bounds:[...$('adaptiveBounds').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,Number(input.value)])))};
  if($('adaptiveElastic')?.checked)Object.assign(c.settings,{aeroelastic_enabled:true,spring_constant_rad:Number($('nativeStiffness').value),damping_constant_rad:Number($('nativeDamping').value),wing_density:Number($('nativeMass').value),step_discards:Number($('nativeHold').value)});
  if(c.adaptive_search.bounds.length!==c.adaptive_search.node_count)throw Error('Build the per-chord rows after changing adaptive node count.');
- delete c.refinement;delete c.span_search;c.mode='custom';return c;
+ delete c.refinement;delete c.span_search;c.mode='custom';c.workflow='adaptive_ratio';c.optimization={objective:'single_wing_thrust_roll_ratio_1pm',constraint:'none'};return c;
 }
 function renderAdaptiveBounds(bounds){
  const n=Number($('adaptiveNodes').value);if(!Number.isInteger(n)||n<2||n>64)throw Error('Use 2–64 chord nodes.');
@@ -49,8 +49,8 @@ function updateSearchMode(){
  $('nativeElasticFields').classList.toggle('hidden',!adaptive||!$('adaptiveElastic').checked);
  $('maximumMoment').closest('label').classList.toggle('hidden',adaptive);
  $('constraintTitle').textContent=adaptive?'1. Name the study':'1. Set the constraint';
- $('constraintHelp').textContent=adaptive?'Set a linspace of wing-root torque allowances below. Each search keeps its span and allowance fixed.':'Limit on the final settled cycle’s peak absolute roll moment at one wing root, after your own drivetrain calculation.';
- $('constraintNote').textContent=adaptive?'Objective: maximum mean thrust at each span and torque allowance. Every evaluated design contributes to the best-observed frontier.':'Maximize mean forward thrust among rigid wings that stay within this limit. Thrust/moment ratio is not the ranking objective.';
+ $('constraintHelp').textContent=adaptive?'Set a linspace of spans below. Each search maximizes mean thrust / peak absolute root torque, with no torque constraint.':'Limit on the final settled cycle’s peak absolute roll moment at one wing root, after your own drivetrain calculation.';
+ $('constraintNote').textContent=adaptive?'Objective: maximum mean thrust / peak absolute root torque. All evaluated designs are retained and compared by torque afterward.':'Maximize mean forward thrust among rigid wings that stay within this limit. Thrust/moment ratio is not the ranking objective.';
 }
 function configuration(allowPendingNodes=false){
  const adaptiveMode=$('searchMode')?.value==='adaptive';
@@ -80,7 +80,7 @@ function fill(c,initial=false){
  refinementSource=refinementActive?structuredClone(c.refinement.source||shape.baseline):null;
  if(refinementActive)baseline=structuredClone(shape.baseline);
  $('localVariation').value=c.refinement?.variation_pct??5;
- $('studyName').value=initial?'Thrust under root moment limit':c.name||'Thrust under root moment limit';
+ $('studyName').value=initial?'Thrust/torque shape search':c.name||'Thrust under root moment limit';
  $('maximumMoment').value=c.optimization?.max_root_moment_nm??$('maximumMoment').value;
  $('totalSpan').value=baseline?2*baseline.sections.at(-1).y_m+Number(settings.gap_m):shape.span_m;
  $('spanSearch').checked=!!c.span_search?.enabled;
@@ -95,7 +95,7 @@ function fill(c,initial=false){
  if(initial){$('wake').value='prescribed';$('wakeCycles').value='2';}
  const legacySample=refinementActive&&c.refinement.search_method!=='linspace';
  renderRanges((c.mode==='custom'&&baseline&&!refinementActive)||legacySample?baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})):shape.ranges);
- $('searchMode').value=c.adaptive_search?.enabled?'adaptive':'grid';
+ $('searchMode').value=initial||c.adaptive_search?.enabled?'adaptive':'grid';
  for(const [id,key] of Object.entries(adaptiveFields))if(c.adaptive_search?.[key]!==undefined)$(id).value=c.adaptive_search[key];
  $('adaptiveDecreasing').checked=c.adaptive_search?.decreasing??true;$('adaptivePaired').checked=c.adaptive_search?.paired_moves??true;
  $('adaptiveElastic').checked=!!c.adaptive_search?.enabled&&!!settings.aeroelastic_enabled;
@@ -130,7 +130,7 @@ async function preview(){
   else if(refinementActive)$('previewStatus').textContent+=' Exact per-chord linspace refinement; fixed chords remain unchanged.';
   const seconds=p.runtime_estimate?.case_seconds*(p.new_simulation_count??p.case_count)+(p.cached_case_count||0);
   $('runtime').textContent=seconds?`Runtime estimate: ${Math.max(1,Math.round(seconds*.5/60))}–${Math.max(1,Math.ceil(seconds*2/60))} min; updates from completed cases.`:'Runtime estimate calibrates from completed cases.';
-  if(p.adaptive_search){$('spanPanels').value=p.settings.span_panels;$('runStudy').textContent='Run adaptive search';$('caseCount').textContent=p.simulation_budget+' max';$('previewStatus').textContent=`${p.cases.length} span seeds · ${p.search_job_count} span/torque searches · ${p.simulation_budget} new-simulation budget. ${p.settings.aeroelastic_enabled?'Native aeroelastic springs; damping '+fmt(p.settings.damping_constant_rad)+' N m s/rad. ':'Rigid UVLM. '}Candidate geometries are generated adaptively; exact cache hits do not use this budget.`;const upper=p.runtime_estimate?.case_seconds*p.simulation_budget;$('runtime').textContent=upper?`Budget runtime estimate: about ${Math.ceil(upper/60)} min at recent case speed; may stop earlier.`:'Runtime estimate calibrates from completed cases.';}
+  if(p.adaptive_search){$('spanPanels').value=p.settings.span_panels;$('runStudy').textContent='Run adaptive search';$('caseCount').textContent=p.simulation_budget+' max';$('previewStatus').textContent=`${p.cases.length} span seeds · ${p.search_job_count} span searches · objective: mean thrust / peak root torque (no torque ceiling) · ${p.simulation_budget} new-simulation budget. ${p.settings.aeroelastic_enabled?'Native aeroelastic springs; damping '+fmt(p.settings.damping_constant_rad)+' N m s/rad. ':'Rigid UVLM. '}Candidate geometries are generated adaptively; exact cache hits do not use this budget.`;const upper=p.runtime_estimate?.case_seconds*p.simulation_budget;$('runtime').textContent=upper?`Budget runtime estimate: about ${Math.ceil(upper/60)} min at recent case speed; may stop earlier.`:'Runtime estimate calibrates from completed cases.';}
   drawPreview();
  }catch(error){if(serial!==previewSerial)return;planData=null;$('validation').innerHTML=`<p class="error">${esc(error.message)}</p>`;$('caseCount').textContent='—';}
 }
@@ -330,10 +330,10 @@ $('searchMode').onchange=()=>{updateSearchMode();preview();};
 $('adaptiveApplyBounds').onclick=()=>{try{renderAdaptiveBounds();preview();}catch(error){notify(error.message);}};
 $('loadEvolution').onclick=async()=>{
  try{const result=await api('adaptive-evolution',{study:currentStudy});
- $('evolutionResult').innerHTML=`<p class="help">${result.events.length} saved path states. Thrust climbs within each fixed torque allowance; torque and thrust/torque need not increase. ${esc(result.summary.stop_reason||'Search is still running; accepted states remain saved.')}</p>${result.files.map(f=>`<div><img src="/files/${esc(f)}?v=${result.events.length}" style="max-width:100%" alt="${f.endsWith('.webp')?'Accepted wing evolution':'Adaptive thrust torque and ratio progress'}"><p><a href="/files/${esc(f)}" download>Download ${f.endsWith('.webp')?'animation':'progress PNG'}</a></p></div>`).join('')}`;
+ $('evolutionResult').innerHTML=`<p class="help">${result.events.length} saved path states. ${result.objective==='single_wing_mean_thrust_over_peak_root_torque_v1'?'Thrust/peak-torque ratio climbs within each span; thrust and torque may each increase or decrease.':'Historical run: the saved path used the previous constrained-thrust objective. New searches maximize thrust/torque without ceilings.'} ${esc(result.summary.stop_reason||'Search is still running; accepted states remain saved.')}</p>${result.files.map(f=>`<div><img src="/files/${esc(f)}?v=${result.events.length}" style="max-width:100%" alt="${f.endsWith('.webp')?'Accepted wing evolution':'Adaptive thrust torque and ratio progress'}"><p><a href="/files/${esc(f)}" download>Download ${f.endsWith('.webp')?'animation':'progress PNG'}</a></p></div>`).join('')}`;
  const jobs=[...new Set(result.events.map(e=>e.job))];
- if(jobs.length){$('evolutionResult').insertAdjacentHTML('afterbegin',`<label>Inspect search path<select id="evolutionJob">${jobs.map(job=>{const e=result.events.find(e=>e.job===job);return `<option value="${job}">Job ${job} · span ${fmt(e.span_m)} m · allowance ${fmt(e.torque_limit_Nm)} N m</option>`;}).join('')}</select></label><label>Accepted state<input id="evolutionFrame" type="range" min="0" step="1" value="0" style="width:100%"></label><div id="evolutionWing"></div>`);
- const inspect=()=>{const path=result.events.filter(e=>e.job===Number($('evolutionJob').value));$('evolutionFrame').max=path.length-1;const index=Math.min(Number($('evolutionFrame').value),path.length-1),e=path[index];$('evolutionWing').innerHTML=outline(e.case,true)+`<p>State ${index+1} of ${path.length} · ${esc(e.case.id)} · ${esc(e.case.status)}</p>`+values({...e.case,root_moment_margin_Nm:e.torque_limit_Nm-e.case.single_wing_peak_abs_roll_moment_Nm});};
+ if(jobs.length){$('evolutionResult').insertAdjacentHTML('afterbegin',`<label>Inspect search path<select id="evolutionJob">${jobs.map(job=>{const e=result.events.find(e=>e.job===job);return `<option value="${job}">Job ${job} · span ${fmt(e.span_m)} m</option>`;}).join('')}</select></label><label>Accepted state<input id="evolutionFrame" type="range" min="0" step="1" value="0" style="width:100%"></label><div id="evolutionWing"></div>`);
+ const inspect=()=>{const path=result.events.filter(e=>e.job===Number($('evolutionJob').value));$('evolutionFrame').max=path.length-1;const index=Math.min(Number($('evolutionFrame').value),path.length-1),e=path[index];$('evolutionWing').innerHTML=outline(e.case,true)+`<p>State ${index+1} of ${path.length} · ${esc(e.case.id)} · ${esc(e.case.status)}</p>`+values(e.case);};
  $('evolutionJob').onchange=()=>{$('evolutionFrame').value=0;inspect();};$('evolutionFrame').oninput=inspect;inspect();}
  }catch(error){notify(error.message);}
 };
