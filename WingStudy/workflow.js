@@ -33,9 +33,27 @@ function updateBaseline(){
  $('samplesHeading').classList.remove('hidden');
  $('gridHelp').textContent=spanSearch?'Chord search is disabled. Each sampled span uses the selected wing’s exact chord lengths.':'Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. All admissible combinations are explored, subject to the case budget and optional decreasing-chord constraint. Zeros are allowed only as an outboard suffix; at least two positive sections remain.';
 }
+const adaptiveFields={adaptiveSpanMin:'span_min_m',adaptiveSpanMax:'span_max_m',adaptiveSpanCount:'span_count',adaptiveNodes:'node_count',adaptiveRoot:'root_chord_m',adaptiveTip:'tip_chord_m',adaptiveChordMin:'minimum_chord_m',adaptiveChordMax:'maximum_chord_m',adaptiveStep:'initial_step_m',adaptiveMinStep:'minimum_step_m',adaptiveShrink:'shrink_factor',adaptiveImprovement:'improvement_pct',adaptiveTorqueMin:'torque_min_nm',adaptiveTorqueMax:'torque_max_nm',adaptiveTorqueCount:'torque_count',adaptiveBudget:'simulation_budget',adaptiveEvaluations:'evaluation_budget',adaptivePasses:'max_passes'};
+function adaptiveConfiguration(c){
+ c.adaptive_search={enabled:true,...Object.fromEntries(Object.entries(adaptiveFields).map(([id,key])=>[key,Number($(id).value)])),decreasing:$('adaptiveDecreasing').checked,paired_moves:$('adaptivePaired').checked,bounds:[...$('adaptiveBounds').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,Number(input.value)])))};
+ if(c.adaptive_search.bounds.length!==c.adaptive_search.node_count)throw Error('Build the per-chord rows after changing adaptive node count.');
+ delete c.refinement;delete c.span_search;c.mode='custom';return c;
+}
+function renderAdaptiveBounds(bounds){
+ const n=Number($('adaptiveNodes').value);if(!Number.isInteger(n)||n<2||n>64)throw Error('Use 2–64 chord nodes.');
+ $('adaptiveBounds').innerHTML=Array.from({length:n},(_,i)=>{const r=bounds?.[i]||{min_m:Number($('adaptiveChordMin').value),max_m:Number($('adaptiveChordMax').value),step_m:Number($('adaptiveStep').value)};return `<tr><td>${i+1}${i===0?' · root':i===n-1?' · tip':''}</td>${['min_m','max_m','step_m'].map(key=>`<td><input type="number" min="${key==='step_m'?'0':'0.01'}" step="any" data-key="${key}" aria-label="Adaptive chord ${i+1} ${key}" value="${esc(r[key])}"></td>`).join('')}</tr>`;}).join('');
+}
+function updateSearchMode(){
+ const adaptive=$('searchMode').value==='adaptive';$('adaptiveControls').classList.toggle('hidden',!adaptive);$('geometryCard').classList.toggle('hidden',adaptive);
+ $('maximumMoment').closest('label').classList.toggle('hidden',adaptive);
+ $('constraintTitle').textContent=adaptive?'1. Name the study':'1. Set the constraint';
+ $('constraintHelp').textContent=adaptive?'Set a linspace of wing-root torque allowances below. Each search keeps its span and allowance fixed.':'Limit on the final settled cycle’s peak absolute roll moment at one wing root, after your own drivetrain calculation.';
+ $('constraintNote').textContent=adaptive?'Objective: maximum mean thrust at each span and torque allowance. Every evaluated design contributes to the best-observed frontier.':'Maximize mean forward thrust among rigid wings that stay within this limit. Thrust/moment ratio is not the ranking objective.';
+}
 function configuration(allowPendingNodes=false){
- if(!$('spanSearch').checked&&refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
- if(!$('spanSearch').checked&&baseline&&!allowPendingNodes&&Math.abs(Number($('totalSpan').value)-(2*baseline.sections.at(-1).y_m+Number($('hingeGap').value)))>1e-10)throw Error('Apply span to resize the saved wing before previewing or running. Chord lengths will stay unchanged.');
+ const adaptiveMode=$('searchMode')?.value==='adaptive';
+ if(!adaptiveMode&&!$('spanSearch').checked&&refinementActive&&baseline&&!allowPendingNodes&&Number($('nodeCount').value)!==baseline.sections.length)throw Error('Apply node count to interpolate the wing before previewing or running.');
+ if(!adaptiveMode&&!$('spanSearch').checked&&baseline&&!allowPendingNodes&&Math.abs(Number($('totalSpan').value)-(2*baseline.sections.at(-1).y_m+Number($('hingeGap').value)))>1e-10)throw Error('Apply span to resize the saved wing before previewing or running. Chord lengths will stay unchanged.');
  const c=structuredClone(baseConfig||defaults);c.workflow='root_torque';c.mode='shape_sweep';c.name=$('studyName').value;
  c.limits={};c.designs=[];
  c.optimization={max_root_moment_nm:Number($('maximumMoment').value)};
@@ -43,7 +61,8 @@ function configuration(allowPendingNodes=false){
  c.settings={...defaults.settings,...c.settings};
  for(const [id,key] of Object.entries(numerical))c.settings[key]=id==='wake'?$(id).value:Number($(id).value);
  Object.assign(c.settings,{frequency_hz:Number($('frequency').value),speed_mps:Number($('speed').value),aeroelastic_enabled:false,save_solver:false});
- c.tail={enabled:false};c.shape_sweep={span_m:Number($('totalSpan').value),chord_count:Number($('nodeCount').value),decreasing:$('decreasing').checked,
+ c.tail={enabled:false};if(adaptiveMode)return adaptiveConfiguration(c);delete c.adaptive_search;
+ c.shape_sweep={span_m:Number($('totalSpan').value),chord_count:Number($('nodeCount').value),decreasing:$('decreasing').checked,
   sweep_deg:0,incidence_deg:0,ranges:readRanges(),baseline:baseline?structuredClone(baseline):null};
  if(refinementActive){c.mode='shape_sweep';c.refinement={enabled:true,search_method:'linspace',variation_pct:Number($('localVariation').value),source:structuredClone(refinementSource)};}
  else delete c.refinement;
@@ -74,7 +93,10 @@ function fill(c,initial=false){
  if(initial){$('wake').value='prescribed';$('wakeCycles').value='2';}
  const legacySample=refinementActive&&c.refinement.search_method!=='linspace';
  renderRanges((c.mode==='custom'&&baseline&&!refinementActive)||legacySample?baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})):shape.ranges);
- updateBaseline();preview();
+ $('searchMode').value=c.adaptive_search?.enabled?'adaptive':'grid';
+ for(const [id,key] of Object.entries(adaptiveFields))if(c.adaptive_search?.[key]!==undefined)$(id).value=c.adaptive_search[key];
+ $('adaptiveDecreasing').checked=c.adaptive_search?.decreasing??true;$('adaptivePaired').checked=c.adaptive_search?.paired_moves??true;
+ renderAdaptiveBounds(c.adaptive_search?.bounds);updateSearchMode();updateBaseline();preview();
 }
 function outline(row,large=false){
  const stations=row.geometry?.stations;
@@ -92,7 +114,7 @@ function drawPreview(){
 }
 async function preview(){
  const serial=++previewSerial;$('runStudy').disabled=true;
- if(!$('maximumMoment').value){$('validation').innerHTML='';$('previewStatus').textContent='Enter your maximum wing-root moment to preview and run.';return;}
+ if($('searchMode').value!=='adaptive'&&!$('maximumMoment').value){$('validation').innerHTML='';$('previewStatus').textContent='Enter your maximum wing-root moment to preview and run.';return;}
  try{
   const p=await api('preview',configuration());if(serial!==previewSerial)return;planData=p;
   const previous=Number($('previewCase').value)||0;
@@ -104,6 +126,7 @@ async function preview(){
   else if(refinementActive)$('previewStatus').textContent+=' Exact per-chord linspace refinement; fixed chords remain unchanged.';
   const seconds=p.runtime_estimate?.case_seconds*(p.new_simulation_count??p.case_count)+(p.cached_case_count||0);
   $('runtime').textContent=seconds?`Runtime estimate: ${Math.max(1,Math.round(seconds*.5/60))}–${Math.max(1,Math.ceil(seconds*2/60))} min; updates from completed cases.`:'Runtime estimate calibrates from completed cases.';
+  if(p.adaptive_search){$('spanPanels').value=p.settings.span_panels;$('runStudy').textContent='Run adaptive search';$('caseCount').textContent=p.simulation_budget+' max';$('previewStatus').textContent=`${p.cases.length} span seeds · ${p.search_job_count} span/torque searches · ${p.simulation_budget} new-simulation budget. Candidate geometries are generated adaptively; exact cache hits do not use this budget.`;const upper=p.runtime_estimate?.case_seconds*p.simulation_budget;$('runtime').textContent=upper?`Budget runtime estimate: about ${Math.ceil(upper/60)} min at recent case speed; may stop earlier.`:'Runtime estimate calibrates from completed cases.';}
   drawPreview();
  }catch(error){if(serial!==previewSerial)return;planData=null;$('validation').innerHTML=`<p class="error">${esc(error.message)}</p>`;$('caseCount').textContent='—';}
 }
@@ -115,6 +138,7 @@ async function refreshIndex(){
   $('studySelect').innerHTML='<option value="master">Master comparison</option>'+list.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} · ${esc(s.created.slice(0,16).replace('T',' '))}${s.rigid?'':' · historical aeroelastic'}</option>`).join('');$('studySelect').value=currentStudy;
   const study=list.find(s=>s.id===currentStudy);
   if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;
+  $('evolutionCard').classList.toggle('hidden',!study?.config.adaptive_search?.enabled);
   renderProgress(study);await evaluate();
  }catch(error){notify(error.message);}finally{indexBusy=false;}
 }
@@ -122,7 +146,7 @@ function renderProgress(study){
  $('keepBest').classList.add('hidden');
  $('masterSources').classList.toggle('hidden',currentStudy!=='master');$('useStudy').disabled=currentStudy==='master';
  $('stopStudy').classList.add('hidden');
- if(currentStudy==='master'){$('progress').textContent='Select Current, Old, or both. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
+ if(currentStudy==='master'){$('progress').textContent='Select Current, Old, and/or Adaptive. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
  if(!study){$('progress').textContent='No saved studies yet.';return;}
  const s=study.status;$('progress').innerHTML=`<p>${esc(s.message||s.state)} · ${s.completed||0} / ${s.total||study.case_count}</p><div class="progress"><div style="width:${100*(s.completed||0)/Math.max(1,s.total||study.case_count)}%"></div></div>`;
  $('stopStudy').classList.toggle('hidden',s.state!=='running');
@@ -135,13 +159,13 @@ async function evaluate(exportFiles=false){
  try{
   if(exportFiles){exportBusy=true;$('exportComparison').disabled=true;}
   const result=await api(id==='master'?'master-results':'torque-results',{study:id,maximum_root_moment_nm:limit,export:exportFiles,
-   ...(id==='master'?{generations:['current','old'].filter(g=>$(g+'Master').checked)}:{})});
+   ...(id==='master'?{generations:['current','old','adaptive'].filter(g=>$(g+'Master')?.checked)}:{})});
   if(serial!==resultSerial||id!==currentStudy)return;
   report=result;$('exportComparison').disabled=false;renderResults();
   if(typeof syncLandscapeSources==='function')syncLandscapeSources();
   const study=studies.find(s=>s.id===id);
   $('keepBest').classList.toggle('hidden',!(study?.config.refinement?.enabled&&result.winner&&['complete','complete_with_errors'].includes(study.status.state)&&study.case_count>1));
-  if(result.generations)for(const g of ['current','old'])$(g+'Count').textContent=`(${result.generations[g]} cases)`;
+  if(result.generations)for(const g of ['current','old','adaptive'])if($(g+'Count'))$(g+'Count').textContent=`(${result.generations[g]} cases)`;
   if(result.files)$('exportLinks').innerHTML=result.files.map(file=>`<a class="button" href="/files/${file}" download>${file.endsWith('.png')?'Comparison PNG':'Ranked results CSV'}</a>`).join('');
   if(study?.retention){if(!result.files)$('exportLinks').innerHTML='';$('exportLinks').innerHTML+=`<a class="button" href="/files/${esc(id)}/best_wing_settings.json" download>Saved best wing settings</a>`;}
  }catch(error){if(serial!==resultSerial)return;report=null;$('winnerBody').innerHTML=`<p class="error">${esc(error.message)}</p>`;$('rankedRows').innerHTML='';}
@@ -155,7 +179,7 @@ function links(row){
 }
 function values(row){return `<p>Actual span: <strong>${fmt(row.single_wing_span_m)} m per wing</strong> (root to tip) · <strong>${fmt(row.effective_total_span_m??row.span_m)} m total</strong> (both wings + hinge gap)</p>${row.span_shortened_by_zero_chords?`<p class="help">Shortened from ${fmt(row.reference_total_span_m)} m reference total span: ${row.omitted_zero_chord_count} trailing zero-chord nodes removed.</p>`:''}<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong> · remaining margin ${fmt(row.root_moment_margin_Nm)} N m</p><p>Thrust / peak root torque: <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm>0?row.single_wing_mean_thrust_N/row.single_wing_peak_abs_roll_moment_Nm:null)} 1/m</strong></p>`;}
 function rowKey(row){return row.comparison_key||row.id;}
-function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':'Current')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
+function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':row.catalog_generation==='adaptive'?'Adaptive':'Current')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
 function renderResults(){
  if(!report)return;
  const winner=report.winner;
@@ -199,7 +223,7 @@ async function refine(row){
  if(sourceStudy){fill(sourceStudy.config);}
  refinementSource={name:row.design_name||row.id,sections:structuredClone(sections),source_study:row._study||currentStudy,source_case:row.id};
  baseline=structuredClone(refinementSource);refinementActive=true;
- $('spanSearch').checked=false;
+ $('searchMode').value='grid';updateSearchMode();$('spanSearch').checked=false;
  $('nodeCount').value=Math.max(16,sections.length);$('localVariation').value=5;
  $('decreasing').checked=sections.every((s,i)=>!i||s.chord_m<=sections[i-1].chord_m);
  if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;
@@ -210,7 +234,7 @@ function loadSpanResize(row){
  const study=studies.find(s=>s.id===(row._study||currentStudy));if(study)fill(study.config);
  refinementSource={name:row.design_name||row.id,sections:structuredClone(row.sections),source_study:row._study||currentStudy,source_case:row.id};
  baseline=structuredClone(refinementSource);refinementActive=true;
- $('spanSearch').checked=false;
+ $('searchMode').value='grid';updateSearchMode();$('spanSearch').checked=false;
  $('nodeCount').value=baseline.sections.length;$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);
  $('spanMinimum').value=$('totalSpan').value;$('spanMaximum').value=$('totalSpan').value;$('spanSamples').value=5;
  $('studyName').value=(baseline.name+' span study').slice(0,80);
@@ -229,7 +253,7 @@ $('applySpan').onclick=async()=>{
 };
 let frontierSerial=0,frontierData=null,frontierSelection='';
 function checkFrontierSelection(){
- const selection=JSON.stringify([currentStudy,...['current','old'].map(g=>$(g+'Master').checked)]);
+ const selection=JSON.stringify([currentStudy,...['current','old','adaptive'].map(g=>!!$(g+'Master')?.checked)]);
  if(selection!==frontierSelection){invalidateFrontier();frontierSelection=selection;}
 }
 function invalidateFrontier(){frontierSerial++;frontierData=null;$('frontierResult').innerHTML='';$('frontierStatus').textContent='Generate the full curve for this comparison; no single torque cutoff is applied.';$('makeFrontier').disabled=false;}
@@ -245,7 +269,7 @@ $('makeFrontier').onclick=async()=>{
  const serial=++frontierSerial;
  try{
   $('makeFrontier').disabled=true;$('frontierStatus').textContent='Building the full torque–thrust frontier…';
-  const data=await api('torque-frontier',{study:currentStudy,wing_size_percent:Number($('frontierSize').value),minimum_spacing_nm:Number($('frontierSpacing').value),torque_min_nm:$('frontierMin').value,torque_max_nm:$('frontierMax').value,generations:['current','old'].filter(g=>$(g+'Master').checked)});
+  const data=await api('torque-frontier',{study:currentStudy,wing_size_percent:Number($('frontierSize').value),minimum_spacing_nm:Number($('frontierSpacing').value),torque_min_nm:$('frontierMin').value,torque_max_nm:$('frontierMax').value,generations:['current','old','adaptive'].filter(g=>$(g+'Master')?.checked)});
   if(serial!==frontierSerial)return;frontierData=data;
   const min=data.minimum_torque_nm,max=data.slider_maximum_torque_nm;
   $('frontierResult').innerHTML=`<img src="/files/${esc(data.files[0])}" alt="Wing silhouettes showing maximum thrust available versus allowable root torque" style="width:100%;max-width:760px"><div class="actions">${data.files.map(f=>`<a href="/files/${esc(f)}" download>${f.endsWith('.png')?'Wing plot PNG':'Frontier designs CSV'}</a>`).join('')}</div><label>Explore allowable root torque <output id="frontierTorqueValue"></output><input id="frontierTorque" type="range" min="${min}" max="${max}" step="any" value="${min}" style="width:100%"></label><label>Frontier design<select id="frontierPoint">${data.points.map((r,i)=>r.single_wing_peak_abs_roll_moment_Nm<=max?`<option value="${i}">${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m → ${fmt(r.single_wing_mean_thrust_N)} N · ${esc(r.design_name||r.id)}</option>`:'').join('')}</select></label><div id="frontierWing"></div>`;
@@ -288,7 +312,7 @@ $('makeLandscape').onclick=async()=>{
  try{
   $('makeLandscape').disabled=true;$('landscapeStatus').textContent=`Building the 3D view and PNG/CSV for ${rows.length} measured wings…`;
   const data=await api('thrust-landscape',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),
-   generations:['current','old'].filter(g=>$(g+'Master').checked),case_keys:rows.map(rowKey),axes:plotAxes()});
+   generations:['current','old','adaptive'].filter(g=>$(g+'Master')?.checked),case_keys:rows.map(rowKey),axes:plotAxes()});
   if(serial!==landscapeSerial)return;
   renderLandscape(data);$('landscapeStatus').textContent=data.note;
  }catch(error){if(serial===landscapeSerial)$('landscapeStatus').textContent=error.message;}
@@ -303,11 +327,22 @@ $('regularGrid').onclick=()=>{$('spanSearch').checked=false;baseline=null;refine
 $('applyLocalBounds').onclick=()=>{const rows=[...$('ranges').querySelectorAll('tr')],chosen=rows.filter(r=>r.querySelector('[data-vary]')?.checked);if(!chosen.length){notify('Select the chord rows you want to vary first, or edit their min/max/samples directly.');return;}const pct=Number($('localVariation').value)/100;if(!Number.isFinite(pct)||pct<0||pct>1){notify('Use a variation between 0 and 100%.');return;}rows.forEach((row,i)=>{if(!row.querySelector('[data-vary]')?.checked)return;const chord=baseline.sections[i].chord_m;row.querySelector('[data-key="min_m"]').value=Number((chord*(1-pct)).toPrecision(12));row.querySelector('[data-key="max_m"]').value=Number((chord*(1+pct)).toPrecision(12));row.querySelector('[data-key="count"]').value=pct?3:1;});preview();};
 $('fixAllChords').onclick=()=>{if(!baseline)return;renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();preview();};
 $('keepBest').onclick=async()=>{if(!report?.winner||currentStudy==='master')return;try{$('keepBest').disabled=true;const r=await api('keep-best',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),winner_id:report.winner.id});$('exportLinks').innerHTML=`<a class="button" href="/files/${esc(r.settings_file)}" download>Saved best wing settings</a>`;notify(`Saved ${r.kept_case}; discarded ${r.discarded_count} cases. ${r.cleanup}`);await refreshIndex();}catch(error){notify(error.message);}finally{$('keepBest').disabled=false;}};
+$('searchMode').onchange=()=>{updateSearchMode();preview();};
+$('adaptiveApplyBounds').onclick=()=>{try{renderAdaptiveBounds();preview();}catch(error){notify(error.message);}};
+$('loadEvolution').onclick=async()=>{
+ try{const result=await api('adaptive-evolution',{study:currentStudy});
+ $('evolutionResult').innerHTML=`<p class="help">${result.events.length} saved path states. Thrust climbs within each fixed torque allowance; torque and thrust/torque need not increase. ${esc(result.summary.stop_reason||'Search is still running; accepted states remain saved.')}</p>${result.files.map(f=>`<div><img src="/files/${esc(f)}?v=${result.events.length}" style="max-width:100%" alt="${f.endsWith('.webp')?'Accepted wing evolution':'Adaptive thrust torque and ratio progress'}"><p><a href="/files/${esc(f)}" download>Download ${f.endsWith('.webp')?'animation':'progress PNG'}</a></p></div>`).join('')}`;
+ const jobs=[...new Set(result.events.map(e=>e.job))];
+ if(jobs.length){$('evolutionResult').insertAdjacentHTML('afterbegin',`<label>Inspect search path<select id="evolutionJob">${jobs.map(job=>{const e=result.events.find(e=>e.job===job);return `<option value="${job}">Job ${job} · span ${fmt(e.span_m)} m · allowance ${fmt(e.torque_limit_Nm)} N m</option>`;}).join('')}</select></label><label>Accepted state<input id="evolutionFrame" type="range" min="0" step="1" value="0" style="width:100%"></label><div id="evolutionWing"></div>`);
+ const inspect=()=>{const path=result.events.filter(e=>e.job===Number($('evolutionJob').value));$('evolutionFrame').max=path.length-1;const index=Math.min(Number($('evolutionFrame').value),path.length-1),e=path[index];$('evolutionWing').innerHTML=outline(e.case,true)+`<p>State ${index+1} of ${path.length} · ${esc(e.case.id)} · ${esc(e.case.status)}</p>`+values({...e.case,root_moment_margin_Nm:e.torque_limit_Nm-e.case.single_wing_peak_abs_roll_moment_Nm});};
+ $('evolutionJob').onchange=()=>{$('evolutionFrame').value=0;inspect();};$('evolutionFrame').oninput=inspect;inspect();}
+ }catch(error){notify(error.message);}
+};
 $('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await api('start',configuration());currentStudy=r.id;$('resultsLimit').value=$('maximumMoment').value;show('results');}catch(error){notify(error.message);preview();}};
-$('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;renderProgress(study);evaluate();};
+$('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);if(!$('resultsLimit').value)$('resultsLimit').value=study?.config.optimization?.max_root_moment_nm??$('maximumMoment').value;$('evolutionCard').classList.toggle('hidden',!study?.config.adaptive_search?.enabled);$('evolutionResult').innerHTML='';renderProgress(study);evaluate();};
 $('resultsLimit').oninput=()=>{page=0;$('exportLinks').innerHTML='';clearTimeout(timer);timer=setTimeout(evaluate,350);};
 $('refreshResults').onclick=refreshIndex;$('exportComparison').onclick=()=>evaluate(true);$('showRejected').onchange=()=>{page=0;renderResults();};
-for(const g of ['current','old'])$(g+'Master').onchange=()=>{page=0;$('exportLinks').innerHTML='';evaluate();};
+for(const g of ['current','old','adaptive'])$(g+'Master').onchange=()=>{page=0;$('exportLinks').innerHTML='';evaluate();};
 $('previousPage').onclick=()=>{page--;renderResults();};$('nextPage').onclick=()=>{page++;renderResults();};
 $('useStudy').onclick=()=>{const s=studies.find(s=>s.id===currentStudy);if(s){fill(s.config);if($('resultsLimit').value)$('maximumMoment').value=$('resultsLimit').value;show('setup');preview();notify('Study settings loaded for a new rigid sweep. Review the motion range.');}};
 $('stopStudy').onclick=async()=>{try{await api('stop',{id:currentStudy});refreshIndex();}catch(error){notify(error.message);}};

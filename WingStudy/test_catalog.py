@@ -25,7 +25,7 @@ class CatalogChecks(unittest.TestCase):
         self.assertFalse(catalog.start_fresh(model))
         catalog.sync(model);catalog.sync(model)
         self.assertEqual(catalog.listing(model)['case_count'],0)
-        self.assertEqual(catalog.generations(model,['old'])['generations'],{'current':0,'old':1})
+        self.assertEqual(catalog.generations(model,['old'])['generations'],{'current':0,'old':1,'adaptive':0})
         self.assertEqual(catalog.preview(model,spec)['cached_case_count'],1)
         second=copy.deepcopy(self.spec);catalog.prepare(model,second,'new-study')
         self.assertGreater(second['cases'][0]['global_case_no'],row['global_case_no'])
@@ -66,6 +66,22 @@ class CatalogChecks(unittest.TestCase):
             cells={cell.get('r'):''.join(cell.itertext()) for row in data if row.get('r')=='6' for cell in row}
             self.assertEqual(cells[headers['Native aeroelasticity']+'6'],'Yes')
             self.assertAlmostEqual(float(cells[headers['Shared spring (Nm/rad)']+'6']),.267)
+
+    def test_adaptive_master_is_separate_and_filters_occurrences(self):
+        import adaptive
+        spec,study,row=self.saved('adaptive-study')
+        spec['config']['adaptive_search']={'enabled':True}
+        model.write_json(study/'manifest.json',spec)
+        catalog.export(model);original=(self.out.parent/'master_runs.xlsx').read_bytes()
+        path=adaptive.export_master(model,'http://localhost')
+        self.assertEqual(path.name,'master_runs_adaptive.xlsx')
+        self.assertEqual(original,(self.out.parent/'master_runs.xlsx').read_bytes())
+        self.assertEqual(len(catalog.generations(model,['adaptive'])['rows']),1)
+        with zipfile.ZipFile(path) as archive:
+            for name in archive.namelist():
+                if name.endswith('.xml'):ET.fromstring(archive.read(name))
+            sheet=ET.fromstring(archive.read('xl/worksheets/sheet1.xml'))
+            self.assertEqual(len(sheet.findall(f'{{{catalog.NS}}}sheetData/{{{catalog.NS}}}row')),6)
 
     def test_rigid_physics_fingerprint_preserved(self):
         source=(model.HERE/'model.py').read_text(encoding='utf-8')

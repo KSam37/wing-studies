@@ -107,10 +107,19 @@ def cache_entries(model,signatures):
     return entries
 
 def generations(model,selected=("current",)):
-    if not isinstance(selected,(list,tuple)) or any(v not in ("current","old") for v in selected):
-        raise ValueError("Choose Current and/or Old master.")
+    if not isinstance(selected,(list,tuple)) or any(v not in ("current","old","adaptive") for v in selected):
+        raise ValueError("Choose Current, Old and/or Adaptive master.")
     rows=[];counts={};seen=set()
-    for name in ("current","old"):
+    for name in ("current","old","adaptive"):
+        if name=='adaptive':
+            import adaptive
+            all_adaptive=adaptive.results(model)
+            data={'rows':all_adaptive if 'adaptive' in selected else []}
+            counts[name]=len(all_adaptive)
+            for row in data['rows']:
+                if row['_signature'] in seen:continue
+                seen.add(row['_signature']);rows.append({**row,'catalog_generation':'adaptive','comparison_key':f"adaptive:{row['global_case_no']}",'aeroelastic_enabled':False})
+            continue
         if name=='old' and not (root(model)/"master_runs_old.sqlite3").exists():
             counts[name]=0;continue
         with (connect(model) if name=='current' else old_connection(model)) as db:
@@ -384,13 +393,18 @@ def column(i):
     while i:i,n=divmod(i-1,26);out=chr(65+n)+out
     return out
 
-def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:8765",force=True):
+def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:8765",force=True,filename="master_runs.xlsx",study_filter=None):
     """Fill the Artifact Tool-authored template using only the portable standard library."""
     with connect(model) as db:
         db.execute("BEGIN IMMEDIATE")
         previous=db.execute("SELECT value FROM meta WHERE key='excel_export_time'").fetchone()
         if not force and previous and time.time()-float(previous[0])<15:return
         data=listing(model,metric,descending,_db=db);rows=data["rows"]
+        if study_filter is not None:
+            rows=[r for r in rows if any(o['study'] in study_filter for o in r['occurrences'])]
+            for rank,r in enumerate(rows,1):
+                if r['catalog_rank'] is not None:r['catalog_rank']=rank
+            data['occurrence_count']=sum(sum(o['study'] in study_filter for o in r['occurrences']) for r in rows)
         tables=[[],[]]
         for r in sorted(rows,key=lambda r:r["global_case_no"]):
             s=r["_settings"];sections=r.get("requested_sections",r.get("sections",[]))
@@ -409,7 +423,7 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
                 *[r.get(k) for k in METRICS],r.get(metric) if r["catalog_rank"] is not None else None,int(r["catalog_rank"] is not None),r.get("area_m2"),r.get("aspect_ratio"),r.get("single_wing_span_m",r.get("reference_half_span_m")),r.get("simulation_mode","legacy paired"),
                 ("link",f"studies/{r['_study']}/{r['id']}/","Open outputs"),("link",f"{browser_url}/#catalog&case={r['global_case_no']}","Open case"),r.get("error")])
         template=Path(__file__).with_name("master_template.xlsx")
-        tmp=root(model)/"master_runs.xlsx.tmp"
+        tmp=root(model)/(filename+".tmp")
         with zipfile.ZipFile(template) as source,zipfile.ZipFile(tmp,"w",zipfile.ZIP_DEFLATED) as dest:
             link_relationships={}
             for info in source.infolist():
@@ -497,11 +511,11 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
                 if info.filename not in ("xl/worksheets/_rels/sheet1.xml.rels","xl/worksheets/_rels/sheet2.xml.rels"):dest.writestr(info,content)
             for path,content in link_relationships.items():dest.writestr(path,content)
         try:
-            os.replace(tmp,root(model)/"master_runs.xlsx")
+            os.replace(tmp,root(model)/filename)
             db.execute("INSERT OR REPLACE INTO meta VALUES('excel_pending','')")
             db.execute("INSERT OR REPLACE INTO meta VALUES('excel_updated',?)",(stamp(),))
             db.execute("INSERT OR REPLACE INTO meta VALUES('excel_export_time',?)",(str(time.time()),))
         except PermissionError:
             tmp.unlink(missing_ok=True)
-            db.execute("INSERT OR REPLACE INTO meta VALUES('excel_pending','Close master_runs.xlsx in Excel, then refresh the workbook in the app. Run records are safely saved.')")
-    return root(model)/"master_runs.xlsx"
+            db.execute("INSERT OR REPLACE INTO meta VALUES('excel_pending',?)",(f"Close {filename} in Excel, then refresh the workbook in the app. Run records are safely saved.",))
+    return root(model)/filename

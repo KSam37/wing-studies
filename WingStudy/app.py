@@ -99,7 +99,8 @@ def pid_alive(pid):
 
 def start(config):
     global PROCESS, ACTIVE
-    specification = model.plan(config)
+    import adaptive
+    specification = adaptive.plan(model,config) if config.get("adaptive_search",{}).get("enabled") else model.plan(config)
     with LOCK:
         if PROCESS is not None and PROCESS.poll() is None:
             raise ValueError("A study is already running. Stop it or let it finish first.")
@@ -131,13 +132,14 @@ def start(config):
         except (OSError, subprocess.SubprocessError):
             specification["ptera_commit"] = "unavailable"
         catalog.sync(model)
-        catalog.prepare(model,specification,identifier)
+        if not specification.get("adaptive_search"):catalog.prepare(model,specification,identifier)
+        else:specification["catalog_engine"]=catalog.engine(model,specification["settings"])
         specification.update(catalog.preview(model,specification))
         specification["browser_url"]=f"http://127.0.0.1:{SERVER.server_port}" if SERVER else "http://127.0.0.1:8765"
         specification["tail_profiles"]=model.export_tail_profiles(specification["settings"],directory)
         model.write_json(directory/"manifest.json", specification)
         model.write_json(directory/"status.json", {"state":"running", "completed":0,
-            "total":len(specification["cases"]), "message":"Starting worker"})
+            "total":specification.get("simulation_budget",len(specification["cases"])), "message":"Starting worker"})
         env = os.environ.copy()
         env.update(MPLBACKEND="Agg", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", NUMBA_NUM_THREADS="1")
         try:
@@ -194,7 +196,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(sweep_studies())
             if path == "/api/catalog":
                 return self.send(catalog.listing(model))
-            if path in ("/master_runs.xlsx","/master_runs_old.xlsx"):
+            if path in ("/master_runs.xlsx","/master_runs_old.xlsx","/master_runs_adaptive.xlsx"):
+                if path=='/master_runs_adaptive.xlsx':
+                    import adaptive
+                    adaptive.export_master(model,f'http://127.0.0.1:{SERVER.server_port}')
                 file=catalog.root(model)/path.lstrip('/')
                 if not file.is_file() and path=="/master_runs.xlsx":catalog.export(model,browser_url=f"http://127.0.0.1:{SERVER.server_port}")
                 return self.send(file.read_bytes(),kind="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -225,7 +230,8 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(length))
             path = urlparse(self.path).path
             if path == "/api/preview":
-                spec=model.plan(data)
+                import adaptive
+                spec=adaptive.plan(model,data) if data.get("adaptive_search",{}).get("enabled") else model.plan(data)
                 spec.update(catalog.preview(model,spec))
                 return self.send(spec)
             if path == "/api/refinement-nodes":
@@ -243,6 +249,11 @@ class Handler(BaseHTTPRequestHandler):
                     if model.read_json(directory/'status.json').get('state')=='running':
                         raise ValueError('Wait for this study to finish or stop it before exporting smooth profiles.')
                     return self.send(wing_curves.export_smooth_profiles(model,directory,data['case']))
+            if path == "/api/adaptive-evolution":
+                directory=study_path(data['study'])
+                events=model.read_json(directory/'evolution.json') if (directory/'evolution.json').exists() else []
+                files=[str((directory/'comparisons'/n).relative_to(model.OUTPUTS)).replace(chr(92),'/') for n in ('adaptive_progress.png','adaptive_evolution.webp') if (directory/'comparisons'/n).exists()]
+                return self.send({'events':events,'files':files,'summary':model.read_json(directory/'adaptive_summary.json') if (directory/'adaptive_summary.json').exists() else {}})
             if path == "/api/torque-frontier":
                 import torque_frontier
                 if data.get('study')!='master':study_path(data['study'])
@@ -346,7 +357,12 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
     if args.worker:
-        model.worker(Path(args.worker)); return
+        study=Path(args.worker)
+        if model.read_json(study/'manifest.json').get('adaptive_search'):
+            import adaptive
+            adaptive.worker(model,study)
+        else:model.worker(study)
+        return
     # Windows permits duplicate listeners with SO_REUSEADDR, leaving browser
     # requests split between old/new processes instead of taking the free port.
     if os.name == "nt":
