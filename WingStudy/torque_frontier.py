@@ -30,11 +30,21 @@ def generate(model,data):
         rows=[{**r,'_study':study,'_settings':manifest['settings']} for r in model.read_json(directory/'results.json')]
     eligible,points=envelope(rows)
     if not points:raise ValueError('No settled rigid single-wing designs with valid positive thrust are available.')
-    digest=hashlib.sha256(catalog.compact(['wing-markers-v1',[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    def bound(key,label):
+        value=data.get(key)
+        return None if value in (None,'') else model.number(value,label,0)
+    lower=bound('torque_min_nm','Minimum plot torque')
+    upper=bound('torque_max_nm','Maximum plot torque')
+    left=0. if lower is None else lower
+    right=eligible[-1][TORQUE] if upper is None else upper
+    if right<=left:raise ValueError('Maximum plot torque must exceed minimum plot torque.')
+    if left>eligible[-1][TORQUE]:raise ValueError('The torque range is above the available data.')
+    shown=[r for r in points if left<=r[TORQUE]<=right]
+    digest=hashlib.sha256(catalog.compact(['wing-markers-v2',lower,upper,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.path import Path as MarkerPath
     plt=model.ieee_style();fig,ax=plt.subplots(figsize=(7.16,4.5),layout='constrained')
-    for row in points:
+    for row in shown:
         vertices=[];codes=[]
         for polygon in model.wing_thumbnail(row,row.get('_settings',{}).get('gap_m',0)):
             vertices.extend([*polygon,polygon[0]])
@@ -43,11 +53,13 @@ def generate(model,data):
             facecolors='#c6e6df',edgecolors='#007f78',linewidths=.55,zorder=3)
     ax.set(xlabel='Allowable peak wing-root torque (N m)',ylabel='Maximum mean single-wing thrust (N)')
     ax.margins(.06);ax.grid(alpha=.2)
+    if lower is not None or upper is not None:ax.set_xlim(left,right)
+    if not shown:ax.text(.5,.5,'No improving designs in this torque range',ha='center',transform=ax.transAxes,fontsize=9)
     ax.set_title('Best available designs · normalized wing silhouettes',fontsize=9)
     fig.savefig(dest/'thrust_torque_frontier.png',dpi=600);plt.close(fig)
     fields=['minimum_allowable_root_torque_Nm','maximum_mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles']
     with (dest/'thrust_torque_frontier.csv').open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=fields);w.writeheader()
-        for r in points:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')]])))
-    return {'points':points,'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
+        for r in shown:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')]])))
+    return {'points':points,'plotted_count':len(shown),'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
         'files':[str((dest/name).relative_to(model.OUTPUTS)).replace(chr(92),'/') for name in ('thrust_torque_frontier.png','thrust_torque_frontier.csv')]}

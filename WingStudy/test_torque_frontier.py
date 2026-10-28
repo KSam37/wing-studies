@@ -38,6 +38,15 @@ class FrontierChecks(unittest.TestCase):
                     values=list(csv.DictReader(f))
                     self.assertEqual([r['case'] for r in values],['a','b'])
                     self.assertEqual(values[-1]['frequency_hz'],'1')
+                zoom=frontier.generate(model,{'study':'saved','torque_min_nm':.2,'torque_max_nm':3})
+                self.assertEqual(zoom['plotted_count'],1)
+                self.assertEqual(len(zoom['points']),2) # Lower-torque winner remains available to slider.
+                self.assertEqual(zoom['minimum_torque_nm'],.2)
+                self.assertEqual(zoom['slider_maximum_torque_nm'],2)
+                self.assertNotEqual(zoom['files'],result['files'])
+                with (root/zoom['files'][1]).open() as f:self.assertEqual([r['case'] for r in csv.DictReader(f)],['b'])
+                for lo,hi in [(-1,2),(2,1),(1,1),(3,4),(0,float('nan'))]:
+                    with self.assertRaises(ValueError):frontier.generate(model,{'study':'saved','torque_min_nm':lo,'torque_max_nm':hi})
             self.assertEqual(before,(study/'results.json').read_bytes())
 
 if __name__=='__main__':unittest.main()
