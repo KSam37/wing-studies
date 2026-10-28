@@ -27,6 +27,26 @@ class AdaptiveChecks(unittest.TestCase):
             invalid=copy.deepcopy(c);invalid['adaptive_search'][key]=value
             with self.assertRaises(ValueError):adaptive.plan(model,invalid)
 
+    def test_native_aeroelastic_opt_in_preserves_material_inputs_and_cache_identity(self):
+        import catalog
+        import pterasoftware as ps
+        c=self.config();rigid=adaptive.plan(model,c)
+        c['settings'].update(aeroelastic_enabled=True,spring_constant_rad=4.27,damping_constant_rad=10.,wing_density=.5,step_discards=5)
+        p=adaptive.plan(model,c)
+        self.assertTrue(p['settings']['aeroelastic_enabled'])
+        self.assertEqual(p['settings']['damping_constant_rad'],10)
+        solver=model.build_solver(p['cases'][0],p['settings'])
+        self.assertIsInstance(solver.unsteady_problem,ps.AeroelasticUnsteadyProblem)
+        self.assertTrue(all(case['aeroelastic_enabled'] for case in p['cases']))
+        self.assertNotEqual(catalog.signature(model,p['cases'][0],p['settings']),catalog.signature(model,rigid['cases'][0],rigid['settings']))
+        native=row('native',2,.3,aeroelastic_enabled=True)
+        self.assertEqual(adaptive.score(native,.5),(1,2))
+        self.assertEqual(torque_study.classify(native,.5),'Aeroelastic result excluded')
+        self.assertEqual(torque_study.rank([native],.5,allow_aeroelastic=True)['winner']['id'],'native')
+        for key,value in [('damping_constant_rad',-1),('spring_constant_rad',0),('wing_density',0),('step_discards',100000)]:
+            bad=copy.deepcopy(c);bad['settings'][key]=value
+            with self.assertRaises(ValueError):adaptive.plan(model,bad)
+
     def test_ascent_converges_and_enforces_each_chord_bound(self):
         r=adaptive.options(model,self.config());r['improvement_pct']=.001;accepted=[];evaluations=[]
         target=[.15,.1,.05]

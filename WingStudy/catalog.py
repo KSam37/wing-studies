@@ -118,7 +118,7 @@ def generations(model,selected=("current",)):
             counts[name]=len(all_adaptive)
             for row in data['rows']:
                 if row['_signature'] in seen:continue
-                seen.add(row['_signature']);rows.append({**row,'catalog_generation':'adaptive','comparison_key':f"adaptive:{row['global_case_no']}",'aeroelastic_enabled':False})
+                seen.add(row['_signature']);rows.append({**row,'catalog_generation':'adaptive','comparison_key':f"adaptive:{row['global_case_no']}",'aeroelastic_enabled':row['_settings'].get('aeroelastic_enabled',False)})
             continue
         if name=='old' and not (root(model)/"master_runs_old.sqlite3").exists():
             counts[name]=0;continue

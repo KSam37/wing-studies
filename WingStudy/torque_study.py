@@ -1,4 +1,4 @@
-"""Maximize rigid single-wing mean thrust subject to a root-moment limit.
+"""Maximize native single-wing mean thrust subject to a root-moment limit.
 
 The limit is a decision constraint, never a solver setting or drivetrain model.
 Existing physical results can be re-ranked without a new Ptera solve.
@@ -27,7 +27,7 @@ def prepare(model,config):
     limit=model.number(c.get('optimization',{}).get('max_root_moment_nm'),'Maximum root moment',1e-12)
     c['optimization']={'max_root_moment_nm':limit,'objective':'single_wing_mean_thrust_N',
         'constraint':'final_cycle_peak_absolute_single_wing_root_roll_moment'}
-    c['settings']['aeroelastic_enabled']=False
+    c['settings']['aeroelastic_enabled']=c['settings'].get('aeroelastic_enabled',False) if c.get('adaptive_search',{}).get('enabled') else False
     c['settings']['save_solver']=False
     c['tail']={'enabled':False}
     motion=c.get('motion_range',{'minimum_deg':-26.,'maximum_deg':34.})
@@ -59,9 +59,9 @@ def prepare(model,config):
     return c
 
 
-def classify(row,limit,repeat_only=True,aeroelastic=False):
+def classify(row,limit,repeat_only=True,aeroelastic=False,allow_aeroelastic=False):
     if row.get('status')!='ok':return 'Failed'
-    if aeroelastic or row.get('aeroelastic_enabled',False):return 'Aeroelastic result excluded'
+    if (aeroelastic or row.get('aeroelastic_enabled',False)) and not allow_aeroelastic:return 'Aeroelastic result excluded'
     if row.get('simulation_mode')!='isolated_single_wing_v1':return 'Single-wing result required'
     thrust=row.get('single_wing_mean_thrust_N');moment=row.get('single_wing_peak_abs_roll_moment_Nm')
     if not all(isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) for v in (thrust,moment)) or moment<0:
@@ -71,10 +71,10 @@ def classify(row,limit,repeat_only=True,aeroelastic=False):
     return 'Within limit' if moment<=limit else 'Over limit'
 
 
-def rank(rows,limit,repeat_only=True,aeroelastic=False):
+def rank(rows,limit,repeat_only=True,aeroelastic=False,allow_aeroelastic=False):
     if not isinstance(limit,(int,float)) or isinstance(limit,bool) or not math.isfinite(limit) or limit<=0:
         raise ValueError('Enter a positive maximum root moment in N m.')
-    evaluated=[{**r,**dimensions(r),'torque_status':classify(r,limit,repeat_only,aeroelastic)} for r in rows]
+    evaluated=[{**r,**dimensions(r),'torque_status':classify(r,limit,repeat_only,aeroelastic,allow_aeroelastic)} for r in rows]
     eligible=sorted((r for r in evaluated if r['torque_status']=='Within limit'),
         key=lambda r:(-r['single_wing_mean_thrust_N'],r['single_wing_peak_abs_roll_moment_Nm'],r['id']))
     ranks={r.get('comparison_key',r['id']):i for i,r in enumerate(eligible,1)}
@@ -85,25 +85,33 @@ def rank(rows,limit,repeat_only=True,aeroelastic=False):
     evaluated.sort(key=lambda r:(r['thrust_rank'] is None,r['thrust_rank'] or 0,r['id']))
     return {'maximum_root_moment_nm':limit,'winner':eligible[0] if eligible else None,
         'feasible_count':len(eligible),'total_count':len(rows),'rows':evaluated,
-        'note':'Maximum final-cycle mean single-wing thrust subject to final-cycle peak absolute root roll moment. Rigid wings only. This is not a motor-shaft torque limit.'}
+        'note':'Maximum final-cycle mean single-wing thrust subject to final-cycle peak absolute root roll moment. Native isolated wings only. This is not a motor-shaft torque limit.'}
 
 
 def results(model,study,limit=None,repeat_only=True,export=False):
     study=Path(study);manifest=model.read_json(study/'manifest.json')
     if limit is None:limit=manifest.get('config',{}).get('optimization',{}).get('max_root_moment_nm')
     rows=model.read_json(study/'results.json') if (study/'results.json').exists() else []
-    report=rank(rows,limit,repeat_only,manifest['settings'].get('aeroelastic_enabled',False))
+    elastic=manifest['settings'].get('aeroelastic_enabled',False)
+    report=rank(rows,limit,repeat_only,elastic,allow_aeroelastic=elastic)
+    report['model_mode']='aeroelastic' if elastic else 'rigid'
     if not export:return report
     return export_report(model,study,report,manifest['settings'])
 
 
-def master_results(model,selected,limit,export=False):
+def select_model(rows,mode):
+    if mode not in ('rigid','aeroelastic'):raise ValueError('Choose rigid or native aeroelastic results.')
+    return [r for r in rows if bool(r.get('aeroelastic_enabled',r.get('_settings',{}).get('aeroelastic_enabled',False)))==(mode=='aeroelastic')]
+
+
+def master_results(model,selected,limit,export=False,model_mode='rigid'):
     import catalog
     data=catalog.generations(model,selected)
-    report={**rank(data['rows'],limit),**{k:v for k,v in data.items() if k!='rows'}}
+    rows=select_model(data['rows'],model_mode)
+    report={**rank(rows,limit,allow_aeroelastic=model_mode=='aeroelastic'),**{k:v for k,v in data.items() if k!='rows'},'model_mode':model_mode}
     if export:
         import hashlib
-        name='compiled-master-'+hashlib.sha256(catalog.compact(sorted(selected)).encode()).hexdigest()[:8]
+        name='compiled-master-'+hashlib.sha256(catalog.compact([sorted(selected),model_mode]).encode()).hexdigest()[:8]
         study=model.OUTPUTS/name;study.mkdir(exist_ok=True)
         export_report(model,study,report,{})
     return report

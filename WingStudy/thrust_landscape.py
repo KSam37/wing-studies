@@ -30,7 +30,7 @@ def data(model,rows,axes=None):
         if any(not isinstance(values.get(k),(int,float)) or isinstance(values[k],bool) or not math.isfinite(values[k]) for k in axes):
             raise ValueError('A selected axis value is missing or undefined (thrust/torque requires positive peak root torque).')
         if row.get('torque_status') not in ('Within limit','Over limit','No positive thrust'):
-            raise ValueError('Select settled rigid single-wing cases with valid forces and moments.')
+            raise ValueError('Select settled single-wing cases for the chosen native model with valid forces and moments.')
         key=row.get('comparison_key',row['id']);settings=row['_settings']
         points.append({'case_id':key,'coords':[values[k] for k in axes],'value':values[axes[2]],'area_m2':area,'aspect_ratio':row.get('aspect_ratio'),
             catalog.OBJECTIVE:ratio,**dimensions(row),
@@ -58,7 +58,7 @@ def data(model,rows,axes=None):
 def generate(model,request):
     limit=request['maximum_root_moment_nm'];study=request.get('study')
     if study=='master':
-        report=torque_study.master_results(model,request.get('generations',['current']),limit)
+        report=torque_study.master_results(model,request.get('generations',['current']),limit,model_mode=request.get('model_mode','rigid'))
     else:
         # The route resolves/validates the study path before entering this function.
         directory=model.OUTPUTS/study;manifest=model.read_json(directory/'manifest.json')

@@ -14,6 +14,15 @@ class FrontierChecks(unittest.TestCase):
         self.assertEqual({r['id'] for r in sampled},{'near','bottom'})
         self.assertEqual(len(frontier.sample_background(rows,[rows[0]],[rows[0]],0,0,2)),3)
 
+    def test_native_results_require_explicit_selection_and_are_not_mixed(self):
+        import torque_study
+        rows=[row('rigid',2,.1),row('native',4,.2,aeroelastic_enabled=True)]
+        self.assertEqual([r['id'] for r in torque_study.select_model(rows,'rigid')],['rigid'])
+        selected=torque_study.select_model(rows,'aeroelastic')
+        self.assertEqual([r['id'] for r in frontier.envelope(selected,allow_aeroelastic=True)[1]],['native'])
+        self.assertEqual(frontier.envelope(selected)[1],[])
+        with self.assertRaises(ValueError):torque_study.select_model(rows,'mixed')
+
     def test_spacing_preserves_best_end_and_full_frontier(self):
         rows=[row(str(i),i+1,t) for i,t in enumerate([.1,.11,.15,.2,.25,.31])]
         original=list(rows);shown=frontier.spaced_points(rows,.1)
@@ -36,6 +45,23 @@ class FrontierChecks(unittest.TestCase):
         rows[2]['cycle_repeatable']=False;rows[3]['aeroelastic_enabled']=True;rows[4]['simulation_mode']='paired'
         self.assertEqual([r['id'] for r in frontier.envelope(rows)[1]],['good','over_old_limit'])
         self.assertEqual(frontier.envelope([]),([],[]))
+
+    def test_native_study_frontier_exports_model_and_material_parameters(self):
+        with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
+            root=Path(temp);study=root/'native';study.mkdir()
+            settings={'aeroelastic_enabled':True,'damping_constant_rad':10.,'spring_constant_rad':4.27,'wing_density':.5}
+            model.write_json(study/'manifest.json',{'settings':settings})
+            sections=[{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':0,'chord_m':.2},{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':.3,'chord_m':.1}]
+            model.write_json(study/'results.json',[row('native',2,.3,aeroelastic_enabled=True,sections=sections,peak_abs_native_twist_deg=3.)])
+            with patch.object(model,'OUTPUTS',root):
+                result=frontier.generate(model,{'study':'native'})
+                self.assertEqual(result['model_mode'],'aeroelastic')
+                self.assertEqual(len(result['points']),1)
+                with (root/result['files'][1]).open() as f:
+                    data=list(csv.DictReader(f))[0]
+                    self.assertEqual(data['model_mode'],'aeroelastic')
+                    self.assertEqual(float(data['damping_constant_rad']),10.)
+                    self.assertEqual(float(data['peak_abs_native_twist_deg']),3.)
 
     def test_exports_full_study_without_torque_cap_and_keeps_source_files(self):
         with tempfile.TemporaryDirectory(dir=model.HERE) as temp:

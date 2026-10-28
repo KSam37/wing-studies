@@ -1,4 +1,4 @@
-"""Budgeted coordinate search of native rigid wings, with an auditable trial log.
+"""Budgeted coordinate search of native isolated wings, with an auditable trial log.
 
 Each span/torque allowance owns a local ascent. Jobs advance round-robin, share
 exact geometry results and keep all trials for the observed torque frontier.
@@ -92,7 +92,7 @@ def valid(chords,r):
 
 def score(row,limit):
     import torque_study
-    status=torque_study.classify(row,limit)
+    status=torque_study.classify(row,limit,allow_aeroelastic=True)
     if status not in ('Within limit','Over limit'):return None
     t=row['single_wing_mean_thrust_N'];m=row['single_wing_peak_abs_roll_moment_Nm']
     # Feasible designs rank by thrust. Infeasible seeds move toward feasibility,
@@ -217,6 +217,13 @@ def worker(model,study):
         rows.append(row);lookup[sig]=row
         log_trial(chords,meta,row,'catalog' if row.get('reused_from') else 'new solve')
         model.write_summary(study,rows)
+        if manifest['settings'].get('aeroelastic_enabled',False):
+            import torque_study
+            report=torque_study.results(model,study)
+            keys=list(dict.fromkeys(k for item in report['rows'] for k in item))
+            with (study/'comparisons'/'top_performers.csv').open('w',newline='',encoding='utf-8') as f:
+                writer=csv.DictWriter(f,fieldnames=['shape_rank',*keys]);writer.writeheader()
+                writer.writerows({'shape_rank':i,**model.csv_row(item)} for i,item in enumerate((r for r in report['rows'] if r['thrust_rank'] is not None),1) if i<=10)
         state('Adaptive search: evaluating neighbors')
         return row
     reason='All coordinate searches reached their stopping condition'

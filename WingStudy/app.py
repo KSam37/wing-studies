@@ -274,7 +274,7 @@ class Handler(BaseHTTPRequestHandler):
                 with LOCK:
                     catalog.sync(model)
                     return self.send(torque_study.master_results(model,data.get('generations',['current']),
-                        data['maximum_root_moment_nm'],export=bool(data.get('export',False))))
+                        data['maximum_root_moment_nm'],export=bool(data.get('export',False)),model_mode=data.get('model_mode','rigid')))
             if path == "/api/torque-results":
                 import torque_study
                 limit=model.number(data.get('maximum_root_moment_nm'),'Maximum root moment',1e-12)

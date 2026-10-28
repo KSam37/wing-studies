@@ -7,8 +7,8 @@ from wing_dimensions import dimensions
 TORQUE='single_wing_peak_abs_roll_moment_Nm'
 THRUST='single_wing_mean_thrust_N'
 
-def envelope(rows):
-    eligible=sorted((r for r in rows if classify(r,float('inf'))=='Within limit'),
+def envelope(rows,allow_aeroelastic=False):
+    eligible=sorted((r for r in rows if classify(r,float('inf'),allow_aeroelastic=allow_aeroelastic)=='Within limit'),
         key=lambda r:(r[TORQUE],-r[THRUST],str(r.get('comparison_key',r['id']))))
     points=[];best=float('-inf')
     for row in eligible:
@@ -55,8 +55,11 @@ def generate(model,data):
         directory=model.OUTPUTS/study
         manifest=model.read_json(directory/'manifest.json')
         rows=[{**r,'_study':study,'_settings':manifest['settings']} for r in model.read_json(directory/'results.json')]
-    eligible,points=envelope(rows)
-    if not points:raise ValueError('No settled rigid single-wing designs with valid positive thrust are available.')
+    import torque_study
+    mode=data.get('model_mode','rigid') if study=='master' else ('aeroelastic' if manifest['settings'].get('aeroelastic_enabled',False) else 'rigid')
+    rows=torque_study.select_model(rows,mode)
+    eligible,points=envelope(rows,allow_aeroelastic=mode=='aeroelastic')
+    if not points:raise ValueError('No settled single-wing designs for the selected model with valid positive thrust are available.')
     def bound(key,label):
         value=data.get(key)
         return None if value in (None,'') else model.number(value,label,0)
@@ -72,7 +75,7 @@ def generate(model,data):
     shown=spaced_points(in_range,spacing)
     all_range=[{**r,**dimensions(r)} for r in eligible if left<=r[TORQUE]<=right]
     background=sample_background(all_range,points,shown,spacing,left,right)
-    digest=hashlib.sha256(catalog.compact(['wing-markers-v4',lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    digest=hashlib.sha256(catalog.compact(['wing-markers-v5',mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.path import Path as MarkerPath
     plt=model.ieee_style();fig,ax=plt.subplots(figsize=(7.16,4.5),layout='constrained')
@@ -96,13 +99,13 @@ def generate(model,data):
     ax.margins(.06);ax.grid(alpha=.2)
     if lower is not None or upper is not None:ax.set_xlim(left,right)
     if not shown and not background:ax.text(.5,.5,'No improving designs in this torque range',ha='center',transform=ax.transAxes,fontsize=9)
-    ax.set_title('Sampled designs · frontier wings 50% larger',fontsize=9)
+    ax.set_title(('Native aeroelastic' if mode=='aeroelastic' else 'Rigid')+' designs · frontier wings 50% larger',fontsize=9)
     fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label='Mean thrust / peak root torque (1/m)',pad=.02)
     fig.savefig(dest/'thrust_torque_frontier.png',dpi=600);plt.close(fig)
-    fields=['peak_root_torque_Nm','mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles','thrust_to_torque_1pm','is_frontier','displayed']
+    fields=['peak_root_torque_Nm','mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles','thrust_to_torque_1pm','is_frontier','displayed','model_mode','spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg']
     with (dest/'thrust_torque_frontier.csv').open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=fields);w.writeheader()
         displayed_ids={identity(r) for r in [*shown,*background]}
-        for r in all_range:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids])))
-    return {'points':points,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
+        for r in all_range:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')]])))
+    return {'model_mode':mode,'points':points,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
         'files':[str((dest/name).relative_to(model.OUTPUTS)).replace(chr(92),'/') for name in ('thrust_torque_frontier.png','thrust_torque_frontier.csv')]}

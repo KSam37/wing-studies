@@ -8,5 +8,7 @@ inputs.adaptiveBounds={querySelectorAll:()=>rows};
 const ctx={$:id=>inputs[id],structuredClone,baseConfig:{settings:{},refinement:{enabled:true},span_search:{enabled:true}},defaults:{settings:{}},numerical:{},baseline:null,refinementActive:false};
 vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('const adaptiveFields='),source.indexOf('function fill(')),ctx);
 const c=ctx.configuration();assert.equal(c.mode,'custom');assert.equal(c.adaptive_search.enabled,true);assert.equal(c.adaptive_search.node_count,3);assert.equal(c.adaptive_search.bounds.length,3);assert.equal(c.adaptive_search.simulation_budget,100);assert.equal(c.adaptive_search.span_count,3);assert.equal(c.refinement,undefined);assert.equal(c.span_search,undefined);assert.equal(c.settings.aeroelastic_enabled,false);
+inputs.adaptiveElastic={checked:true};inputs.nativeStiffness={value:'4.27'};inputs.nativeDamping={value:'10'};inputs.nativeMass={value:'.5'};inputs.nativeHold={value:'5'};
+const elastic=ctx.configuration();assert.equal(elastic.settings.aeroelastic_enabled,true);assert.equal(elastic.settings.damping_constant_rad,10);assert.equal(elastic.settings.spring_constant_rad,4.27);assert.equal(elastic.settings.wing_density,.5);
 inputs.adaptiveNodes.value='4';assert.throws(()=>ctx.configuration(),/Build/);
 console.log('Adaptive configuration, per-node bounds, shared budgets and node-reset checks passed.');
