@@ -18,6 +18,15 @@ def envelope(rows):
     return eligible,points
 
 
+def spaced_points(points,spacing):
+    """Thin display markers only, retaining the highest-thrust end first."""
+    kept=[]
+    for row in reversed(points):
+        if not kept or kept[-1][TORQUE]-row[TORQUE]>=spacing-1e-12:
+            kept.append(row)
+    return list(reversed(kept))
+
+
 def generate(model,data):
     import catalog
     study=data.get('study')
@@ -39,17 +48,21 @@ def generate(model,data):
     right=eligible[-1][TORQUE] if upper is None else upper
     if right<=left:raise ValueError('Maximum plot torque must exceed minimum plot torque.')
     if left>eligible[-1][TORQUE]:raise ValueError('The torque range is above the available data.')
-    shown=[r for r in points if left<=r[TORQUE]<=right]
-    digest=hashlib.sha256(catalog.compact(['wing-markers-v2',lower,upper,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    in_range=[r for r in points if left<=r[TORQUE]<=right]
+    spacing=model.number(data.get('minimum_spacing_nm',.1),'Minimum marker torque spacing',0)
+    size=model.number(data.get('wing_size_percent',100),'Wing marker size (%)',10,400)
+    shown=spaced_points(in_range,spacing)
+    digest=hashlib.sha256(catalog.compact(['wing-markers-v3',lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.path import Path as MarkerPath
     plt=model.ieee_style();fig,ax=plt.subplots(figsize=(7.16,4.5),layout='constrained')
     for row in shown:
         vertices=[];codes=[]
         for polygon in model.wing_thumbnail(row,row.get('_settings',{}).get('gap_m',0)):
+            polygon=[(x,-y) for x,y in polygon] # Match the downward chord direction of the GUI top view.
             vertices.extend([*polygon,polygon[0]])
             codes.extend([MarkerPath.MOVETO,*([MarkerPath.LINETO]*(len(polygon)-1)),MarkerPath.CLOSEPOLY])
-        ax.scatter([row[TORQUE]],[row[THRUST]],marker=MarkerPath(vertices,codes),s=150,
+        ax.scatter([row[TORQUE]],[row[THRUST]],marker=MarkerPath(vertices,codes),s=150*(size/100)**2,
             facecolors='#c6e6df',edgecolors='#007f78',linewidths=.55,zorder=3)
     ax.set(xlabel='Allowable peak wing-root torque (N m)',ylabel='Maximum mean single-wing thrust (N)')
     ax.margins(.06);ax.grid(alpha=.2)
@@ -60,6 +73,6 @@ def generate(model,data):
     fields=['minimum_allowable_root_torque_Nm','maximum_mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles']
     with (dest/'thrust_torque_frontier.csv').open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=fields);w.writeheader()
-        for r in shown:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')]])))
-    return {'points':points,'plotted_count':len(shown),'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
+        for r in in_range:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')]])))
+    return {'points':points,'plotted_count':len(shown),'range_count':len(in_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
         'files':[str((dest/name).relative_to(model.OUTPUTS)).replace(chr(92),'/') for name in ('thrust_torque_frontier.png','thrust_torque_frontier.csv')]}

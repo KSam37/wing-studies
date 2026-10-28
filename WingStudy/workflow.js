@@ -245,18 +245,18 @@ $('makeFrontier').onclick=async()=>{
  const serial=++frontierSerial;
  try{
   $('makeFrontier').disabled=true;$('frontierStatus').textContent='Building the full torque–thrust frontier…';
-  const data=await api('torque-frontier',{study:currentStudy,torque_min_nm:$('frontierMin').value,torque_max_nm:$('frontierMax').value,generations:['current','old'].filter(g=>$(g+'Master').checked)});
+  const data=await api('torque-frontier',{study:currentStudy,wing_size_percent:Number($('frontierSize').value),minimum_spacing_nm:Number($('frontierSpacing').value),torque_min_nm:$('frontierMin').value,torque_max_nm:$('frontierMax').value,generations:['current','old'].filter(g=>$(g+'Master').checked)});
   if(serial!==frontierSerial)return;frontierData=data;
   const min=data.minimum_torque_nm,max=data.slider_maximum_torque_nm;
   $('frontierResult').innerHTML=`<img src="/files/${esc(data.files[0])}" alt="Wing silhouettes showing maximum thrust available versus allowable root torque" style="width:100%;max-width:760px"><div class="actions">${data.files.map(f=>`<a href="/files/${esc(f)}" download>${f.endsWith('.png')?'Wing plot PNG':'Frontier designs CSV'}</a>`).join('')}</div><label>Explore allowable root torque <output id="frontierTorqueValue"></output><input id="frontierTorque" type="range" min="${min}" max="${max}" step="any" value="${min}" style="width:100%"></label><label>Frontier design<select id="frontierPoint">${data.points.map((r,i)=>r.single_wing_peak_abs_roll_moment_Nm<=max?`<option value="${i}">${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m → ${fmt(r.single_wing_mean_thrust_N)} N · ${esc(r.design_name||r.id)}</option>`:'').join('')}</select></label><div id="frontierWing"></div>`;
   $('frontierTorque').oninput=inspectFrontier;
   $('frontierPoint').onchange=()=>{$('frontierTorque').value=data.points[Number($('frontierPoint').value)].single_wing_peak_abs_roll_moment_Nm;inspectFrontier();};
-  $('frontierStatus').textContent=`${data.eligible_count} eligible designs · ${data.plotted_count} improving designs in plotted range. Wing silhouettes only; no connecting lines. Plot range is independent of the ranking limit. Mixed study driving conditions may differ.`;
+  $('frontierStatus').textContent=`${data.eligible_count} eligible designs · ${data.plotted_count} wing markers shown of ${data.range_count} improving designs in range · minimum spacing ${fmt(data.minimum_spacing_nm)} N m. Wing silhouettes only; no connecting lines. Plot range is independent of the ranking limit. Mixed study driving conditions may differ.`;
   inspectFrontier();
  }catch(error){if(serial===frontierSerial)$('frontierStatus').textContent=error.message;}
  finally{if(serial===frontierSerial)$('makeFrontier').disabled=false;}
 };
-for(const id of ['frontierMin','frontierMax'])$(id).oninput=invalidateFrontier;
+for(const id of ['frontierMin','frontierMax','frontierSize','frontierSpacing'])$(id).oninput=invalidateFrontier;
 let landscapeSerial=0;
 function plotAxes(){return ['X','Y','Z'].map(axis=>$('plotAxis'+axis).value);}
 function landscapeRows(){

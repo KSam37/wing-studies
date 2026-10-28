@@ -8,6 +8,14 @@ import torque_frontier as frontier
 from test_torque_study import row
 
 class FrontierChecks(unittest.TestCase):
+    def test_spacing_preserves_best_end_and_full_frontier(self):
+        rows=[row(str(i),i+1,t) for i,t in enumerate([.1,.11,.15,.2,.25,.31])]
+        original=list(rows);shown=frontier.spaced_points(rows,.1)
+        self.assertEqual(shown[-1],rows[-1])
+        self.assertTrue(all(b[frontier.TORQUE]-a[frontier.TORQUE]>=.1-1e-12 for a,b in zip(shown,shown[1:])))
+        self.assertEqual(frontier.spaced_points(rows,0),rows)
+        self.assertEqual(rows,original)
+
     def test_best_at_or_below_each_torque_and_equal_torque_ties(self):
         rows=[row('low',2,.1),row('dominated',1,.2),row('high',5,.4),row('tie',4,.4),row('same_thrust',5,.8),row('final',8,1.2)]
         eligible,points=frontier.envelope(list(reversed(rows)))
