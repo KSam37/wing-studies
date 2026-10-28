@@ -211,8 +211,11 @@ $('applySpan').onclick=async()=>{
  }catch(error){notify(error.message);}finally{$('applySpan').disabled=false;}
 };
 let landscapeSerial=0;
+function plotAxes(){return ['X','Y','Z'].map(axis=>$('plotAxis'+axis).value);}
 function landscapeRows(){
- let rows=(report?.rows||[]).map(r=>({...r,plot_ratio:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null})).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&Number.isFinite(r.plot_ratio));
+ const axes=plotAxes();
+ let rows=(report?.rows||[]).map(r=>({...r,plot_ratio:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null,
+  single_wing_thrust_roll_ratio_1pm:r.single_wing_peak_abs_roll_moment_Nm>0?r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm:null})).filter(r=>['Within limit','Over limit','No positive thrust'].includes(r.torque_status)&&Number.isFinite(r.area_m2)&&r.area_m2>0&&axes.every(key=>Number.isFinite(r[key])));
  if($('plotFeasible').checked)rows=rows.filter(r=>r.torque_status==='Within limit');
  if($('plotStudy').value)rows=rows.filter(r=>(r._study||currentStudy)===$('plotStudy').value);
  for(const [key,prefix] of [['area_m2','Area'],['plot_ratio','Ratio']])for(const bound of ['Min','Max']){
@@ -230,20 +233,21 @@ function syncLandscapeSources(){
  const old=$('plotStudy').value,sources=[...new Set((report?.rows||[]).map(r=>r._study||currentStudy))];
  $('plotStudy').innerHTML='<option value="">All included studies</option>'+sources.map(id=>`<option value="${esc(id)}">${esc(studies.find(s=>s.id===id)?.name||id)} · ${esc(id.slice(0,15))}</option>`).join('');
  $('plotStudy').value=sources.includes(old)?old:'';$('makeLandscape').disabled=!landscapeRows().length;
- $('landscapeStatus').textContent=`${landscapeRows().length} matching measured wings. Generate to view wing area × thrust/peak root torque × mean thrust.`;
+ $('landscapeStatus').textContent=`${landscapeRows().length} matching measured wings. Choose X, Y and Z, then generate. Color follows Z.`;
 }
 $('makeLandscape').onclick=async()=>{
  const serial=++landscapeSerial,rows=landscapeRows();if(!rows.length){notify('No settled wings match the 3D filters.');return;}
+ if(new Set(plotAxes()).size!==3){notify('Choose three different axis parameters.');return;}
  try{
   $('makeLandscape').disabled=true;$('landscapeStatus').textContent=`Building the 3D view and PNG/CSV for ${rows.length} measured wings…`;
   const data=await api('thrust-landscape',{study:currentStudy,maximum_root_moment_nm:Number($('resultsLimit').value),
-   generations:['current','old'].filter(g=>$(g+'Master').checked),case_keys:rows.map(rowKey)});
+   generations:['current','old'].filter(g=>$(g+'Master').checked),case_keys:rows.map(rowKey),axes:plotAxes()});
   if(serial!==landscapeSerial)return;
   renderLandscape(data);$('landscapeStatus').textContent=data.note;
  }catch(error){if(serial===landscapeSerial)$('landscapeStatus').textContent=error.message;}
  finally{if(serial===landscapeSerial)$('makeLandscape').disabled=false;}
 };
-for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
+for(const id of ['plotStudy','plotFeasible','plotCount','plotAreaMin','plotAreaMax','plotRatioMin','plotRatioMax','plotAxisX','plotAxisY','plotAxisZ'])$(id).onchange=()=>{invalidateLandscape();syncLandscapeSources();};
 $('setupTab').onclick=()=>show('setup');$('resultsTab').onclick=()=>show('results');
 $('setup').oninput=event=>{if(event.target.id==='previewCase')return;if(['totalSpan','hingeGap'].includes(event.target.id)){if(baseline&&event.target.id==='hingeGap')$('totalSpan').value=2*baseline.sections.at(-1).y_m+Number($('hingeGap').value);renderRanges(readRanges());}clearTimeout(timer);timer=setTimeout(preview,350);};
 $('previewCase').onchange=drawPreview;

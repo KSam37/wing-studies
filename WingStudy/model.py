@@ -1393,8 +1393,10 @@ def shape_landscape(study,repeat_only=True,export=True,*,selected_rows=None,sele
     save_figure(fig,stem);plt.close(fig)
     by_id={r["id"]:r for r in rows}
     with stem.with_suffix('.csv').open('w',newline='',encoding='utf-8') as f:
-        records=[{"case_id":p["case_id"],"area_m2":p["coords"][0],"aspect_ratio":p["aspect_ratio"],spec.get("value_key",OBJECTIVE):p["value"],
-            **{k:p[k] for k in (OBJECTIVE,"single_wing_span_m","effective_total_span_m","reference_total_span_m","omitted_zero_chord_count","span_shortened_by_zero_chords") if k in p},
+        records=[{"case_id":p["case_id"],"area_m2":p.get("area_m2",p["coords"][0]),"aspect_ratio":p["aspect_ratio"],spec.get("value_key",OBJECTIVE):p["value"],
+            **{k:p[k] for k in (OBJECTIVE,"leading_edge_length_m","single_wing_span_m","effective_total_span_m","reference_total_span_m","omitted_zero_chord_count","span_shortened_by_zero_chords") if k in p},
+            **{f"plot_{axis}":p['coords'][i] for i,axis in enumerate(('x','y','z'))},
+            **{f"plot_{axis}_parameter":spec['axes'][i] for i,axis in enumerate(('x','y','z'))},
             "single_wing_mean_thrust_N":p["single_wing_mean_thrust_N"],"single_wing_peak_abs_roll_moment_Nm":p["single_wing_peak_abs_roll_moment_Nm"],
             "cycle_repeatable":p["repeatable"],"used_for_interpolation":p["case_id"] in spec["vertex_case_ids"],
             "interpolation_kind":spec["interpolation_kind"],"sections":json.dumps(by_id[p["case_id"]].get("sections",[])),

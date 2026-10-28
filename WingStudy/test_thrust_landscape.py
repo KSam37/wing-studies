@@ -12,6 +12,41 @@ import test_catalog
 
 
 class ThrustLandscapeChecks(unittest.TestCase):
+    def test_custom_leading_edge_and_torque_axes_and_zero_torque(self):
+        rows=self.rows();axes=['leading_edge_length_m','single_wing_peak_abs_roll_moment_Nm','single_wing_mean_thrust_N']
+        spec=thrust_landscape.data(model,rows,axes)
+        self.assertEqual(spec['axes'],axes)
+        self.assertEqual(spec['points'][0]['coords'],[.2,1.,10.])
+        self.assertEqual(spec['points'][0]['area_m2'],.02)
+        rows[0]['single_wing_peak_abs_roll_moment_Nm']=0
+        self.assertEqual(thrust_landscape.data(model,rows,axes)['points'][0]['coords'][1],0)
+        reversed_axes=['area_m2','single_wing_mean_thrust_N','single_wing_peak_abs_roll_moment_Nm']
+        changed=thrust_landscape.data(model,rows,reversed_axes)
+        self.assertEqual(changed['points'][0]['value'],0)
+        self.assertEqual(changed['color_label'],thrust_landscape.AXIS_PARAMETERS[reversed_axes[-1]])
+        for invalid in [[],['area_m2']*3,['area_m2','unknown','single_wing_mean_thrust_N']]:
+            with self.assertRaises(ValueError):thrust_landscape.data(model,rows,invalid)
+
+    def test_leading_edge_length_includes_sweep_and_bending_but_not_zero_suffix(self):
+        from wing_dimensions import dimensions
+        row={'sections':[{'y_m':0,'x_m':0,'chord_m':.2,'roll_deg':45.},
+             {'y_m':.3,'x_m':.4,'chord_m':.1,'roll_deg':0.},
+             {'y_m':1.,'x_m':2.,'chord_m':0}], 'span_m':.64,'_settings':{'gap_m':.04}}
+        self.assertAlmostEqual(dimensions(row)['leading_edge_length_m'],(.3**2+.4**2+.3**2)**.5)
+        self.assertEqual(dimensions(row)['single_wing_span_m'],.3)
+
+    def test_custom_axis_export_does_not_mislabel_length_as_area(self):
+        rows=self.rows();axes=['leading_edge_length_m','single_wing_peak_abs_roll_moment_Nm','single_wing_mean_thrust_N']
+        spec=thrust_landscape.data(model,rows,axes)
+        with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
+            export=[{**r,'id':r['comparison_key']} for r in rows]
+            model.shape_landscape(Path(temp),True,True,selected_rows=export,selected_spec=spec)
+            with (Path(temp)/'comparisons'/(spec['export_stem']+'.csv')).open(encoding='utf-8',newline='') as f:records=list(csv.DictReader(f))
+            self.assertEqual(float(records[0]['area_m2']),.02)
+            self.assertEqual(float(records[0]['leading_edge_length_m']),.2)
+            self.assertEqual(float(records[0]['plot_x']),.2)
+            self.assertEqual(records[0]['plot_y_parameter'],axes[1])
+
     def rows(self):
         rows=test_catalog.LandscapeChecks().rows()
         for i,r in enumerate(rows):
