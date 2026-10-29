@@ -72,7 +72,8 @@ class AdaptiveChecks(unittest.TestCase):
             self.assertAlmostEqual(p['cases'][0]['span_m'],.6)
 
     def test_zero_suffix_can_shorten_any_outboard_node_without_disconnection(self):
-        c=self.config();c['adaptive_search'].update(node_count=5,tip_chord_m=0)
+        c=self.config();c['adaptive_search'].update(node_count=5,tip_chord_m=0,
+            bounds=[{'min_m':.01 if i<2 else 0} for i in range(5)])
         r=adaptive.options(model,c)
         self.assertTrue(adaptive.valid([.2,.1,.03,0,0],r))
         self.assertFalse(adaptive.valid([.2,.1,0,.02,0],r))

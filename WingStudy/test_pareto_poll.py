@@ -38,7 +38,8 @@ class PollChecks(unittest.TestCase):
         self.assertEqual(improved[0]['kind'],'whole_wing')
         child=improved[0]['case']['id']
         child_steps={tuple(meta['poll_steps_m']) for chords,meta in seen if meta['parent_case']==child}
-        self.assertIn((.02,.02,.02),child_steps)
+        # A champion is guaranteed the next finer poll, even while new
+        # nondominated discoveries accumulate in the archive.
         self.assertIn((.01,.01,.01),child_steps)
         self.assertEqual(len({tuple(chords) for chords,meta in seen}),len(seen))
 

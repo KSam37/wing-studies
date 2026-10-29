@@ -82,6 +82,11 @@ def generate(model,data):
     import torque_study
     mode=data.get('model_mode','rigid') if study=='master' else ('aeroelastic' if manifest['settings'].get('aeroelastic_enabled',False) else 'rigid')
     rows=torque_study.select_model(rows,mode)
+    from case_identity import families,FAMILY_LABELS,FAMILY_COLORS
+    family=data.get('seed_family','all');color_mode=data.get('color_mode','ratio')
+    if family!='all' and family not in FAMILY_LABELS:raise ValueError('Unknown seed family.')
+    if color_mode not in ('family','ratio'):raise ValueError('Unknown wing color mode.')
+    if family!='all':rows=[r for r in rows if family in families(r)]
     from wing_dimensions import span_class
     chosen_span=data.get('span_class','all')
     if chosen_span!='all':rows=[r for r in rows if span_class(r)==chosen_span]
@@ -103,11 +108,11 @@ def generate(model,data):
     all_range=[{**r,**dimensions(r)} for r in eligible if left<=r[TORQUE]<=right]
     comparison=data.get('comparison_mode','frontier')
     if comparison not in ('frontier','bands'):raise ValueError('Choose full frontier or torque-band winners.')
-    band_width=model.number(data.get('torque_band_width_nm',.5),'Torque band width',1e-12) if comparison=='bands' else None
+    band_width=model.number(data.get('torque_band_width_nm',.1),'Torque band width',1e-12) if comparison=='bands' else None
     winners=band_winners(all_range,left,right,band_width) if comparison=='bands' else []
     if comparison=='bands':shown=winners
     background=[] if comparison=='bands' else sample_background(all_range,points,shown,spacing,left,right)
-    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v7',comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v8',family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.offsetbox import DrawingArea, AnnotationBbox
     from matplotlib.patches import Polygon
@@ -132,7 +137,8 @@ def generate(model,data):
         box=DrawingArea(max(width,1),max(height,1),0,0)
         vertices=(polygon-lo)*points_per_m;vertices[:,1]=height-vertices[:,1]
         emphasized=row['is_frontier'] or row['is_representative']
-        box.add_artist(Polygon(vertices,facecolor=cmap(norm(row[THRUST]/row[TORQUE])) if row[TORQUE]>0 else '#aaa',edgecolor='#172f36' if emphasized else '#888',linewidth=.8 if emphasized else .35))
+        color=FAMILY_COLORS[families(row)[0]] if color_mode=='family' else cmap(norm(row[THRUST]/row[TORQUE])) if row[TORQUE]>0 else '#aaa'
+        box.add_artist(Polygon(vertices,facecolor=color,edgecolor='#172f36' if emphasized else '#888',linewidth=.8 if emphasized else .35))
         ax.add_artist(AnnotationBbox(box,(row[TORQUE],row[THRUST]),frameon=False,pad=0,zorder=3 if emphasized else 2))
         ax.plot(row[TORQUE],row[THRUST],alpha=0)
     ax.set(xlabel='Peak wing-root torque (N m)',ylabel='Mean single-wing thrust (N)')
@@ -147,14 +153,16 @@ def generate(model,data):
     legend.add_artist(Line2D([0,points_per_m*.1],[8,8],color='#17313d',linewidth=1.5))
     legend.add_artist(Text(points_per_m*.1+4,5,'0.10 m',fontsize=7))
     ax.add_artist(AnnotationBbox(legend,(.03,.96),xycoords='axes fraction',box_alignment=(0,1),frameon=True,pad=.3))
-    fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label='Mean thrust / peak root torque (1/m)',pad=.02)
+    if color_mode=='family':
+        ax.legend(handles=[Line2D([],[],marker='s',linestyle='',color=FAMILY_COLORS[f],label=FAMILY_LABELS[f]) for f in FAMILY_LABELS if any(f in families(r) for r in displayed)],fontsize=6,loc='lower right')
+    else:fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label='Mean thrust / peak root torque (1/m)',pad=.02)
     fig.savefig(dest/'thrust_torque_frontier.png',dpi=600);plt.close(fig)
-    fields=['peak_root_torque_Nm','mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles','thrust_to_torque_1pm','is_frontier','displayed','model_mode','spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg','is_band_winner','band_min_torque_Nm','band_max_torque_Nm','band_design_count']
+    fields=['seed_families','geometry_id','simulation_id','peak_root_torque_Nm','mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles','thrust_to_torque_1pm','is_frontier','displayed','model_mode','spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg','is_band_winner','band_min_torque_Nm','band_max_torque_Nm','band_design_count']
     with (dest/'thrust_torque_frontier.csv').open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=fields);w.writeheader()
         displayed_ids={identity(r) for r in [*shown,*background]}
         for r in all_range:
             winner=winner_map.get(identity(r),{})
-            w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')],bool(winner),winner.get('torque_band_min_nm'),winner.get('torque_band_max_nm'),winner.get('torque_band_count')])))
-    return {'comparison_mode':comparison,'torque_band_width_nm':band_width,'model_mode':mode,'points':winners if comparison=='bands' else points,'displayed':displayed,'wing_size_percent':size,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'range_eligible_count':len(all_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'plot_maximum_torque_nm':right,'slider_maximum_torque_nm':right if comparison=='bands' else min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
+            w.writerow(dict(zip(fields,[';'.join(families(r)),r.get('geometry_id'),r.get('simulation_id'),r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')],bool(winner),winner.get('torque_band_min_nm'),winner.get('torque_band_max_nm'),winner.get('torque_band_count')])))
+    return {'seed_family':family,'color_mode':color_mode,'family_colors':FAMILY_COLORS,'family_labels':FAMILY_LABELS,'comparison_mode':comparison,'torque_band_width_nm':band_width,'model_mode':mode,'points':winners if comparison=='bands' else points,'displayed':displayed,'wing_size_percent':size,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'range_eligible_count':len(all_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'plot_maximum_torque_nm':right,'slider_maximum_torque_nm':right if comparison=='bands' else min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
         'files':[str((dest/name).relative_to(model.OUTPUTS)).replace(chr(92),'/') for name in ('thrust_torque_frontier.png','thrust_torque_frontier.csv')]}

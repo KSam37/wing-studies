@@ -38,6 +38,8 @@ PARAM_HEADERS = ["Case #","Origin study","Local case","State","Recorded UTC","Si
 RESULT_HEADERS = ["Rank","Case #","Origin study","Local case","State","Repeatable cycles","Cycle error (%)",
     *METRICS.values(),"Ranking value","Rank eligible (1/0)","Area (m2)","Aspect ratio","Wing span (m)","Simulation mode",
     "Outputs","Interactive case","Last error"]
+PARAM_HEADERS += ['Geometry code','Simulation code','Seed families']
+RESULT_HEADERS += ['Geometry code','Simulation code','Seed families']
 NS="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 RNS="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 ET.register_namespace("",NS)
@@ -64,6 +66,14 @@ def connect(model,filename="master_runs.sqlite3"):
         state TEXT, reused INTEGER DEFAULT 0, PRIMARY KEY(study,local_case));
       CREATE TABLE IF NOT EXISTS imports (study TEXT PRIMARY KEY, revision TEXT);
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT);""")
+    if 'geometry_id' not in {r[1] for r in db.execute('PRAGMA table_info(cases)')}:
+        db.execute('ALTER TABLE cases ADD COLUMN geometry_id TEXT')
+        db.execute('CREATE INDEX IF NOT EXISTS cases_geometry_id ON cases(geometry_id)')
+        from case_identity import geometry_id
+        for row in db.execute('SELECT case_no,payload FROM cases').fetchall():
+            db.execute('UPDATE cases SET geometry_id=? WHERE case_no=?',
+                (geometry_id(json.loads(row['payload'])['case']),row['case_no']))
+        db.commit()
     return db
 
 def old_connection(model):
@@ -97,14 +107,20 @@ def start_fresh(model):
     return True
 
 def cache_entries(model,signatures):
-    """Both generations remain available for exact physical-result reuse."""
-    entries={}
-    if (root(model)/"master_runs_old.sqlite3").exists():
-        with old_connection(model) as db:
-            entries.update({r["signature"]:r for r in db.execute("SELECT * FROM cases WHERE state='ok'") if r['signature'] in signatures and available(model,r)})
-    with connect(model) as db:
-        entries.update({r["signature"]:r for r in db.execute("SELECT * FROM cases WHERE state='ok'") if r['signature'] in signatures and available(model,r)})
+    """Indexed exact-identity lookup across both catalog generations."""
+    wanted=list(signatures);entries={}
+    if not wanted:return entries
+    connections=[]
+    if (root(model)/'master_runs_old.sqlite3').exists():connections.append(old_connection(model))
+    connections.append(connect(model))
+    for db in connections:
+        with db:
+            for start in range(0,len(wanted),900):
+                chunk=wanted[start:start+900];marks=','.join('?' for _ in chunk)
+                for row in db.execute(f"SELECT * FROM cases WHERE state='ok' AND signature IN ({marks})",chunk):
+                    if available(model,row):entries[row['signature']]=row
     return entries
+
 
 def generations(model,selected=("current",)):
     if not isinstance(selected,(list,tuple)) or any(v not in ("current","old","adaptive") for v in selected):
@@ -222,6 +238,12 @@ def _register(db,signature_value,payload,study,local_case,state="planned",result
     if result is not None and not (result.get("reused_from") and entry["state"]=="ok") and (result.get("status")=="ok" or entry["state"]!="ok"):
         db.execute("UPDATE cases SET result=?,payload=?,origin_study=?,origin_case=?,state=?,recorded=? WHERE case_no=?",
             (compact(result),compact(payload),study,local_case,result.get("status","failed"),stamp(),entry["case_no"]))
+    elif result is not None and entry['state']=='ok' and result.get('seed_families'):
+        saved=json.loads(entry['result'] or '{}')
+        saved['seed_families']=list(dict.fromkeys([*saved.get('seed_families',[]),*result['seed_families']]))
+        db.execute('UPDATE cases SET result=? WHERE case_no=?',(compact(saved),entry['case_no']))
+    from case_identity import geometry_id
+    db.execute('UPDATE cases SET geometry_id=? WHERE case_no=?',(geometry_id(payload['case']),entry['case_no']))
     db.execute("INSERT INTO occurrences(study,local_case,case_no,state,reused) VALUES(?,?,?,?,?) "
         "ON CONFLICT(study,local_case) DO UPDATE SET case_no=excluded.case_no,state=excluded.state,reused=excluded.reused",
         (study,local_case,entry["case_no"],state,int(bool(result and result.get("reused_from")))))
@@ -337,7 +359,8 @@ def listing(model,metric=OBJECTIVE,descending=True,_db=None,check_outputs=True):
         area=g.get("area_m2",0)/(2 if isolated else 1)
         geometry={"area_m2":area or None,"aspect_ratio":span**2/area if isolated and area else g.get("aspect_ratio"),
                   "single_wing_span_m":span}
-        rows.append({**case,**geometry,**result,"global_case_no":e["case_no"],"catalog_state":e["state"],
+        from case_identity import geometry_id
+        rows.append({**case,**geometry,**result,'geometry_id':geometry_id(case),'simulation_id':'SIM-'+e['signature'],"global_case_no":e["case_no"],"catalog_state":e["state"],
             "_study":e["origin_study"],"_studyName":payload["study_name"],"_settings":payload["settings"],
             "_ptera_version":payload.get("ptera_version"),"_signature":e["signature"],"_recorded":e["recorded"],
             "_verified":payload.get("reuse_verified",False),"outputs_available":available(model,e) if check_outputs else None,
@@ -422,6 +445,10 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
             tables[1].append([r["catalog_rank"],r["global_case_no"],r["_study"],r["id"],r["catalog_state"],r.get("cycle_repeatable"),r.get("cycle_error_pct"),
                 *[r.get(k) for k in METRICS],r.get(metric) if r["catalog_rank"] is not None else None,int(r["catalog_rank"] is not None),r.get("area_m2"),r.get("aspect_ratio"),r.get("single_wing_span_m",r.get("reference_half_span_m")),r.get("simulation_mode","legacy paired"),
                 ("link",f"studies/{r['_study']}/{r['id']}/","Open outputs"),("link",f"{browser_url}/#catalog&case={r['global_case_no']}","Open case"),r.get("error")])
+        from case_identity import families
+        for table,ordered in zip(tables,[sorted(rows,key=lambda r:r['global_case_no']),rows]):
+            for values,r in zip(table,ordered):
+                values.extend([r['geometry_id'],r['simulation_id'],', '.join(families(r))])
         template=Path(__file__).with_name("master_template.xlsx")
         tmp=root(model)/(filename+".tmp")
         with zipfile.ZipFile(template) as source,zipfile.ZipFile(tmp,"w",zipfile.ZIP_DEFLATED) as dest:

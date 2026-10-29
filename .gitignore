@@ -4,6 +4,7 @@
 !/.gitattributes
 !/.gitmodules
 !/README.md
+!/OPTIMIZATION_STRATEGY.md
 !/requirements-windows.lock
 !/ptera-source.json
 !/setup_windows.py
@@ -39,3 +40,6 @@ WingStudy/tmp*/
 !/outputs/master_runs_old.xlsx
 !/outputs/master_runs_old.sqlite3
 outputs/studies/**/*.tmp
+
+# Temporary isolated native-case staging; removed after completion.
+.parallel-*/

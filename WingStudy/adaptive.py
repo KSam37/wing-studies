@@ -1,4 +1,4 @@
-"""Budgeted Pareto coordinate exploration from one triangular seed per span.
+"""Budgeted Pareto direct exploration from multiple shape families per span.
 
 Retain nondominated mean-thrust / peak-root-torque tradeoffs, without a torque
 ceiling. This is a local sampled frontier, not proof of global optimality.
@@ -7,22 +7,33 @@ import copy
 import csv
 import math
 from pathlib import Path
-import time
-import traceback
 
 
 DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
     'root_chord_m':.2,'maximum_root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':None,
     'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
     'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
-    'improvement_pct':.2,'frontier_parents':8,'coordinated_moves':True,'decreasing':True,'paired_moves':True,'bounds':[]}
+    'improvement_pct':.2,'frontier_parents':3,'parallel_workers':1,'poll_candidates':0,'seed_families':['triangle'],
+    'coordinated_moves':True,'decreasing':True,'paired_moves':True,'bounds':[]}
+
+SEED_FAMILIES=('triangle','square','concave','convex','narrow')
+
+def search_jobs(r):
+    return [(span,family) for span in levels(r['span_min_m'],r['span_max_m'],r['span_count'])
+        for family in r.get('seed_families',['triangle'])]
 
 
 def options(model,config):
     r={**DEFAULT,**config.get('adaptive_search',{})}
     for obsolete in ('torque_min_nm','torque_max_nm','torque_count'):r.pop(obsolete,None)
     r['objective']='pareto_mean_thrust_peak_root_torque_v1'
-    r['search_algorithm']='per_parent_direct_poll_v2'
+    r['search_algorithm']='family_beam_direct_poll_v3'
+    families=r['seed_families']
+    if not isinstance(families,list) or not families or any(f not in SEED_FAMILIES for f in families):
+        raise ValueError('Select at least one supported seed family.')
+    r['seed_families']=list(dict.fromkeys(families))
+    r['parallel_workers']=model.number(r['parallel_workers'],'Parallel Ptera processes',1,61,True)
+    r['poll_candidates']=model.number(r['poll_candidates'],'Candidates per local poll',0,256,True)
     for key in ('span_count','node_count','simulation_budget','evaluation_budget','max_passes','frontier_parents'):
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
     for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
@@ -33,7 +44,7 @@ def options(model,config):
     r['improvement_pct']=model.number(r['improvement_pct'],'Frontier sampling resolution (%)',0,100)
     for lo,hi,count,label in [('span_min_m','span_max_m','span_count','Span')]:
         if r[hi]<r[lo] or (r[count]==1 and r[lo]!=r[hi]):raise ValueError(label+' linspace needs ordered bounds and at least two samples for different endpoints.')
-    jobs=1 if r['span_min_m']==r['span_max_m'] else r['span_count']
+    jobs=(1 if r['span_min_m']==r['span_max_m'] else r['span_count'])*len(r['seed_families'])
     if jobs>r['evaluation_budget']:raise ValueError('Candidate budget must cover at least one request per span search.')
     if r['minimum_step_m']>r['initial_step_m']:raise ValueError('Minimum step must not exceed initial step.')
     n=r['node_count'];raw=r.get('bounds') or [{} for _ in range(n)]
@@ -43,7 +54,7 @@ def options(model,config):
     r['bounds']=[]
     for i,b in enumerate(raw):
         floor=r['minimum_chord_m'] if i<2 else 0.
-        lo=model.number(b.get('min_m',floor),f'Chord {i+1} minimum',floor)
+        lo=model.number(b.get('min_m',r['minimum_chord_m']),f'Chord {i+1} minimum',floor)
         if 0<lo<r['minimum_chord_m']:raise ValueError('Chord bounds must be zero or at least the positive chord minimum.')
         upper=b.get('max_m',r['maximum_chord_m'])
         hi=None if upper in (None,'') else model.number(upper,f'Chord {i+1} maximum',lo,r['maximum_chord_m'])
@@ -54,7 +65,7 @@ def options(model,config):
         r['bounds'].append({'min_m':lo,'max_m':hi,'step_m':step})
     if r['span_min_m']<=config['settings']['gap_m']:raise ValueError('Adaptive span must exceed the hinge gap.')
     # Validate a feasible decreasing seed, including the per-node bounds.
-    seed(r)
+    for family in r['seed_families']:seed(r,family)
     return r
 
 
@@ -63,10 +74,14 @@ def levels(lo,hi,count):
     return list(dict.fromkeys(float(x) for x in np.linspace(lo,hi,count)))
 
 
-def seed(r):
+def seed(r,family='triangle'):
     n=r['node_count'];out=[]
     for i,b in enumerate(r['bounds']):
-        value=r['root_chord_m']+(r['tip_chord_m']-r['root_chord_m'])*i/(n-1)
+        eta=i/(n-1);root=r['root_chord_m'];tip=r['tip_chord_m']
+        profile={'triangle':1-eta,'square':1.,'concave':(1-eta)**2,
+            'convex':1-eta**2,'narrow':1-eta}[family]
+        value=tip+(root-tip)*profile
+        if family=='narrow':value*=.5
         value=min(b['max_m'] if b['max_m'] is not None else math.inf,max(b['min_m'],value))
         if r['decreasing'] and out:value=min(value,out[-1])
         if value<b['min_m']-1e-12:raise ValueError('Per-node bounds cannot form a decreasing seed.')
@@ -91,12 +106,13 @@ def plan(model,config):
     c=torque_study.prepare(model,c)
     c['settings']['span_panels']=max(c['settings']['span_panels'],r['node_count']-1)
     spans=levels(r['span_min_m'],r['span_max_m'],r['span_count'])
-    c['settings']['case_budget']=max(c['settings'].get('case_budget',1),len(spans))
-    c['designs']=[design(r,s,c['settings']['gap_m'],seed(r),f'Adaptive seed span {s:g}') for s in spans]
+    jobs=search_jobs(r)
+    c['settings']['case_budget']=max(c['settings'].get('case_budget',1),len(jobs))
+    c['designs']=[design(r,s,c['settings']['gap_m'],seed(r,f),f'{f.title()} seed span {s:g}') for s,f in jobs]
     spec=model.plan(c)
     spec['adaptive_search']=r
     spec['simulation_budget']=r['simulation_budget']
-    spec['search_job_count']=len(spans)
+    spec['search_job_count']=len(jobs)
     return spec
 
 
@@ -174,11 +190,11 @@ def neighbor(chords,nodes,direction,steps,r):
     return candidate(chords,weights,steps,r,valid)
 
 
-def climb(r,span,job):
-    """One seed; diverse frontier polls with independent parent step sizes."""
+def climb(r,span,job,family='triangle'):
+    """One family/span branch with a bounded, coarse-to-fine active beam."""
     from pareto_poll import directions,candidate
-    chords=seed(r);initial_steps=[b['step_m'] for b in r['bounds']]
-    meta={'job':job,'span_m':span,'objective':r['objective'],'search_algorithm':r['search_algorithm'],
+    chords=seed(r,family);initial_steps=[b['step_m'] for b in r['bounds']]
+    meta={'job':job,'span_m':span,'seed_family':family,'objective':r['objective'],'search_algorithm':r['search_algorithm'],
         'pass':0,'node':None,'step_m':0.,'parent_case':None,'kind':'seed'}
     current=yield (chords[:],meta)
     archive=[];visited={tuple(chords)}
@@ -190,41 +206,66 @@ def climb(r,span,job):
             'frontier_min_torque_Nm':min(objectives(e['case'])[1] for e in archive)}
     if offer(archive,initial):yield ('accepted',event(initial))
     poll_directions=directions(len(chords),r['paired_moves'],r.get('coordinated_moves',True))
+    parents=[]
     for iteration in range(1,r['max_passes']+1):
-        pool=[e for e in (archive or [initial]) if not states[tuple(e['chords'])]['done']]
-        if not pool:return
-        # Give unexplored frontier parents a turn before polling an older one again.
-        least=min(states[tuple(e['chords'])]['polls'] for e in pool)
-        pool=[e for e in pool if states[tuple(e['chords'])]['polls']==least]
-        parents=frontier_parents(pool,{},r['frontier_parents'],r['improvement_pct']/100) if archive else pool
+        # Freeze a small beam for a coarse-to-fine epoch. New discoveries cannot
+        # continually displace its champions before they receive finer polls.
+        if not parents:
+            pool=[e for e in (archive or [initial]) if not states[tuple(e['chords'])]['done']]
+            if not pool:return
+            parents=frontier_parents(pool,{},r['frontier_parents'],r['improvement_pct']/100) if archive else pool
+        next_parents=[]
         for parent in parents:
-            state=states[tuple(parent['chords'])];steps=state['steps'][:];success=False
-            for weights,kind in poll_directions:
+            state=states[tuple(parent['chords'])];steps=state['steps'][:];tested=[]
+            base=[objectives(e['case']) for e in archive]
+            pending=[]
+            cap=r.get('poll_candidates',0)
+            offset=((iteration-1)*(cap or len(poll_directions)))%len(poll_directions)
+            for weights,kind in poll_directions[offset:]+poll_directions[:offset]:
                 proposed=candidate(parent['chords'],weights,steps,r,valid)
                 if proposed is None or tuple(proposed) in visited:continue
                 visited.add(tuple(proposed))
                 nodes=[i for i,(a,b) in enumerate(zip(parent['chords'],proposed)) if a!=b]
-                meta={'job':job,'span_m':span,'objective':r['objective'],'search_algorithm':r['search_algorithm'],
+                meta={'job':job,'span_m':span,'seed_family':family,'objective':r['objective'],'search_algorithm':r['search_algorithm'],
                     'pass':iteration,'parent_poll':state['polls']+1,'poll_steps_m':steps[:],'node':nodes,
                     'step_m':max(abs(proposed[i]-parent['chords'][i]) for i in nodes),
                     'parent_case':parent['case'].get('id'),'kind':kind}
-                trial=yield (proposed,meta)
+                pending.append((proposed,meta))
+                if cap and len(pending)>=cap:break
+            responses=(yield ('batch',pending)) if r.get('parallel_workers',1)>1 and pending else None
+            for index,(proposed,meta) in enumerate(pending):
+                if responses is not None:
+                    if index>=len(responses):break
+                    trial=responses[index]
+                else:trial=yield (proposed,meta)
                 entry={'case':trial,'chords':proposed,**meta}
+                if objectives(trial):tested.append(entry)
                 if offer(archive,entry):
-                    success=True
                     states[tuple(proposed)]={'steps':steps[:],'polls':0,'done':False}
                     yield ('accepted',event(entry))
+            from pareto_poll import hypervolume
+            # Compare against the frozen pre-poll archive, independent of order.
+            values=base+[objectives(e['case']) for e in tested]
+            reference=1.1*max((v[1] for v in values),default=1.)+1e-9
+            baseline=hypervolume(base,reference)
+            winner=max(tested,key=lambda e:hypervolume([*base,objectives(e['case'])],reference)-baseline,default=None)
+            gain=hypervolume([*base,objectives(winner['case'])],reference)-baseline if winner else 0.
             state['polls']+=1
-            if not success:
-                state['done']=max(steps)<=r['minimum_step_m']*(1+1e-12)
-                state['steps']=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps]
+            fine=max(steps)<=r['minimum_step_m']*(1+1e-12)
+            state['done']=True
+            champion=winner if gain>max(1e-12,baseline*r['improvement_pct']/100) else parent
+            if not fine or champion is not parent:
+                states[tuple(champion['chords'])]={'steps':[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps],
+                    'polls':state['polls'],'done':False}
+                next_parents.append(champion)
+        parents=next_parents
 
 
 def run_search(r,evaluate,on_accept=lambda event:None):
     """Fair interleaving; evaluator owns cache, persistence, and strict budgets."""
     jobs=[]
-    for span in levels(r['span_min_m'],r['span_max_m'],r['span_count']):
-        g=climb(r,span,len(jobs)+1);jobs.append([g,next(g)])
+    for span,family in search_jobs(r):
+        g=climb(r,span,len(jobs)+1,family);jobs.append([g,next(g)])
     while jobs:
         active=[]
         for g,pending in jobs:
@@ -242,90 +283,8 @@ class BudgetReached(Exception):pass
 
 
 def worker(model,study):
-    import catalog
-    study=Path(study);manifest=model.read_json(study/'manifest.json');r=manifest['adaptive_search']
-    manifest['catalog_engine']=catalog.engine(model,manifest['settings'])
-    manifest['cases']=[];manifest['case_count']=0
-    model.write_json(study/'manifest.json',manifest)
-    rows=[];events=[];lookup={};simulations=0;requests=0;cache_hits=0
-    def state(message,**extra):
-        model.write_json(study/'status.json',{'state':'running','total':r['simulation_budget'],'completed':simulations,
-            'evaluated_cases':len(rows),'candidate_requests':requests,'cache_hits':cache_hits,'accepted_count':len(events),'message':message,**extra})
-    def accept(event):
-        events.append({**event,'evaluation':len(rows),'simulations':simulations})
-        from pareto_poll import refresh_hypervolume
-        reference=refresh_hypervolume(events)
-        model.write_json(study/'adaptive_hypervolume.json',reference)
-        model.write_json(study/'evolution.json',events)
-    def log_trial(chords,meta,row,reuse):
-        path=study/'comparisons'/'adaptive_trials.csv';path.parent.mkdir(exist_ok=True)
-        fresh=not path.exists()
-        with path.open('a',newline='',encoding='utf-8') as f:
-            w=csv.writer(f)
-            if fresh:w.writerow(['request','case','global_case_no','job','span_m','thrust_to_peak_torque_1pm','pass','nodes','step_m','parent_case','reuse','status','mean_thrust_N','peak_root_torque_Nm','chords_m'])
-            w.writerow([requests,row['id'],row.get('global_case_no'),meta['job'],meta['span_m'],score(row),meta['pass'],meta['node'],meta['step_m'],meta['parent_case'],reuse,row['status'],row.get('single_wing_mean_thrust_N'),row.get('single_wing_peak_abs_roll_moment_Nm'),chords])
-    def evaluate(chords,meta):
-        nonlocal simulations,requests,cache_hits
-        if requests>=r['evaluation_budget']:raise BudgetReached('Candidate-request budget reached')
-        requests+=1
-        cfg=copy.deepcopy(manifest['config']);cfg.pop('adaptive_search',None)
-        cfg['mode']='custom';cfg['designs']=[design(r,meta['span_m'],manifest['settings']['gap_m'],chords,'Adaptive wing')]
-        case=model.plan(cfg)['cases'][0]
-        sig=catalog.signature(model,case,manifest['settings'])
-        if sig in lookup:
-            log_trial(chords,meta,lookup[sig],'within study');return lookup[sig]
-        existing=catalog.cache_entries(model,{sig}).get(sig)
-        if existing is None and simulations>=r['simulation_budget']:raise BudgetReached('New-simulation budget reached')
-        case['id']=f'case_{len(rows)+1:04d}';case['design_name']=f'Adaptive {len(rows)+1:04d}'
-        case['adaptive_trial']=meta
-        manifest['cases'].append(case);manifest['case_count']=len(manifest['cases'])
-        model.write_json(study/'manifest.json',manifest)
-        directory=study/case['id'];directory.mkdir(exist_ok=True)
-        state(f"Adaptive trial {case['id']} · span {meta['span_m']:g} m · exploring thrust–torque frontier",current=case['id'],current_case_started=time.time())
-        start=time.time();row={**case}
-        try:
-            cached=catalog.reuse(model,case,manifest['settings'],directory) if existing is not None else None
-            if cached is None:
-                if simulations>=r['simulation_budget']:
-                    manifest['cases'].pop();manifest['case_count']=len(manifest['cases']);model.write_json(study/'manifest.json',manifest)
-                    raise BudgetReached('New-simulation budget reached')
-                simulations+=1
-                cached=model.run_case(case,manifest['settings'],directory)
-            else:cache_hits+=1
-            row.update(cached,status='ok')
-        except BudgetReached:raise
-        except Exception as exc:
-            traceback.print_exc();row.update(status='failed',error=str(exc))
-            model.write_json(directory/'error.json',{'error':str(exc)})
-        row['elapsed_s']=round(time.time()-start,3)
-        catalog.record(model,manifest,study.name,row)
-        rows.append(row);lookup[sig]=row
-        log_trial(chords,meta,row,'catalog' if row.get('reused_from') else 'new solve')
-        model.write_summary(study,rows)
-        state('Adaptive search: evaluating neighbors')
-        return row
-    reason='Pareto searches reached their stopping condition'
-    try:
-        state('Preparing Pareto search from one triangle per span')
-        run_search(r,evaluate,accept)
-    except BudgetReached as exc:reason=str(exc)
-    except Exception as exc:
-        traceback.print_exc();reason='Search interrupted: '+str(exc)
-        model.write_json(study/'status.json',{'state':'failed','completed':simulations,'total':r['simulation_budget'],'message':reason})
-        raise
-    finally:
-        model.write_json(study/'evolution.json',events)
-    model.write_json(study/'adaptive_summary.json',{'new_simulations':simulations,'cache_hits':cache_hits,'candidate_requests':requests,'unique_cases':len(rows),'accepted_changes':len(events),'objective':r['objective'],'search_algorithm':r['search_algorithm'],'hypervolume':model.read_json(study/'adaptive_hypervolume.json') if events else None,'frontier_case_ids':{str(job):next(e['frontier_case_ids'] for e in reversed(events) if e['job']==job) for job in {e['job'] for e in events}},'stop_reason':reason})
-    artifacts(model,study,events)
-    export_master(model,manifest.get('browser_url','http://127.0.0.1:8766'))
-    if any(row.get('status')=='ok' for row in rows):
-        import torque_frontier
-        try:
-            frontier=torque_frontier.generate(model,{'study':study.name})
-            model.write_json(study/'frontier.json',frontier)
-        except ValueError:pass
-    model.write_json(study/'status.json',{'state':'complete' if not any(x['status']=='failed' for x in rows) else 'complete_with_errors',
-        'total':simulations,'completed':simulations,'evaluated_cases':len(rows),'message':reason+f'; {len(rows)} unique cases, {simulations} new simulations, {cache_hits} reused.'})
+    from parallel_cases import run_worker
+    return run_worker(model,study)
 
 
 _STUDY_FLAGS={}

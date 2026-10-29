@@ -41,7 +41,7 @@ For the complete study workflow, output definitions, filtering, and modeling ass
 
 ## Model limits and provenance
 
-New runs model one isolated rigid wing with prescribed motion, positive forward speed, water density and viscosity, and selectable UVLM wake settings. Estimated pair thrust is twice the isolated single-wing value, without wing interaction. The primary shape score is mean thrust divided by sampled peak absolute root fluid roll moment; it is not a motor torque or structural qualification. Native simulations do not model membrane bending compliance, wing inertia, drivetrain loads, or zero-inflow test stands.
+New runs default to one isolated rigid wing with prescribed motion, positive forward speed, water density and viscosity, and selectable UVLM wake settings. Native aeroelasticity is optional. Estimated pair thrust is twice the isolated single-wing value, without wing interaction. Adaptive searches explore higher mean thrust and lower sampled peak absolute root fluid roll moment together; thrust/torque is a reported ratio, not the sole objective. Root fluid moment is not motor torque or structural qualification. The rigid model omits wing inertia, drivetrain loads, membrane compliance and zero-inflow test stands.
 
 Ptera is maintained by Cameron Urban and contributors under the licenses in the pinned upstream [PteraSoftware repository](https://github.com/camUrban/PteraSoftware/tree/17a98a10f724a743f1b5f1597579b24edf95cf2d). The companion is a separate research application. Third-party license notices remain with their packages. This repository is private; no public distribution license for the companion is granted here.
 
@@ -53,3 +53,8 @@ The previous master is preserved in `outputs/master_runs_old.xlsx` and `outputs/
 
 
 The torque–thrust comparison defaults to the highest observed mean thrust in each editable torque band. Empty bands are not filled, and each winner reports the number of evaluated designs in its band. The full observed Pareto frontier remains selectable. PNG/CSV exports preserve actual torque, span, band membership, and winner flags; grouping never imposes a simulation torque ceiling. Initial adjustment changes apply when rebuilding per-chord rows; the preview reports the effective row step sizes.
+
+
+Adaptive studies support **Parallel Ptera processes** (GUI default 4; 1 runs serially). Independent span seeds and neighbor cases run in isolated processes. One coordinator reserves unique case IDs, checks completed and in-flight geometries, enforces shared budgets, and writes the catalog and combined histories. Completed cases save while other cases are running; poll responses are fed back in request order. Temporary per-process output staging is removed after completion. Stop study ends the worker process tree on Windows. More processes increase memory use, and speedup depends on solver resolution and animation rendering.
+
+See [OPTIMIZATION_STRATEGY.md](OPTIMIZATION_STRATEGY.md) for the current search policy, seed families, reuse rules, and validation limits.

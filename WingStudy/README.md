@@ -1,3 +1,5 @@
+Current adaptive-search policy: see [Optimization strategy](../OPTIMIZATION_STRATEGY.md). It defines the multi-family search, bounded refinement, parallel execution, geometry/simulation codes, and torque-band comparison defaults. Older feature notes below remain for reading existing studies.
+
 # Current workflow: maximize thrust / peak root torque across spans
 
 **Selectable 3D axes:** X, Y and Z can each use wing area, leading-edge length, active root-to-tip span, aspect ratio, thrust/peak-root-torque ratio, peak root torque, or mean thrust. Choose three different parameters. Leading-edge length sums the active section segments in 3D, including leading-edge sweep and dihedral; removed zero-chord sections are excluded. Torque is peak absolute single-wing root roll moment (N m). Color follows Z, and interpolation remains bounded in the selected X/Y plane. Exports record the selected parameter names, plotted coordinates and physical values with their proper units. Zero torque is allowed when no selected axis requires dividing by it.
