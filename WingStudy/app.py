@@ -257,7 +257,7 @@ class Handler(BaseHTTPRequestHandler):
                 directory=study_path(data['study'])
                 events=model.read_json(directory/'evolution.json') if (directory/'evolution.json').exists() else []
                 files=[str((directory/'comparisons'/n).relative_to(model.OUTPUTS)).replace(chr(92),'/') for n in ('adaptive_progress.png','adaptive_evolution.webp') if (directory/'comparisons'/n).exists()]
-                return self.send({'events':events,'files':files,'objective':model.read_json(directory/'manifest.json').get('adaptive_search',{}).get('objective','legacy_constrained_thrust'),'summary':model.read_json(directory/'adaptive_summary.json') if (directory/'adaptive_summary.json').exists() else {}})
+                return self.send({'events':events,'files':files,'hypervolume':model.read_json(directory/'adaptive_hypervolume.json') if (directory/'adaptive_hypervolume.json').exists() else None,'progress_csv':str((directory/'comparisons/adaptive_progress.csv').relative_to(model.OUTPUTS)).replace(chr(92),'/') if (directory/'comparisons/adaptive_progress.csv').exists() else None,'objective':model.read_json(directory/'manifest.json').get('adaptive_search',{}).get('objective','legacy_constrained_thrust'),'summary':model.read_json(directory/'adaptive_summary.json') if (directory/'adaptive_summary.json').exists() else {}})
             if path == "/api/torque-frontier":
                 import torque_frontier
                 if data.get('study')!='master':study_path(data['study'])

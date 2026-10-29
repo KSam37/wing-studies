@@ -15,17 +15,18 @@ DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
     'root_chord_m':.2,'maximum_root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':None,
     'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
     'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
-    'improvement_pct':.2,'frontier_parents':8,'decreasing':True,'paired_moves':True,'bounds':[]}
+    'improvement_pct':.2,'frontier_parents':8,'coordinated_moves':True,'decreasing':True,'paired_moves':True,'bounds':[]}
 
 
 def options(model,config):
     r={**DEFAULT,**config.get('adaptive_search',{})}
     for obsolete in ('torque_min_nm','torque_max_nm','torque_count'):r.pop(obsolete,None)
     r['objective']='pareto_mean_thrust_peak_root_torque_v1'
+    r['search_algorithm']='per_parent_direct_poll_v2'
     for key in ('span_count','node_count','simulation_budget','evaluation_budget','max_passes','frontier_parents'):
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
     for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
-        r[key]=model.number(r[key],key.replace('_',' '),.01 if 'chord' in key else 1e-12)
+        r[key]=model.number(r[key],key.replace('_',' '),0 if key=='tip_chord_m' else .01 if 'chord' in key else 1e-12)
     upper=r.get('maximum_chord_m')
     r['maximum_chord_m']=None if upper in (None,'') else model.number(upper,'Maximum chord',r['minimum_chord_m'])
     r['shrink_factor']=model.number(r['shrink_factor'],'Step shrink factor',.01,.99)
@@ -41,7 +42,9 @@ def options(model,config):
     r['maximum_root_chord_m']=model.number(root_max,'Maximum root width',r['minimum_chord_m'])
     r['bounds']=[]
     for i,b in enumerate(raw):
-        lo=model.number(b.get('min_m',r['minimum_chord_m']),f'Chord {i+1} minimum',r['minimum_chord_m'])
+        floor=r['minimum_chord_m'] if i<2 else 0.
+        lo=model.number(b.get('min_m',floor),f'Chord {i+1} minimum',floor)
+        if 0<lo<r['minimum_chord_m']:raise ValueError('Chord bounds must be zero or at least the positive chord minimum.')
         upper=b.get('max_m',r['maximum_chord_m'])
         hi=None if upper in (None,'') else model.number(upper,f'Chord {i+1} maximum',lo,r['maximum_chord_m'])
         if hi is None:hi=r['maximum_chord_m']
@@ -67,7 +70,10 @@ def seed(r):
         value=min(b['max_m'] if b['max_m'] is not None else math.inf,max(b['min_m'],value))
         if r['decreasing'] and out:value=min(value,out[-1])
         if value<b['min_m']-1e-12:raise ValueError('Per-node bounds cannot form a decreasing seed.')
+        value=round(value,12)
+        if 0<value<r['minimum_chord_m']-1e-12:value=0. if b['min_m']==0 else r['minimum_chord_m']
         out.append(round(value,12))
+    if not valid(out,r):raise ValueError('Seed must have two positive sections followed only by optional trailing zeros.')
     return out
 
 
@@ -95,7 +101,12 @@ def plan(model,config):
 
 
 def valid(chords,r):
-    return all(b['min_m']-1e-12<=c<=(b['max_m'] if b['max_m'] is not None else math.inf)+1e-12 for c,b in zip(chords,r['bounds'])) and (not r['decreasing'] or all(a>=b-1e-12 for a,b in zip(chords,chords[1:])))
+    if len(chords)!=len(r['bounds']):return False
+    zero=next((i for i,c in enumerate(chords) if c==0),len(chords))
+    return (zero>=2 and all(c==0 for c in chords[zero:])
+        and all(c==0 or c>=r['minimum_chord_m']-1e-12 for c in chords)
+        and all(b['min_m']-1e-12<=c<=(b['max_m'] if b['max_m'] is not None else math.inf)+1e-12 for c,b in zip(chords,r['bounds']))
+        and (not r['decreasing'] or all(a>=b-1e-12 for a,b in zip(chords,chords[1:]))))
 
 
 def score(row):
@@ -158,53 +169,55 @@ def frontier_parents(archive,expanded,count,resolution):
 
 
 def neighbor(chords,nodes,direction,steps,r):
-    candidate=chords[:]
-    for i in nodes:candidate[i]=round(candidate[i]+direction*steps[i],12)
-    if len(nodes)==1:
-        i=nodes[0];b=r['bounds'][i]
-        lo=b['min_m'];hi=b['max_m'] if b['max_m'] is not None else math.inf
-        if r['decreasing']:
-            if i:hi=min(hi,chords[i-1])
-            if i+1<len(chords):lo=max(lo,chords[i+1])
-        candidate[i]=round(max(lo,min(hi,candidate[i])),12)
-    return candidate if candidate!=chords and valid(candidate,r) else None
+    from pareto_poll import candidate
+    weights=[float(direction) if i in nodes else 0. for i in range(len(chords))]
+    return candidate(chords,weights,steps,r,valid)
 
 
 def climb(r,span,job):
-    """Branch over a sampled Pareto archive from one triangle; yield each solve."""
-    chords=seed(r);steps=[b['step_m'] for b in r['bounds']]
-    meta={'job':job,'span_m':span,'objective':r['objective'],'pass':0,'node':None,'step_m':0.,'parent_case':None,'kind':'seed'}
+    """One seed; diverse frontier polls with independent parent step sizes."""
+    from pareto_poll import directions,candidate
+    chords=seed(r);initial_steps=[b['step_m'] for b in r['bounds']]
+    meta={'job':job,'span_m':span,'objective':r['objective'],'search_algorithm':r['search_algorithm'],
+        'pass':0,'node':None,'step_m':0.,'parent_case':None,'kind':'seed'}
     current=yield (chords[:],meta)
-    archive=[];visited={tuple(chords)};expanded={}
+    archive=[];visited={tuple(chords)}
     initial={'case':current,'chords':chords[:],**meta}
+    states={tuple(chords):{'steps':initial_steps,'polls':0,'done':False}}
     def event(entry):
         return {'accepted':True,**entry,'frontier_case_ids':[e['case']['id'] for e in archive],
             'frontier_size':len(archive),'frontier_max_thrust_N':max(objectives(e['case'])[0] for e in archive),
             'frontier_min_torque_Nm':min(objectives(e['case'])[1] for e in archive)}
     if offer(archive,initial):yield ('accepted',event(initial))
-    moves=[(i,) for i in range(len(chords))]
-    if r['paired_moves']:moves += [(i,i+1) for i in range(len(chords)-1)]
+    poll_directions=directions(len(chords),r['paired_moves'],r.get('coordinated_moves',True))
     for iteration in range(1,r['max_passes']+1):
-        parents=frontier_parents(archive,expanded,r['frontier_parents'],r['improvement_pct']/100)
-        if not parents:
-            if not archive and not expanded:parents=[initial] # Probe neighbors of an unsettled/failed seed.
-            else:
-                if max(steps)<=r['minimum_step_m']*(1+1e-12):return
-                steps=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps];expanded={}
-                parents=frontier_parents(archive,expanded,r['frontier_parents'],r['improvement_pct']/100) or [initial]
+        pool=[e for e in (archive or [initial]) if not states[tuple(e['chords'])]['done']]
+        if not pool:return
+        # Give unexplored frontier parents a turn before polling an older one again.
+        least=min(states[tuple(e['chords'])]['polls'] for e in pool)
+        pool=[e for e in pool if states[tuple(e['chords'])]['polls']==least]
+        parents=frontier_parents(pool,{},r['frontier_parents'],r['improvement_pct']/100) if archive else pool
         for parent in parents:
-            expanded[tuple(parent['chords'])]=objectives(parent['case']) or (0.,0.)
-            for nodes in moves:
-                for direction in (1,-1):
-                    candidate=neighbor(parent['chords'],nodes,direction,steps,r)
-                    if candidate is None or tuple(candidate) in visited:continue
-                    visited.add(tuple(candidate))
-                    meta={'job':job,'span_m':span,'objective':r['objective'],'pass':iteration,'node':list(nodes),
-                        'step_m':max(abs(candidate[i]-parent['chords'][i]) for i in nodes),
-                        'parent_case':parent['case'].get('id'),'kind':'paired' if len(nodes)>1 else 'coordinate'}
-                    trial=yield (candidate,meta)
-                    entry={'case':trial,'chords':candidate,**meta}
-                    if offer(archive,entry):yield ('accepted',event(entry))
+            state=states[tuple(parent['chords'])];steps=state['steps'][:];success=False
+            for weights,kind in poll_directions:
+                proposed=candidate(parent['chords'],weights,steps,r,valid)
+                if proposed is None or tuple(proposed) in visited:continue
+                visited.add(tuple(proposed))
+                nodes=[i for i,(a,b) in enumerate(zip(parent['chords'],proposed)) if a!=b]
+                meta={'job':job,'span_m':span,'objective':r['objective'],'search_algorithm':r['search_algorithm'],
+                    'pass':iteration,'parent_poll':state['polls']+1,'poll_steps_m':steps[:],'node':nodes,
+                    'step_m':max(abs(proposed[i]-parent['chords'][i]) for i in nodes),
+                    'parent_case':parent['case'].get('id'),'kind':kind}
+                trial=yield (proposed,meta)
+                entry={'case':trial,'chords':proposed,**meta}
+                if offer(archive,entry):
+                    success=True
+                    states[tuple(proposed)]={'steps':steps[:],'polls':0,'done':False}
+                    yield ('accepted',event(entry))
+            state['polls']+=1
+            if not success:
+                state['done']=max(steps)<=r['minimum_step_m']*(1+1e-12)
+                state['steps']=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps]
 
 
 def run_search(r,evaluate,on_accept=lambda event:None):
@@ -240,6 +253,9 @@ def worker(model,study):
             'evaluated_cases':len(rows),'candidate_requests':requests,'cache_hits':cache_hits,'accepted_count':len(events),'message':message,**extra})
     def accept(event):
         events.append({**event,'evaluation':len(rows),'simulations':simulations})
+        from pareto_poll import refresh_hypervolume
+        reference=refresh_hypervolume(events)
+        model.write_json(study/'adaptive_hypervolume.json',reference)
         model.write_json(study/'evolution.json',events)
     def log_trial(chords,meta,row,reuse):
         path=study/'comparisons'/'adaptive_trials.csv';path.parent.mkdir(exist_ok=True)
@@ -299,7 +315,7 @@ def worker(model,study):
         raise
     finally:
         model.write_json(study/'evolution.json',events)
-    model.write_json(study/'adaptive_summary.json',{'new_simulations':simulations,'cache_hits':cache_hits,'candidate_requests':requests,'unique_cases':len(rows),'accepted_changes':len(events),'objective':r['objective'],'frontier_case_ids':{str(job):next(e['frontier_case_ids'] for e in reversed(events) if e['job']==job) for job in {e['job'] for e in events}},'stop_reason':reason})
+    model.write_json(study/'adaptive_summary.json',{'new_simulations':simulations,'cache_hits':cache_hits,'candidate_requests':requests,'unique_cases':len(rows),'accepted_changes':len(events),'objective':r['objective'],'search_algorithm':r['search_algorithm'],'hypervolume':model.read_json(study/'adaptive_hypervolume.json') if events else None,'frontier_case_ids':{str(job):next(e['frontier_case_ids'] for e in reversed(events) if e['job']==job) for job in {e['job'] for e in events}},'stop_reason':reason})
     artifacts(model,study,events)
     export_master(model,manifest.get('browser_url','http://127.0.0.1:8766'))
     if any(row.get('status')=='ok' for row in rows):
@@ -345,14 +361,25 @@ def artifacts(model,study,events):
     plt=model.ieee_style();fig,axes=plt.subplots(3,1,figsize=(7.16,6),layout='constrained')
     for job in sorted({e['job'] for e in events}):
         path=[e for e in events if e['job']==job and e['case'].get('status')=='ok']
-        x=list(range(len(path)))
-        for ax,key,label in zip(axes,['frontier_max_thrust_N','frontier_min_torque_Nm','frontier_size'],['Frontier max thrust (N)','Frontier min torque (N m)','Frontier design count']):
-            ax.plot(x,[e.get(key,float('nan')) for e in path],marker='.',lw=.8,label=f"J{job}: {path[0]['span_m']:g} m" if path else f'J{job}')
+        x=[e.get('evaluation',i+1) for i,e in enumerate(path)]
+        summary=model.read_json(study/'adaptive_summary.json') if (study/'adaptive_summary.json').exists() else {}
+        end=summary.get('unique_cases',x[-1] if x else 0)
+        for ax,key,label in zip(axes,['frontier_max_thrust_N','frontier_min_torque_Nm','normalized_hypervolume'],['Frontier max thrust (N)','Frontier min torque (N m)','Normalized hypervolume']):
+            ys=[e.get(key,float('nan')) for e in path]
+            ax.plot([*x,end] if x and end>x[-1] else x,[*ys,ys[-1]] if ys and end>x[-1] else ys,marker='.',lw=.8,label=f"J{job}: {path[0]['span_m']:g} m" if path else f'J{job}')
             ax.set_ylabel(label);ax.grid(alpha=.2)
     if len({e['job'] for e in events})<=12:axes[0].legend(fontsize=5,ncol=2)
-    axes[-1].set_xlabel('Frontier discoveries (per span)')
-    axes[0].set_title('Pareto exploration · frontier progress at each span')
+    axes[-1].set_xlabel('Unique evaluated designs (including cached results)')
+    reference=model.read_json(study/'adaptive_hypervolume.json') if (study/'adaptive_hypervolume.json').exists() else {}
+    reference_note=(f"\nHV reference: T = 0 N, M = {reference['reference_torque_Nm']:.4g} N m; scales: T = {reference['thrust_scale_N']:.4g} N, M = {reference['torque_scale_Nm']:.4g} N m" if reference else '')
+    axes[0].set_title('Pareto exploration · frontier progress at each span'+reference_note,fontsize=8)
     fig.savefig(dest/'adaptive_progress.png',dpi=300);plt.close(fig)
+    with (dest/'adaptive_progress.csv').open('w',newline='',encoding='utf-8') as f:
+        reference=model.read_json(study/'adaptive_hypervolume.json') if (study/'adaptive_hypervolume.json').exists() else {}
+        reference_fields=['reference_thrust_N','reference_torque_Nm','thrust_scale_N','torque_scale_Nm']
+        fields=['evaluation','simulations','job','span_m','frontier_max_thrust_N','frontier_min_torque_Nm','frontier_size','normalized_hypervolume',*reference_fields]
+        writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
+        writer.writerows({k:reference.get(k) if k in reference_fields else e.get(k) for k in fields} for e in events)
     frames=[]
     # Bound media size independently of the auditable, complete event history.
     import numpy as np

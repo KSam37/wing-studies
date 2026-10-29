@@ -2,7 +2,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync(__dirname+'/workflow.js','utf8');
 const values={searchMode:'adaptive',studyName:'Adaptive',maximumMoment:'.625',flapMinimum:'-26',flapMaximum:'34',frequency:'1',speed:'.5',adaptiveSpanMin:'.6',adaptiveSpanMax:'.8',adaptiveSpanCount:'3',adaptiveNodes:'3',adaptiveRoot:'.2',adaptiveRootMax:'.2',adaptiveTip:'.01',adaptiveChordMin:'.01',adaptiveChordMax:'.2',adaptiveStep:'.01',adaptiveMinStep:'.001',adaptiveShrink:'.5',adaptiveImprovement:'.2',adaptiveTorqueMin:'.2',adaptiveTorqueMax:'1.2',adaptiveTorqueCount:'4',adaptiveBudget:'100',adaptiveEvaluations:'500',adaptivePasses:'20',adaptiveParents:'8'};
 const inputs=Object.fromEntries(Object.entries(values).map(([k,value])=>[k,{value}]));
-inputs.adaptiveDecreasing={checked:true};inputs.adaptivePaired={checked:true};
+inputs.adaptiveDecreasing={checked:true};inputs.adaptivePaired={checked:true};inputs.adaptiveCoordinated={checked:true};
 const rows=Array.from({length:3},()=>({querySelectorAll:()=>[{dataset:{key:'min_m'},value:'.01'},{dataset:{key:'max_m'},value:'.2'},{dataset:{key:'step_m'},value:'.01'}]}));
 inputs.adaptiveBounds={querySelectorAll:()=>rows};
 const ctx={$:id=>inputs[id],structuredClone,baseConfig:{settings:{},refinement:{enabled:true},span_search:{enabled:true}},defaults:{settings:{}},numerical:{},baseline:null,refinementActive:false};
@@ -15,3 +15,5 @@ inputs.adaptiveNodes.value='4';assert.throws(()=>ctx.configuration(),/Build/);
 console.log('Adaptive configuration, per-node bounds, shared budgets and node-reset checks passed.');
 
 inputs.adaptiveNodes.value='3';inputs.adaptiveChordMax.value='';rows.forEach(r=>r.querySelectorAll=()=>[{dataset:{key:'min_m'},value:'.01'},{dataset:{key:'max_m'},value:''},{dataset:{key:'step_m'},value:'.01'}]);assert.equal(ctx.configuration().adaptive_search.maximum_chord_m,null);assert.equal(ctx.configuration().adaptive_search.bounds[0].max_m,null);assert.equal(ctx.configuration().adaptive_search.maximum_root_chord_m,.2);
+
+assert.equal(ctx.configuration().adaptive_search.coordinated_moves,true);inputs.adaptiveCoordinated.checked=false;assert.equal(ctx.configuration().adaptive_search.coordinated_moves,false);

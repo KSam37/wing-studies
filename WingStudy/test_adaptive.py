@@ -58,9 +58,35 @@ class AdaptiveChecks(unittest.TestCase):
         self.assertAlmostEqual(case['span_m'],.6)
         self.assertTrue(all(s['chord_m']>=.01 for s in case['sections']))
         self.assertIsNotNone(model.build_solver(case,p['settings']))
-        for key,value in [('minimum_chord_m',.001),('tip_chord_m',0),('minimum_step_m',.1),('span_max_m',.4),('shrink_factor',1)]:
+        for key,value in [('minimum_chord_m',.001),('tip_chord_m',-1),('minimum_step_m',.1),('span_max_m',.4),('shrink_factor',1)]:
             invalid=copy.deepcopy(c);invalid['adaptive_search'][key]=value
             with self.assertRaises(ValueError):adaptive.plan(model,invalid)
+
+    def test_minimum_tip_rounding_does_not_remove_a_valid_seed_tip(self):
+        for count in (3,4,5,8,16):
+            c=self.config();c['adaptive_search']['node_count']=count
+            r=adaptive.options(model,c)
+            self.assertEqual(adaptive.seed(r)[-1],.01)
+            p=adaptive.plan(model,c)
+            self.assertEqual(p['cases'][0]['omitted_zero_chord_count'],0)
+            self.assertAlmostEqual(p['cases'][0]['span_m'],.6)
+
+    def test_zero_suffix_can_shorten_any_outboard_node_without_disconnection(self):
+        c=self.config();c['adaptive_search'].update(node_count=5,tip_chord_m=0)
+        r=adaptive.options(model,c)
+        self.assertTrue(adaptive.valid([.2,.1,.03,0,0],r))
+        self.assertFalse(adaptive.valid([.2,.1,0,.02,0],r))
+        self.assertFalse(adaptive.valid([.2,0,0,0,0],r))
+        self.assertFalse(adaptive.valid([.2,.1,.005,0,0],r))
+        for decreasing in (False,True):
+            r['decreasing']=decreasing
+            proposal=adaptive.neighbor([.2,.1,.03,.02,.01],(2,),-1,[.04]*5,r)
+            self.assertEqual(proposal,[.2,.1,0.,0.,0.])
+        case=model.custom_case(adaptive.design(r,.6,.04,proposal),adaptive.plan(model,c)['settings'])
+        self.assertEqual(case['active_chord_count'],2)
+        self.assertEqual(case['omitted_zero_chord_count'],3)
+        self.assertLess(case['span_m'],.6)
+        self.assertIsNotNone(model.build_solver(case,adaptive.plan(model,c)['settings']))
 
     def test_native_aeroelastic_opt_in_preserves_material_inputs_and_cache_identity(self):
         import catalog
