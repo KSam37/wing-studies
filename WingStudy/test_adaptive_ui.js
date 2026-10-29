@@ -21,3 +21,13 @@ assert.equal(ctx.configuration().adaptive_search.coordinated_moves,true);inputs.
 assert.equal(ctx.configuration().adaptive_search.parallel_workers,4);
 
 assert.equal(c.adaptive_search.budget_only,true);assert.equal(c.adaptive_search.max_passes,undefined);assert.equal(c.adaptive_search.evaluation_budget,undefined);assert.equal(c.adaptive_search.poll_candidates,undefined);
+
+const families=['triangle','square','concave','convex','narrow'].map(value=>({value,checked:true}));
+inputs.adaptiveFamilies={querySelectorAll:selector=>selector==='input:checked'?families.filter(f=>f.checked):families};
+assert.deepEqual(Array.from(ctx.configuration().adaptive_search.seed_families),families.map(f=>f.value));
+families[1].checked=false;
+assert.deepEqual(Array.from(ctx.configuration().adaptive_search.seed_families),['triangle','concave','convex','narrow']);
+families.forEach(f=>f.checked=false);families[0].checked=true;families[4].checked=true;
+assert.deepEqual(Array.from(ctx.configuration().adaptive_search.seed_families),['triangle','narrow']);
+families.forEach(f=>f.checked=false);assert.throws(()=>ctx.configuration(),/Select at least one/);
+console.log('Independent seed checkboxes preserve multiple families and validate empty selection.');

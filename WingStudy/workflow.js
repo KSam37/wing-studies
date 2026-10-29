@@ -36,8 +36,9 @@ function updateBaseline(){
 }
 const adaptiveFields={adaptiveSpanMin:'span_min_m',adaptiveSpanMax:'span_max_m',adaptiveSpanCount:'span_count',adaptiveNodes:'node_count',adaptiveRoot:'root_chord_m',adaptiveRootMax:'maximum_root_chord_m',adaptiveTip:'tip_chord_m',adaptiveChordMin:'minimum_chord_m',adaptiveChordMax:'maximum_chord_m',adaptiveStep:'initial_step_m',adaptiveMinStep:'minimum_step_m',adaptiveShrink:'shrink_factor',adaptiveBudget:'simulation_budget',adaptiveWorkers:'parallel_workers'};
 function adaptiveConfiguration(c){
- c.adaptive_search={enabled:true,budget_only:true,acceptance_rule:'strict_thrust_nonincreasing_torque',seed_families: $('adaptiveFamilies') ? [...$('adaptiveFamilies').selectedOptions].map(o=>o.value) : ['triangle'],...Object.fromEntries(Object.entries(adaptiveFields).map(([id,key])=>[key,key==='maximum_chord_m'&&$(id).value===''?null:Number($(id).value)])),decreasing:$('adaptiveDecreasing').checked,paired_moves:$('adaptivePaired').checked,coordinated_moves:$('adaptiveCoordinated').checked,bounds:[...$('adaptiveBounds').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,input.dataset.key==='max_m'&&input.value===''?null:Number(input.value)])))};
+ c.adaptive_search={enabled:true,budget_only:true,acceptance_rule:'strict_thrust_nonincreasing_torque',seed_families: $('adaptiveFamilies') ? [...$('adaptiveFamilies').querySelectorAll('input:checked')].map(o=>o.value) : ['triangle'],...Object.fromEntries(Object.entries(adaptiveFields).map(([id,key])=>[key,key==='maximum_chord_m'&&$(id).value===''?null:Number($(id).value)])),decreasing:$('adaptiveDecreasing').checked,paired_moves:$('adaptivePaired').checked,coordinated_moves:$('adaptiveCoordinated').checked,bounds:[...$('adaptiveBounds').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,input.dataset.key==='max_m'&&input.value===''?null:Number(input.value)])))};
  if($('adaptiveElastic')?.checked)Object.assign(c.settings,{aeroelastic_enabled:true,spring_constant_rad:Number($('nativeStiffness').value),damping_constant_rad:Number($('nativeDamping').value),wing_density:Number($('nativeMass').value),step_discards:Number($('nativeHold').value)});
+ if(!c.adaptive_search.seed_families.length)throw Error('Select at least one starting shape family.');
  if(c.adaptive_search.bounds.length!==c.adaptive_search.node_count)throw Error('Build the per-chord rows after changing adaptive node count.');
  delete c.refinement;delete c.span_search;c.mode='custom';c.workflow='adaptive_pareto';c.optimization={objective:'pareto_mean_thrust_peak_root_torque_v1',constraint:'none'};return c;
 }
@@ -101,7 +102,7 @@ function fill(c,initial=false){
  $('adaptiveDecreasing').checked=c.adaptive_search?.decreasing??true;$('adaptivePaired').checked=c.adaptive_search?.paired_moves??true;$('adaptiveCoordinated').checked=c.adaptive_search?.coordinated_moves??true;
  $('adaptiveElastic').checked=!!c.adaptive_search?.enabled&&!!settings.aeroelastic_enabled;
  for(const [id,key] of Object.entries({nativeStiffness:'spring_constant_rad',nativeDamping:'damping_constant_rad',nativeMass:'wing_density',nativeHold:'step_discards'}))$(id).value=settings[key];
- if($('adaptiveFamilies'))for(const o of $('adaptiveFamilies').options)o.selected=(c.adaptive_search?.seed_families??(initial?['triangle','square','concave','convex','narrow']:['triangle'])).includes(o.value);
+ if($('adaptiveFamilies'))for(const o of $('adaptiveFamilies').querySelectorAll('input'))o.checked=(c.adaptive_search?.seed_families??(initial?['triangle','square','concave','convex','narrow']:['triangle'])).includes(o.value);
  renderAdaptiveBounds(c.adaptive_search?.bounds);updateSearchMode();updateBaseline();preview();
 }
 function wingPoints(row){
