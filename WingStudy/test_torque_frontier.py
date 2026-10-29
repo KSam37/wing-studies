@@ -72,6 +72,9 @@ class FrontierChecks(unittest.TestCase):
             with patch.object(model,'OUTPUTS',root):
                 result=frontier.generate(model,{'study':'saved','maximum_root_moment_nm':.2})
                 self.assertEqual(len(result['points']),2)
+                self.assertEqual(len(result['displayed']),2)
+                widths=[max(p[0] for p in r['outline_m'])-min(p[0] for p in r['outline_m']) for r in result['displayed']]
+                self.assertEqual(widths,[.3,.4])
                 self.assertEqual(result['maximum_torque_nm'],2)
                 self.assertTrue((root/result['files'][0]).is_file())
                 with (root/result['files'][1]).open() as f:

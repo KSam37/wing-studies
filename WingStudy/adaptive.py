@@ -13,7 +13,7 @@ import traceback
 
 
 DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
-    'root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':.2,
+    'root_chord_m':.2,'maximum_root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':None,
     'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
     'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
     'improvement_pct':.2,'decreasing':True,'paired_moves':True,'bounds':[]}
@@ -25,8 +25,10 @@ def options(model,config):
     r['objective']='single_wing_mean_thrust_over_peak_root_torque_v1'
     for key in ('span_count','node_count','simulation_budget','evaluation_budget','max_passes'):
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
-    for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','maximum_chord_m','initial_step_m','minimum_step_m'):
+    for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
         r[key]=model.number(r[key],key.replace('_',' '),.01 if 'chord' in key else 1e-12)
+    upper=r.get('maximum_chord_m')
+    r['maximum_chord_m']=None if upper in (None,'') else model.number(upper,'Maximum chord',r['minimum_chord_m'])
     r['shrink_factor']=model.number(r['shrink_factor'],'Step shrink factor',.01,.99)
     r['improvement_pct']=model.number(r['improvement_pct'],'Minimum improvement (%)',0,100)
     for lo,hi,count,label in [('span_min_m','span_max_m','span_count','Span')]:
@@ -34,13 +36,18 @@ def options(model,config):
     jobs=1 if r['span_min_m']==r['span_max_m'] else r['span_count']
     if jobs>r['evaluation_budget']:raise ValueError('Candidate budget must cover at least one request per span search.')
     if r['minimum_step_m']>r['initial_step_m']:raise ValueError('Minimum step must not exceed initial step.')
-    if r['minimum_chord_m']>r['maximum_chord_m']:raise ValueError('Minimum chord must not exceed maximum chord.')
     n=r['node_count'];raw=r.get('bounds') or [{} for _ in range(n)]
     if len(raw)!=n:raise ValueError('Provide a chord bound/step row for every adaptive node.')
+    root_max=r.get('maximum_root_chord_m',.2)
+    r['maximum_root_chord_m']=model.number(root_max,'Maximum root width',r['minimum_chord_m'])
     r['bounds']=[]
     for i,b in enumerate(raw):
         lo=model.number(b.get('min_m',r['minimum_chord_m']),f'Chord {i+1} minimum',r['minimum_chord_m'])
-        hi=model.number(b.get('max_m',r['maximum_chord_m']),f'Chord {i+1} maximum',lo,r['maximum_chord_m'])
+        upper=b.get('max_m',r['maximum_chord_m'])
+        hi=None if upper in (None,'') else model.number(upper,f'Chord {i+1} maximum',lo,r['maximum_chord_m'])
+        if hi is None:hi=r['maximum_chord_m']
+        if i==0:hi=min(hi if hi is not None else math.inf,r['maximum_root_chord_m'])
+        if hi is not None and hi<lo:raise ValueError('Chord minimum exceeds its maximum.')
         step=model.number(b.get('step_m',r['initial_step_m']),f'Chord {i+1} step',r['minimum_step_m'])
         r['bounds'].append({'min_m':lo,'max_m':hi,'step_m':step})
     if r['span_min_m']<=config['settings']['gap_m']:raise ValueError('Adaptive span must exceed the hinge gap.')
@@ -58,7 +65,7 @@ def seed(r):
     n=r['node_count'];out=[]
     for i,b in enumerate(r['bounds']):
         value=r['root_chord_m']+(r['tip_chord_m']-r['root_chord_m'])*i/(n-1)
-        value=min(b['max_m'],max(b['min_m'],value))
+        value=min(b['max_m'] if b['max_m'] is not None else math.inf,max(b['min_m'],value))
         if r['decreasing'] and out:value=min(value,out[-1])
         if value<b['min_m']-1e-12:raise ValueError('Per-node bounds cannot form a decreasing seed.')
         out.append(round(value,12))
@@ -89,7 +96,7 @@ def plan(model,config):
 
 
 def valid(chords,r):
-    return all(b['min_m']-1e-12<=c<=b['max_m']+1e-12 for c,b in zip(chords,r['bounds'])) and (not r['decreasing'] or all(a>=b-1e-12 for a,b in zip(chords,chords[1:])))
+    return all(b['min_m']-1e-12<=c<=(b['max_m'] if b['max_m'] is not None else math.inf)+1e-12 for c,b in zip(chords,r['bounds'])) and (not r['decreasing'] or all(a>=b-1e-12 for a,b in zip(chords,chords[1:])))
 
 
 def score(row):
@@ -124,7 +131,16 @@ def climb(r,span,job):
             for direction in (1,-1):
                 candidate=chords[:]
                 for i in nodes:candidate[i]=round(candidate[i]+direction*steps[i],12)
-                if not valid(candidate,r):continue
+                # Shorten a coordinate step to its feasible interval. This also lets
+                # root and tip move when the requested step exceeds a neighbor gap.
+                if len(nodes)==1:
+                    i=nodes[0];b=r['bounds'][i]
+                    lo=b['min_m'];hi=b['max_m'] if b['max_m'] is not None else math.inf
+                    if r['decreasing']:
+                        if i:hi=min(hi,chords[i-1])
+                        if i+1<len(chords):lo=max(lo,chords[i+1])
+                    candidate[i]=round(max(lo,min(hi,candidate[i])),12)
+                if candidate==chords or not valid(candidate,r):continue
                 meta={'job':job,'span_m':span,'objective':r['objective'],'pass':iteration,'node':list(nodes),'step_m':max(steps[i] for i in nodes),'parent_case':parent.get('id'),'kind':'paired' if len(nodes)>1 else 'coordinate'}
                 trial=yield (candidate,meta)
                 if better(trial,best,r['improvement_pct']/100):best=trial;best_chords=candidate

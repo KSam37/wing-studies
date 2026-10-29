@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync(__dirname+'/workflow.js','utf8');
+const ctx={esc:String,resultWingScale:800};vm.createContext(ctx);
+vm.runInContext(source.slice(source.indexOf('function wingPoints('),source.indexOf('function drawPreview(')),ctx);
+const wing=span=>({geometry:{stations:[{le:[0,0,0],te:[.2,0,0]},{le:[0,span,0],te:[.01,span,0]}]}});
+const width=svg=>{const p=svg.match(/polygon points="([^"]+)"/)[1].split(' ').map(p=>Number(p.split(',')[0]));return Math.max(...p)-Math.min(...p);};
+assert(Math.abs(width(ctx.outline(wing(.2),false,true))/width(ctx.outline(wing(.4),false,true))-.5)<1e-12);
+assert(ctx.outline({outline_m:[[0,0],[.2,0],[.2,.01],[0,.1]]},true).includes('<polygon'));
+assert(ctx.outline(wing(.2),false,true).includes('0.10 m'));
+console.log('Common physical scale, scale legend, and plot inspection outlines passed.');

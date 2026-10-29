@@ -78,26 +78,33 @@ def generate(model,data):
     shown=spaced_points(in_range,spacing)
     all_range=[{**r,**dimensions(r)} for r in eligible if left<=r[TORQUE]<=right]
     background=sample_background(all_range,points,shown,spacing,left,right)
-    digest=hashlib.sha256(catalog.compact(['wing-markers-v5',mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v6',mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
-    from matplotlib.path import Path as MarkerPath
+    from matplotlib.offsetbox import DrawingArea, AnnotationBbox
+    from matplotlib.patches import Polygon
     plt=model.ieee_style();fig,ax=plt.subplots(figsize=(7.16,4.5),layout='constrained')
     from matplotlib.colors import Normalize
     from matplotlib.cm import ScalarMappable
     ratios=[r[THRUST]/r[TORQUE] for r in all_range if r[TORQUE]>0]
     low=min(ratios,default=0);high=max(ratios,default=1)
     norm=Normalize(low,high if high>low else low+1e-9);cmap=plt.get_cmap('viridis')
-    frontier_ids={identity(r) for r in points}
+    frontier_ids={identity(r) for r in points};displayed=[]
+    import numpy as np
     for row in [*background,*shown]:
-        is_frontier=identity(row) in frontier_ids
-        vertices=[];codes=[]
-        for polygon in model.wing_thumbnail(row,row.get('_settings',{}).get('gap_m',0)):
-            polygon=[(x,-y) for x,y in polygon] # Match the downward chord direction of the GUI top view.
-            vertices.extend([*polygon,polygon[0]])
-            codes.extend([MarkerPath.MOVETO,*([MarkerPath.LINETO]*(len(polygon)-1)),MarkerPath.CLOSEPOLY])
-        ax.scatter([row[TORQUE]],[row[THRUST]],marker=MarkerPath(vertices,codes),s=150*(size/100)**2*(1.5**2 if is_frontier else 1),
-            facecolors=cmap(norm(row[THRUST]/row[TORQUE])) if row[TORQUE]>0 else '#aaa',
-            edgecolors='#172f36' if is_frontier else '#666',linewidths=.7 if is_frontier else .35,zorder=3 if is_frontier else 2)
+        leading,frames=model.custom_frames(row)
+        leading=np.asarray(leading);trailing=[p+f@np.array([s['chord_m'],0,0]) for p,f,s in zip(leading,frames,row['sections'])]
+        polygon=[[float(p[1]),float(p[0])] for p in [*leading,*trailing[::-1]]]
+        displayed.append({**row,'outline_m':polygon,'is_frontier':identity(row) in frontier_ids})
+    extent=max((max(max(p[k] for p in r['outline_m'])-min(p[k] for p in r['outline_m']) for k in (0,1)) for r in displayed),default=.4)
+    points_per_m=30/max(extent,1e-9)*size/100
+    for row in displayed:
+        polygon=np.asarray(row['outline_m']);lo=polygon.min(axis=0);hi=polygon.max(axis=0)
+        width,height=(hi-lo)*points_per_m
+        box=DrawingArea(max(width,1),max(height,1),0,0)
+        vertices=(polygon-lo)*points_per_m;vertices[:,1]=height-vertices[:,1]
+        box.add_artist(Polygon(vertices,facecolor=cmap(norm(row[THRUST]/row[TORQUE])) if row[TORQUE]>0 else '#aaa',edgecolor='#172f36' if row['is_frontier'] else '#888',linewidth=.8 if row['is_frontier'] else .35))
+        ax.add_artist(AnnotationBbox(box,(row[TORQUE],row[THRUST]),frameon=False,pad=0,zorder=3 if row['is_frontier'] else 2))
+        ax.plot(row[TORQUE],row[THRUST],alpha=0)
     ax.set(xlabel='Peak wing-root torque (N m)',ylabel='Mean single-wing thrust (N)')
     ax.margins(.06);ax.grid(alpha=.2)
     if lower is not None or upper is not None:ax.set_xlim(left,right)
@@ -110,5 +117,5 @@ def generate(model,data):
         w=csv.DictWriter(f,fieldnames=fields);w.writeheader()
         displayed_ids={identity(r) for r in [*shown,*background]}
         for r in all_range:w.writerow(dict(zip(fields,[r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')]])))
-    return {'model_mode':mode,'points':points,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
+    return {'model_mode':mode,'points':points,'displayed':displayed,'wing_size_percent':size,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'slider_maximum_torque_nm':min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
         'files':[str((dest/name).relative_to(model.OUTPUTS)).replace(chr(92),'/') for name in ('thrust_torque_frontier.png','thrust_torque_frontier.csv')]}

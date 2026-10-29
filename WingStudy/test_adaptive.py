@@ -31,6 +31,24 @@ class AdaptiveChecks(unittest.TestCase):
             value=re.search('id="'+field+'"[^>]*value="([^"]+)"',html)[1]
             self.assertEqual(float(value),r[key])
 
+    def test_endpoints_are_search_coordinates_and_root_max_is_not_a_fixed_width(self):
+        c=self.config();c['adaptive_search'].update(root_chord_m=.12,tip_chord_m=.04,maximum_root_chord_m=.2,initial_step_m=.04,minimum_step_m=.01,max_passes=1,paired_moves=False)
+        r=adaptive.options(model,c);seen=[]
+        def evaluate(chords,meta):
+            seen.append(chords[:]);return row(str(len(seen)),1,1)
+        adaptive.run_search(r,evaluate)
+        seed=adaptive.seed(r)
+        self.assertTrue(any(v[0]<seed[0] for v in seen))
+        self.assertTrue(any(v[0]>seed[0] for v in seen))
+        self.assertTrue(any(v[-1]<seed[-1] for v in seen))
+        self.assertTrue(any(v[-1]>seed[-1] for v in seen))
+        self.assertTrue(all(.01<=v[0]<=.2 for v in seen))
+        c['adaptive_search'].update(root_chord_m=.2,decreasing=True,tip_chord_m=.19)
+        r=adaptive.options(model,c);seen.clear();adaptive.run_search(r,evaluate)
+        self.assertTrue(any(.19<=v[0]<.2 for v in seen))
+        self.assertTrue(any(v[-1]>.19 for v in seen))
+        self.assertIsNone(r['maximum_chord_m'])
+
     def test_plan_roundtrip_fixed_span_chord_floor_and_native_mesh(self):
         c=self.config();before=copy.deepcopy(c);p=adaptive.plan(model,c)
         self.assertEqual(c,before)

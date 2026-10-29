@@ -34,16 +34,16 @@ function updateBaseline(){
  $('samplesHeading').classList.remove('hidden');
  $('gridHelp').textContent=spanSearch?'Chord search is disabled. Each sampled span uses the selected wing’s exact chord lengths.':'Each node uses an inclusive linspace. Set min=max and samples=1 to hold it fixed. All admissible combinations are explored, subject to the case budget and optional decreasing-chord constraint. Zeros are allowed only as an outboard suffix; at least two positive sections remain.';
 }
-const adaptiveFields={adaptiveSpanMin:'span_min_m',adaptiveSpanMax:'span_max_m',adaptiveSpanCount:'span_count',adaptiveNodes:'node_count',adaptiveRoot:'root_chord_m',adaptiveTip:'tip_chord_m',adaptiveChordMin:'minimum_chord_m',adaptiveChordMax:'maximum_chord_m',adaptiveStep:'initial_step_m',adaptiveMinStep:'minimum_step_m',adaptiveShrink:'shrink_factor',adaptiveImprovement:'improvement_pct',adaptiveBudget:'simulation_budget',adaptiveEvaluations:'evaluation_budget',adaptivePasses:'max_passes'};
+const adaptiveFields={adaptiveSpanMin:'span_min_m',adaptiveSpanMax:'span_max_m',adaptiveSpanCount:'span_count',adaptiveNodes:'node_count',adaptiveRoot:'root_chord_m',adaptiveRootMax:'maximum_root_chord_m',adaptiveTip:'tip_chord_m',adaptiveChordMin:'minimum_chord_m',adaptiveChordMax:'maximum_chord_m',adaptiveStep:'initial_step_m',adaptiveMinStep:'minimum_step_m',adaptiveShrink:'shrink_factor',adaptiveImprovement:'improvement_pct',adaptiveBudget:'simulation_budget',adaptiveEvaluations:'evaluation_budget',adaptivePasses:'max_passes'};
 function adaptiveConfiguration(c){
- c.adaptive_search={enabled:true,...Object.fromEntries(Object.entries(adaptiveFields).map(([id,key])=>[key,Number($(id).value)])),decreasing:$('adaptiveDecreasing').checked,paired_moves:$('adaptivePaired').checked,bounds:[...$('adaptiveBounds').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,Number(input.value)])))};
+ c.adaptive_search={enabled:true,...Object.fromEntries(Object.entries(adaptiveFields).map(([id,key])=>[key,key==='maximum_chord_m'&&$(id).value===''?null:Number($(id).value)])),decreasing:$('adaptiveDecreasing').checked,paired_moves:$('adaptivePaired').checked,bounds:[...$('adaptiveBounds').querySelectorAll('tr')].map(row=>Object.fromEntries([...row.querySelectorAll('input')].map(input=>[input.dataset.key,input.dataset.key==='max_m'&&input.value===''?null:Number(input.value)])))};
  if($('adaptiveElastic')?.checked)Object.assign(c.settings,{aeroelastic_enabled:true,spring_constant_rad:Number($('nativeStiffness').value),damping_constant_rad:Number($('nativeDamping').value),wing_density:Number($('nativeMass').value),step_discards:Number($('nativeHold').value)});
  if(c.adaptive_search.bounds.length!==c.adaptive_search.node_count)throw Error('Build the per-chord rows after changing adaptive node count.');
  delete c.refinement;delete c.span_search;c.mode='custom';c.workflow='adaptive_ratio';c.optimization={objective:'single_wing_thrust_roll_ratio_1pm',constraint:'none'};return c;
 }
 function renderAdaptiveBounds(bounds){
  const n=Number($('adaptiveNodes').value);if(!Number.isInteger(n)||n<2||n>64)throw Error('Use 2–64 chord nodes.');
- $('adaptiveBounds').innerHTML=Array.from({length:n},(_,i)=>{const r=bounds?.[i]||{min_m:Number($('adaptiveChordMin').value),max_m:Number($('adaptiveChordMax').value),step_m:Number($('adaptiveStep').value)};return `<tr><td>${i+1}${i===0?' · root':i===n-1?' · tip':''}</td>${['min_m','max_m','step_m'].map(key=>`<td><input type="number" min="${key==='step_m'?'0':'0.01'}" step="any" data-key="${key}" aria-label="Adaptive chord ${i+1} ${key}" value="${esc(r[key])}"></td>`).join('')}</tr>`;}).join('');
+ $('adaptiveBounds').innerHTML=Array.from({length:n},(_,i)=>{const r=bounds?.[i]||{min_m:Number($('adaptiveChordMin').value),max_m:$('adaptiveChordMax').value===''?null:Number($('adaptiveChordMax').value),step_m:Number($('adaptiveStep').value)};return `<tr><td>${i+1}${i===0?' · root':i===n-1?' · tip':''}</td>${['min_m','max_m','step_m'].map(key=>`<td><input type="number" min="${key==='step_m'?'0':'0.01'}" step="any" data-key="${key}" aria-label="Adaptive chord ${i+1} ${key}" value="${esc(r[key])}"></td>`).join('')}</tr>`;}).join('');
 }
 function updateSearchMode(){
  const adaptive=$('searchMode').value==='adaptive';$('adaptiveControls').classList.toggle('hidden',!adaptive);$('geometryCard').classList.toggle('hidden',adaptive);
@@ -103,14 +103,38 @@ function fill(c,initial=false){
  for(const [id,key] of Object.entries({nativeStiffness:'spring_constant_rad',nativeDamping:'damping_constant_rad',nativeMass:'wing_density',nativeHold:'step_discards'}))$(id).value=settings[key];
  renderAdaptiveBounds(c.adaptive_search?.bounds);updateSearchMode();updateBaseline();preview();
 }
-function outline(row,large=false){
- const stations=row.geometry?.stations;
- if(!stations?.length)return '<p class="help">Geometry preview unavailable</p>';
- const lead=stations.map(s=>s.le?[s.le[1],s.le[0]]:[s.y_m,s.x_m]);
- const trail=stations.toReversed().map(s=>s.te?[s.te[1],s.te[0]]:[s.y_m,s.x_m+s.chord_m]);
- const points=[...lead,...trail],lo=[0,1].map(i=>Math.min(...points.map(p=>p[i]))),hi=[0,1].map(i=>Math.max(...points.map(p=>p[i])));
- const scale=Math.min(390/Math.max(hi[0]-lo[0],1e-9),185/Math.max(hi[1]-lo[1],1e-9));
- return `<svg ${large?'class="preview"':''} viewBox="0 0 440 240" role="img" aria-label="${esc(row.design_name||row.id||'Wing shape')}"><polygon points="${points.map(p=>[220+(p[0]-(hi[0]+lo[0])/2)*scale,120+(p[1]-(hi[1]+lo[1])/2)*scale].join(',')).join(' ')}" fill="#c6e6df" stroke="#007d72" stroke-width="2"/></svg>`;
+function wingPoints(row){
+ if(row.outline_m)return row.outline_m;
+ const stations=row.geometry?.stations||[];
+ return [...stations.map(s=>s.le?[s.le[1],s.le[0]]:[s.y_m,s.x_m]),...stations.toReversed().map(s=>s.te?[s.te[1],s.te[0]]:[s.y_m,s.x_m+s.chord_m])];
+}
+function inspectWing(row){
+ let dialog=$('wingInspector');
+ if(!dialog){dialog=document.createElement('dialog');dialog.id='wingInspector';document.body.append(dialog);}
+ dialog.innerHTML=`<button autofocus id="closeWingInspector">Close</button><h2>${esc(row.design_name||row.id)} · ${esc(row.id)}</h2>${outline(row,true)}${values(row)}<p class="help">${esc(row._study||currentStudy)} / ${esc(row.id)} · enlarged inspection view</p><h3>Chord widths (m), root to tip</h3><p>${(row.sections||[]).map(s=>fmt(s.chord_m)).join(' · ')}</p>`;
+ $('closeWingInspector').onclick=()=>dialog.close();dialog.showModal();
+}
+function outline(row,large=false,physical=false){
+ const points=wingPoints(row);
+ if(!points.length)return '<p class="help">Geometry preview unavailable</p>';
+ const lo=[0,1].map(i=>Math.min(...points.map(p=>p[i]))),hi=[0,1].map(i=>Math.max(...points.map(p=>p[i])));
+ const scale=physical?resultWingScale:Math.min(390/Math.max(hi[0]-lo[0],1e-9),185/Math.max(hi[1]-lo[1],1e-9));
+ return `<svg ${large?'class="preview"':''} viewBox="0 0 440 240" role="img" aria-label="${esc(row.design_name||row.id||'Wing shape')}"><polygon points="${points.map(p=>[220+(p[0]-(hi[0]+lo[0])/2)*scale,110+(p[1]-(hi[1]+lo[1])/2)*scale].join(',')).join(' ')}" fill="#c6e6df" stroke="#007d72" stroke-width="2"/>${physical?`<path d="M20 220h${scale*.1}" stroke="#17313d" stroke-width="3"/><text x="20" y="208" font-size="24">0.10 m</text>`:''}</svg>`;
+}
+let resultWingScale=800;
+
+function mountFrontierPlot(data){
+ const rows=data.displayed||[],W=900,H=520,L=72,R=865,T=35,B=450;
+ const min=data.minimum_torque_nm,max=data.slider_maximum_torque_nm;
+ const ymax=Math.max(...rows.map(r=>r.single_wing_mean_thrust_N),1)*1.15;
+ const extents=rows.map(r=>[0,1].map(k=>Math.max(...r.outline_m.map(p=>p[k]))-Math.min(...r.outline_m.map(p=>p[k]))));
+ const scale=65/Math.max(.01,...extents.flat())*(data.wing_size_percent||100)/100;
+ const ratios=rows.filter(r=>r.single_wing_peak_abs_roll_moment_Nm>0).map(r=>r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm),loRatio=Math.min(...ratios),hiRatio=Math.max(...ratios);
+ const color=r=>{if(!(r.single_wing_peak_abs_roll_moment_Nm>0))return '#aaa';const v=(r.single_wing_mean_thrust_N/r.single_wing_peak_abs_roll_moment_Nm-loRatio)/(hiRatio-loRatio||1);return `hsl(${260-200*v} 65% 42%)`;};
+ const ticks=Array.from({length:6},(_,i)=>{const x=L+(R-L)*i/5,y=B-(B-T)*i/5;return `<path d="M${x} ${T}V${B}M${L} ${y}H${R}" stroke="#e3ebeb"/><text x="${x}" y="${B+22}" text-anchor="middle">${fmt(min+(max-min)*i/5)}</text><text x="${L-12}" y="${y+5}" text-anchor="end">${fmt(ymax*i/5)}</text>`;}).join('');
+ const glyphs=rows.map((r,i)=>{const pts=r.outline_m,lo=[0,1].map(k=>Math.min(...pts.map(p=>p[k]))),hi=[0,1].map(k=>Math.max(...pts.map(p=>p[k])));const x=L+(r.single_wing_peak_abs_roll_moment_Nm-min)/(max-min||1)*(R-L),y=B-r.single_wing_mean_thrust_N/ymax*(B-T);return `<g transform="translate(${x} ${y})"><g class="plot-wing" data-plot-wing="${i}" tabindex="0" role="button" aria-label="Inspect ${esc(r.design_name||r.id)}"><title>${esc(r.design_name||r.id)} · span ${fmt(r.single_wing_span_m)} m · click for metrics</title><circle r="12" fill="transparent"/><polygon points="${pts.map(p=>[(p[0]-(lo[0]+hi[0])/2)*scale,(p[1]-(lo[1]+hi[1])/2)*scale].join(',')).join(' ')}" fill="${color(r)}" stroke="${r.is_frontier?'#102f3c':'#9aa'}" stroke-width="${r.is_frontier?2:0.7}"/></g></g>`;}).join('');
+ $('interactiveFrontier').innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:550px" aria-label="Interactive torque thrust wings with shared physical scale">${ticks}<path d="M${L} ${T}V${B}H${R}" fill="none" stroke="#17313d"/><text x="460" y="503" text-anchor="middle">Peak wing-root torque (N m)</text><text transform="translate(18 250) rotate(-90)" text-anchor="middle">Mean single-wing thrust (N)</text><path d="M${L} 16h${scale*.1}" stroke="#17313d" stroke-width="3"/><text x="${L+scale*.1+10}" y="21">0.10 m · common wing scale</text>${glyphs}</svg><p class="help">Color: purple → green = increasing thrust / torque. Dark outline: frontier. Hover temporarily magnifies; click or press Enter for metrics.</p>`;
+ document.querySelectorAll('[data-plot-wing]').forEach(g=>{g.onclick=()=>inspectWing(rows[Number(g.dataset.plotWing)]);g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();g.onclick();}};g.onmouseenter=()=>{const anchor=g.parentElement,svg=anchor.parentElement;if(svg.lastElementChild!==anchor)svg.append(anchor);};});
 }
 function drawPreview(){
  const row=planData?.cases[Number($('previewCase').value)||0];if(!row)return;
@@ -193,6 +217,9 @@ function renderResults(){
  if(!report)return;
  $('spanTabs').innerHTML=[{key:'all'},...(report.span_classes||[])].map(c=>`<button role="tab" aria-selected="${selectedSpanClass===c.key}" data-span="${esc(c.key)}" class="${selectedSpanClass===c.key?'primary':''}" style="flex-shrink:0">${c.key==='all'?'All spans':c.key==='unknown'?'Unknown span':fmt(Number(c.key))+' m total'}</button>`).join('');
  document.querySelectorAll('[data-span]').forEach(b=>b.onclick=()=>{if(selectedSpanClass===b.dataset.span)return;selectedSpanClass=b.dataset.span;page=0;evaluate();});
+ const allPoints=report.rows.flatMap(wingPoints);
+ const maxSpan=Math.max(.4,...studies.map(s=>(s.config?.adaptive_search?.span_max_m||0)/2),...allPoints.map(p=>Math.abs(p[0])));
+ const maxChord=Math.max(.2,...allPoints.map(p=>Math.abs(p[1])));resultWingScale=Math.min(360/maxSpan,175/maxChord);
  const rows=report.rows.filter(r=>$('showRejected').checked||['Eligible','Frontier'].includes(r.torque_status));
  $('resultSummary').textContent=`${report.frontier_count} frontier designs · ${report.eligible_count} eligible of ${report.total_count} cases · full peak-torque range, with no single cutoff. Ordered by mean thrust / peak root torque${selectedSpanClass==='all'?'':'; span class '+selectedSpanClass+' m total'}.`;
  const study=studies.find(s=>s.id===currentStudy),s=study?.config.settings;
@@ -200,7 +227,8 @@ function renderResults(){
  if(report.model_mode)$('resultSummary').textContent+=` Model: ${report.model_mode==='aeroelastic'?'native aeroelastic':'rigid'}.`;
  if(s)$('resultSummary').textContent+=` Study motion: ${s.frequency_hz} Hz, speed ${s.speed_mps} m/s; ${study.config.motion_range?study.config.motion_range.minimum_deg+'° to '+study.config.motion_range.maximum_deg+'°':'half-stroke '+s.amplitude_deg+'°'}.`;
  page=Math.max(0,Math.min(page,Math.ceil(rows.length/25)-1));
- $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.ratio_rank??'—'}</div>${outline(r)}<div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${sourceNote(r)}${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(rowKey(r))}">Refine this shape</button><button data-resize="${esc(rowKey(r))}">Resize span</button>${links(r)}<button data-evolution-gif="${esc(rowKey(r))}" ${evolutionSource(r)?'':'disabled title="No adaptive design history was recorded"'}>Export design evolution GIF</button><span class="gif-links"></span></div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
+ $('rankedRows').innerHTML=rows.slice(page*25,(page+1)*25).map(r=>`<article class="wing-row"><div class="rank">${r.ratio_rank??'—'}</div><button class="wing-thumb" data-inspect-wing="${esc(rowKey(r))}" aria-label="Inspect ${esc(r.design_name||r.id)}">${outline(r,false,true)}</button><div><div class="row-top"><strong>${esc(r.design_name||r.id)} · ${esc(r.id)}</strong><span class="badge ${r.thrust_rank?'':'bad'}">${esc(r.torque_status)}</span></div>${sourceNote(r)}${values(r)}${r.error?`<details><summary>Solver error</summary><pre>${esc(r.error)}</pre></details>`:''}<div class="actions"><button data-refine="${esc(rowKey(r))}">Refine this shape</button><button data-resize="${esc(rowKey(r))}">Resize span</button>${links(r)}<button data-evolution-gif="${esc(rowKey(r))}" ${evolutionSource(r)?'':'disabled title="No adaptive design history was recorded"'}>Export design evolution GIF</button><span class="gif-links"></span></div></div></article>`).join('')||'<p class="help">No cases in this view. Check “Show rejected cases” to inspect exclusions.</p>';
+ document.querySelectorAll('[data-inspect-wing]').forEach(b=>b.onclick=()=>inspectWing(report.rows.find(r=>rowKey(r)===b.dataset.inspectWing)));
  document.querySelectorAll('[data-evolution-gif]').forEach(button=>button.onclick=async()=>{
   const row=report.rows.find(r=>rowKey(r)===button.dataset.evolutionGif);if(!row)return;
   const source=evolutionSource(row);if(!source)return;
@@ -285,10 +313,11 @@ $('makeFrontier').onclick=async()=>{
   const data=await api('torque-frontier',{study:currentStudy,span_class:selectedSpanClass,model_mode:$('resultsModel')?.value||'rigid',wing_size_percent:Number($('frontierSize').value),minimum_spacing_nm:Number($('frontierSpacing').value),torque_min_nm:$('frontierMin').value,torque_max_nm:$('frontierMax').value,generations:['current','old','adaptive'].filter(g=>$(g+'Master')?.checked)});
   if(serial!==frontierSerial)return;frontierData=data;
   const min=data.minimum_torque_nm,max=data.slider_maximum_torque_nm;
-  $('frontierResult').innerHTML=`<img src="/files/${esc(data.files[0])}" alt="Wing silhouettes showing maximum thrust available versus allowable root torque" style="width:100%;max-width:760px"><div class="actions">${data.files.map(f=>`<a href="/files/${esc(f)}" download>${f.endsWith('.png')?'Wing plot PNG':'Frontier designs CSV'}</a>`).join('')}</div><label>Explore allowable root torque <output id="frontierTorqueValue"></output><input id="frontierTorque" type="range" min="${min}" max="${max}" step="any" value="${min}" style="width:100%"></label><label>Frontier design<select id="frontierPoint">${data.points.map((r,i)=>r.single_wing_peak_abs_roll_moment_Nm<=max?`<option value="${i}">${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m → ${fmt(r.single_wing_mean_thrust_N)} N · ${esc(r.design_name||r.id)}</option>`:'').join('')}</select></label><div id="frontierWing"></div>`;
+  $('frontierResult').innerHTML=`<div id="interactiveFrontier" style="overflow:auto"></div><div class="actions">${data.files.map(f=>`<a href="/files/${esc(f)}" download>${f.endsWith('.png')?'Wing plot PNG':'Frontier designs CSV'}</a>`).join('')}</div><label>Explore allowable root torque <output id="frontierTorqueValue"></output><input id="frontierTorque" type="range" min="${min}" max="${max}" step="any" value="${min}" style="width:100%"></label><label>Frontier design<select id="frontierPoint">${data.points.map((r,i)=>r.single_wing_peak_abs_roll_moment_Nm<=max?`<option value="${i}">${fmt(r.single_wing_peak_abs_roll_moment_Nm)} N m → ${fmt(r.single_wing_mean_thrust_N)} N · ${esc(r.design_name||r.id)}</option>`:'').join('')}</select></label><div id="frontierWing"></div>`;
+  mountFrontierPlot(data);
   $('frontierTorque').oninput=inspectFrontier;
   $('frontierPoint').onchange=()=>{$('frontierTorque').value=data.points[Number($('frontierPoint').value)].single_wing_peak_abs_roll_moment_Nm;inspectFrontier();};
-  $('frontierStatus').textContent=`${data.model_mode==='aeroelastic'?'Native aeroelastic':'Rigid'} · ${data.eligible_count} eligible designs · ${data.plotted_count} frontier wings + ${data.background_count} sampled other designs (${data.range_count} frontier designs in range) · minimum spacing ${fmt(data.minimum_spacing_nm)} N m. Color: thrust / torque (1/m). Frontier wings 50% larger; no connecting lines. Plot range affects display only; all eligible data remain available. Mixed study driving conditions may differ.`;
+  $('frontierStatus').textContent=`${data.model_mode==='aeroelastic'?'Native aeroelastic':'Rigid'} · ${data.eligible_count} eligible designs · ${data.plotted_count} frontier wings + ${data.background_count} sampled other designs (${data.range_count} frontier designs in range) · minimum spacing ${fmt(data.minimum_spacing_nm)} N m. Color: thrust / torque (1/m). Wings share a physical scale; dark outlines identify the frontier. Hover to enlarge; click for metrics. Plot range affects display only; all eligible data remain available. Mixed study driving conditions may differ.`;
   inspectFrontier();
  }catch(error){if(serial===frontierSerial)$('frontierStatus').textContent=error.message;}
  finally{if(serial===frontierSerial)$('makeFrontier').disabled=false;}
