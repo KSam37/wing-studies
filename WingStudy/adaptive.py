@@ -15,6 +15,7 @@ DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
     'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
     'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
     'improvement_pct':.2,'frontier_parents':3,'parallel_workers':1,'poll_candidates':0,'seed_families':['triangle'],
+    'acceptance_rule':'strict_thrust_nonincreasing_torque',
     'coordinated_moves':True,'decreasing':True,'paired_moves':True,'bounds':[]}
 
 SEED_FAMILIES=('triangle','square','concave','convex','narrow')
@@ -28,7 +29,7 @@ def options(model,config):
     r={**DEFAULT,**config.get('adaptive_search',{})}
     for obsolete in ('torque_min_nm','torque_max_nm','torque_count'):r.pop(obsolete,None)
     r['objective']='pareto_mean_thrust_peak_root_torque_v1'
-    r['search_algorithm']='family_beam_direct_poll_v3'
+    r['search_algorithm']='strict_parent_ascent_v4' if r['acceptance_rule']=='strict_thrust_nonincreasing_torque' else 'family_beam_direct_poll_v3'
     # New GUI studies have one user-facing budget. Retain legacy limits only
     # for old saved configurations and direct callers that explicitly use them.
     budget_only=bool(r.get('budget_only',False))
@@ -197,8 +198,60 @@ def neighbor(chords,nodes,direction,steps,r):
     return candidate(chords,weights,steps,r,valid)
 
 
+def improves(candidate_row,parent_row):
+    """Parent dominance: neither metric worsens and at least one improves."""
+    a=objectives(candidate_row);b=objectives(parent_row)
+    return a is not None and b is not None and dominates(a,b)
+
+
+def strict_climb(r,span,job,family):
+    from pareto_poll import directions,candidate
+    chords=seed(r,family);steps=[b['step_m'] for b in r['bounds']]
+    meta={'job':job,'span_m':span,'seed_family':family,'objective':r['objective'],
+        'search_algorithm':r['search_algorithm'],'pass':0,'node':None,'step_m':0.,'parent_case':None,'kind':'seed'}
+    current=yield (chords[:],meta)
+    if objectives(current) is None:return
+    def event(row,widths,metadata):
+        return {'accepted':True,'evolution_role':'seed' if metadata['kind']=='seed' else 'improvement',
+            'case':row,'chords':widths[:],**metadata,'frontier_case_ids':[row['id']],
+            'frontier_size':1,'frontier_max_thrust_N':objectives(row)[0],'frontier_min_torque_Nm':objectives(row)[1]}
+    yield ('accepted',event(current,chords,meta))
+    basis=directions(len(chords),r['paired_moves'],r.get('coordinated_moves',True))
+    visited={tuple(chords)};offset=0;iteration=0
+    while r.get('max_passes') is None or iteration<r['max_passes']:
+        iteration+=1;cap=r.get('poll_candidates',0) or len(basis)
+        block=basis[offset:offset+cap];offset+=len(block);pending=[]
+        for weights,kind in block:
+            proposed=candidate(chords,weights,steps,r,valid)
+            if proposed is None or tuple(proposed) in visited:continue
+            visited.add(tuple(proposed))
+            nodes=[i for i,(a,b) in enumerate(zip(chords,proposed)) if a!=b]
+            metadata={**meta,'pass':iteration,'kind':kind,'node':nodes,'poll_steps_m':steps[:],
+                'step_m':max(abs(proposed[i]-chords[i]) for i in nodes),'parent_case':current['id']}
+            pending.append((proposed,metadata))
+        responses=(yield ('batch',pending)) if r.get('parallel_workers',1)>1 and pending else None
+        winners=[]
+        for i,(proposed,metadata) in enumerate(pending):
+            if responses is not None:
+                if i>=len(responses):break
+                trial=responses[i]
+            else:trial=yield (proposed,metadata)
+            if improves(trial,current):winners.append((trial,proposed,metadata))
+        if winners:
+            current,chords,chosen=max(winners,key=lambda item:(objectives(item[0])[0],-objectives(item[0])[1]))
+            yield ('accepted',event(current,chords,chosen))
+            offset=0
+            steps=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps]
+        elif offset>=len(basis):
+            if max(steps)<=r['minimum_step_m']*(1+1e-12):return
+            steps=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps];offset=0
+
+
 def climb(r,span,job,family='triangle'):
     """One family/span branch with a bounded, coarse-to-fine active beam."""
+    if r.get('acceptance_rule')=='strict_thrust_nonincreasing_torque':
+        yield from strict_climb(r,span,job,family)
+        return
     from pareto_poll import directions,candidate
     chords=seed(r,family);initial_steps=[b['step_m'] for b in r['bounds']]
     meta={'job':job,'span_m':span,'seed_family':family,'objective':r['objective'],'search_algorithm':r['search_algorithm'],

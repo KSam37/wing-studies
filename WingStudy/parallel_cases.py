@@ -245,7 +245,8 @@ def run_worker(model,study):
     adaptive.artifacts(model,study,events);adaptive.export_master(model,manifest.get('browser_url','http://127.0.0.1:8766'))
     if any(row.get('status')=='ok' for row in rows):
         import torque_frontier
-        try:model.write_json(study/'frontier.json',torque_frontier.generate(model,{'study':study.name}))
+        try:model.write_json(study/'frontier.json',torque_frontier.generate(model,{'study':study.name,
+            'comparison_mode':'evolution' if r.get('acceptance_rule')=='strict_thrust_nonincreasing_torque' else 'frontier'}))
         except ValueError:pass
     model.write_json(study/'status.json',{'state':'complete' if not any(x['status']=='failed' for x in rows) else 'complete_with_errors',
         'total':pipeline.simulations,'completed':pipeline.finished,'evaluated_cases':len(rows),

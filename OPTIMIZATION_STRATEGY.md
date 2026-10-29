@@ -1,7 +1,7 @@
 # Wing optimization strategy
 
-Find useful tradeoffs between **higher settled-cycle mean single-wing thrust**
-and **lower peak absolute single-wing root roll moment**. There is no torque
+Improve **settled-cycle mean single-wing thrust** while keeping **peak absolute
+single-wing root roll moment equal or lower than the current design**. There is no torque
 ceiling in the search. Thrust/torque is a useful reported ratio, not the sole
 objective and not an energy efficiency. Estimated pair thrust is twice the
 isolated-wing result; wing interaction is not modeled.
@@ -17,13 +17,16 @@ isolated-wing result; wing interaction is not modeled.
   stations permit a contiguous removed suffix, leaving two positive sections.
   Root maximum, per-node bounds/steps, and optional decreasing widths apply.
 - Poll coordinate, adjacent-pair, and optional coordinated shape changes.
-  Keep every result and every nondominated thrust/torque tradeoff. Refine a
-  small active beam; continue the child with the greatest marginal
-  two-objective hypervolume gain against the frozen pre-poll archive.
-  Neighborhood size and direction rotation are automatic, sharing work
-  across families without an additional user-facing poll-size control.
-  Shrink adjustment sizes after each poll so archive growth cannot starve
-  fine refinement. Refill the beam when its local branches finish.
+  A candidate wins only if its settled-cycle mean thrust is equal or greater
+  than the current parent's and its peak root torque is equal or lower, with
+  at least one strict improvement.
+  There is no torque tolerance that permits an increase. A torque reduction
+  with unchanged thrust is a win; an exact tie is not. Of the qualifying neighbors, continue the highest
+  thrust (break ties with lower torque). Each family/span follows one chain.
+  All trials remain saved, but only the chosen winner enters evolution history.
+  Neighborhood sampling is automatic. Cover the remaining directions before
+  shrinking steps after an unsuccessful neighborhood; stop when useful local
+  moves are exhausted at the smallest adjustment or the budget is reached.
 - Advance family/span jobs fairly. The GUI uses one maximum-new-simulations
   budget, with no separate pass or candidate-request limit. Four Ptera processes are the
   GUI default; use fewer for memory-heavy cases. One coordinator writes IDs,
@@ -38,8 +41,11 @@ provenance. Only an exact simulation match with available outputs authorizes
 reuse. Current and Old catalogs are both checked through indexed lookups.
 Different time steps correctly require new simulations even for the same wing.
 
-Display the **highest mean thrust in each occupied 0.1 N m torque band** by
-default. Bands and plot filters affect comparison only. Color/filter by seed
+Display **winning evolution designs, with optional seeds**, by default.
+Only recorded improvements meeting the strict parent rule appear. Historical
+tradeoff events are filtered by that same measured parent rule; no history is
+invented for ordinary grid runs. The highest-thrust-per-0.1-N-m-band and full
+frontier views remain optional. Bands and plot filters affect comparison only. Color/filter by seed
 family to compare search basins; retain common physical silhouette scale.
 Results and ancestry save automatically; exports produce additional views.
 

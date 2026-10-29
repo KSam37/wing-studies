@@ -11,7 +11,7 @@ from test_torque_study import row
 class AdaptiveChecks(unittest.TestCase):
     def config(self):
         c=torque_study.default_config(model)
-        c['adaptive_search']={**adaptive.DEFAULT,'enabled':True,'span_min_m':.6,'span_max_m':.6,'span_count':1,'node_count':3,'decreasing':False}
+        c['adaptive_search']={**adaptive.DEFAULT,'enabled':True,'span_min_m':.6,'span_max_m':.6,'span_count':1,'node_count':3,'decreasing':False,'acceptance_rule':'pareto'}
         return c
 
     def test_requested_defaults_match_ui_and_form_four_unconstrained_searches(self):
