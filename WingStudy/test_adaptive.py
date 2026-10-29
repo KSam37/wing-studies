@@ -27,7 +27,7 @@ class AdaptiveChecks(unittest.TestCase):
         self.assertEqual((r['simulation_budget'],r['evaluation_budget']),(500,1000))
         self.assertEqual(p['search_job_count'],4)
         html=(model.HERE/'workflow.html').read_text(encoding='utf-8')
-        for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveMinStep':'minimum_step_m','adaptiveBudget':'simulation_budget','adaptiveEvaluations':'evaluation_budget'}.items():
+        for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveMinStep':'minimum_step_m','adaptiveBudget':'simulation_budget'}.items():
             value=re.search('id="'+field+'"[^>]*value="([^"]+)"',html)[1]
             self.assertEqual(float(value),r[key])
 

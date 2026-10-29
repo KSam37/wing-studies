@@ -132,7 +132,7 @@ class CasePipeline:
             for chords,meta in inputs:
                 for future in list(pending):
                     if future.done():self.finish_future(future,pending.pop(future))
-                if self.requests>=self.r['evaluation_budget']:
+                if self.r.get('evaluation_budget') is not None and self.requests>=self.r['evaluation_budget']:
                     self.stop_reason='Candidate-request budget reached';break
                 self.requests+=1;request=self.requests
                 cfg=copy.deepcopy(self.manifest['config']);cfg.pop('adaptive_search',None)

@@ -16,7 +16,7 @@ from test_torque_study import row
 
 class ParallelChecks(unittest.TestCase):
     def test_parallel_dedup_budget_single_writer_and_partial_poll_history(self):
-        c=test_adaptive.AdaptiveChecks().config();c['adaptive_search'].update(parallel_workers=2,simulation_budget=3,evaluation_budget=30)
+        c=test_adaptive.AdaptiveChecks().config();c['adaptive_search'].update(parallel_workers=2,simulation_budget=3,budget_only=True,evaluation_budget=1,max_passes=1)
         spec=adaptive.plan(model,c);calls=[];active=0;peak=0;lock=threading.Lock();coordinator=threading.get_ident();both_ready=threading.Event()
         def fake(case,settings,study):
             nonlocal active,peak

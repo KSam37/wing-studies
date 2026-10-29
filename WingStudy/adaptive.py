@@ -6,6 +6,7 @@ ceiling. This is a local sampled frontier, not proof of global optimality.
 import copy
 import csv
 import math
+import itertools
 from pathlib import Path
 
 
@@ -28,6 +29,11 @@ def options(model,config):
     for obsolete in ('torque_min_nm','torque_max_nm','torque_count'):r.pop(obsolete,None)
     r['objective']='pareto_mean_thrust_peak_root_torque_v1'
     r['search_algorithm']='family_beam_direct_poll_v3'
+    # New GUI studies have one user-facing budget. Retain legacy limits only
+    # for old saved configurations and direct callers that explicitly use them.
+    budget_only=bool(r.get('budget_only',False))
+    if budget_only:
+        r.update(max_passes=None,evaluation_budget=None,poll_candidates=8)
     families=r['seed_families']
     if not isinstance(families,list) or not families or any(f not in SEED_FAMILIES for f in families):
         raise ValueError('Select at least one supported seed family.')
@@ -35,6 +41,7 @@ def options(model,config):
     r['parallel_workers']=model.number(r['parallel_workers'],'Parallel Ptera processes',1,61,True)
     r['poll_candidates']=model.number(r['poll_candidates'],'Candidates per local poll',0,256,True)
     for key in ('span_count','node_count','simulation_budget','evaluation_budget','max_passes','frontier_parents'):
+        if budget_only and key in ('evaluation_budget','max_passes'):continue
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
     for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
         r[key]=model.number(r[key],key.replace('_',' '),0 if key=='tip_chord_m' else .01 if 'chord' in key else 1e-12)
@@ -45,7 +52,7 @@ def options(model,config):
     for lo,hi,count,label in [('span_min_m','span_max_m','span_count','Span')]:
         if r[hi]<r[lo] or (r[count]==1 and r[lo]!=r[hi]):raise ValueError(label+' linspace needs ordered bounds and at least two samples for different endpoints.')
     jobs=(1 if r['span_min_m']==r['span_max_m'] else r['span_count'])*len(r['seed_families'])
-    if jobs>r['evaluation_budget']:raise ValueError('Candidate budget must cover at least one request per span search.')
+    if not budget_only and jobs>r['evaluation_budget']:raise ValueError('Candidate budget must cover at least one request per span search.')
     if r['minimum_step_m']>r['initial_step_m']:raise ValueError('Minimum step must not exceed initial step.')
     n=r['node_count'];raw=r.get('bounds') or [{} for _ in range(n)]
     if len(raw)!=n:raise ValueError('Provide a chord bound/step row for every adaptive node.')
@@ -79,7 +86,7 @@ def seed(r,family='triangle'):
     for i,b in enumerate(r['bounds']):
         eta=i/(n-1);root=r['root_chord_m'];tip=r['tip_chord_m']
         profile={'triangle':1-eta,'square':1.,'concave':(1-eta)**2,
-            'convex':1-eta**2,'narrow':1-eta}[family]
+            'convex':1-eta**2,'narrow':1.}[family]
         value=tip+(root-tip)*profile
         if family=='narrow':value*=.5
         value=min(b['max_m'] if b['max_m'] is not None else math.inf,max(b['min_m'],value))
@@ -207,7 +214,8 @@ def climb(r,span,job,family='triangle'):
     if offer(archive,initial):yield ('accepted',event(initial))
     poll_directions=directions(len(chords),r['paired_moves'],r.get('coordinated_moves',True))
     parents=[]
-    for iteration in range(1,r['max_passes']+1):
+    iterations=range(1,r['max_passes']+1) if r.get('max_passes') is not None else itertools.count(1)
+    for iteration in iterations:
         # Freeze a small beam for a coarse-to-fine epoch. New discoveries cannot
         # continually displace its champions before they receive finer polls.
         if not parents:

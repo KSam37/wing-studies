@@ -22,6 +22,7 @@ class SearchReviewChecks(unittest.TestCase):
         self.assertLess(shapes[2][3],shapes[0][3])
         self.assertGreater(shapes[3][3],shapes[0][3])
         self.assertLess(shapes[4][0],shapes[0][0])
+        self.assertEqual(shapes[4],[.1]*8)
         c['adaptive_search']['seed_families']=['unknown']
         with self.assertRaises(ValueError):adaptive.plan(model,c)
 
@@ -61,6 +62,22 @@ class SearchReviewChecks(unittest.TestCase):
         adaptive.run_search(r,evaluate)
         self.assertLessEqual(len(seen),25)
         self.assertEqual({max(m['poll_steps_m']) for m in seen if m['pass']},{.04,.02,.01})
+
+    def test_single_budget_ignores_old_pass_and_request_limits(self):
+        c=test_adaptive.AdaptiveChecks().config()
+        c['adaptive_search'].update(budget_only=True,max_passes=1,evaluation_budget=1,simulation_budget=1,
+            seed_families=list(adaptive.SEED_FAMILIES))
+        r=adaptive.options(model,c)
+        self.assertIsNone(r['max_passes'])
+        self.assertIsNone(r['evaluation_budget'])
+        self.assertEqual(r['simulation_budget'],1)
+        seen=[]
+        def evaluate(chords,meta):
+            if meta['pass']>=2:raise adaptive.BudgetReached('test stop')
+            seen.append(meta)
+            return row(str(len(seen)),sum(chords),sum(chords)**2)
+        with self.assertRaises(adaptive.BudgetReached):adaptive.run_search(r,evaluate)
+        self.assertGreater(len(seen),1)
 
 
 if __name__=='__main__':unittest.main()

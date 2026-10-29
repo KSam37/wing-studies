@@ -19,3 +19,5 @@ inputs.adaptiveNodes.value='3';inputs.adaptiveChordMax.value='';rows.forEach(r=>
 assert.equal(ctx.configuration().adaptive_search.coordinated_moves,true);inputs.adaptiveCoordinated.checked=false;assert.equal(ctx.configuration().adaptive_search.coordinated_moves,false);
 
 assert.equal(ctx.configuration().adaptive_search.parallel_workers,4);
+
+assert.equal(c.adaptive_search.budget_only,true);assert.equal(c.adaptive_search.max_passes,undefined);assert.equal(c.adaptive_search.evaluation_budget,undefined);assert.equal(c.adaptive_search.poll_candidates,undefined);

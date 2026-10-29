@@ -9,8 +9,8 @@ isolated-wing result; wing interaction is not modeled.
 ## Search
 
 - Start each requested span from selected families: triangle, rectangular,
-  concave/inset, convex/full, and long/narrow. Narrow seeds halve triangular
-  chord widths before applying fabrication bounds. These labels describe
+  concave/inset, convex/full, and long/narrow. Narrow seeds use a constant half-root chord width (a thin rectangle)
+  before applying fabrication bounds. These labels describe
   starting families, not constraints on their descendants.
 - Chords are **widths**, at fixed equally spaced span stations. Vary root and
   tip too. Default minimum width is 0.01 m; explicit zero minima on outboard
@@ -20,12 +20,12 @@ isolated-wing result; wing interaction is not modeled.
   Keep every result and every nondominated thrust/torque tradeoff. Refine a
   small active beam; continue the child with the greatest marginal
   two-objective hypervolume gain against the frozen pre-poll archive.
-  GUI polls sample 8 feasible directions, rotating the direction list each
-  pass; 0 requests the complete poll. This shares a finite budget across families.
+  Neighborhood size and direction rotation are automatic, sharing work
+  across families without an additional user-facing poll-size control.
   Shrink adjustment sizes after each poll so archive growth cannot starve
   fine refinement. Refill the beam when its local branches finish.
-- Advance family/span jobs fairly. Share strict simulation and request
-  budgets across all jobs. Four independent native Ptera processes are the
+- Advance family/span jobs fairly. The GUI uses one maximum-new-simulations
+  budget, with no separate pass or candidate-request limit. Four Ptera processes are the
   GUI default; use fewer for memory-heavy cases. One coordinator writes IDs,
   histories, results and catalog records. Duplicate requests share a solve.
 
