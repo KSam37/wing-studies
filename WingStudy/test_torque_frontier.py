@@ -8,6 +8,22 @@ import torque_frontier as frontier
 from test_torque_study import row
 
 class FrontierChecks(unittest.TestCase):
+    def test_band_winner_is_highest_thrust_not_highest_ratio(self):
+        rows=[row('ratio',2,.1),row('thrust',3,.8),row('boundary',4,1),row('final',5,2)]
+        chosen=frontier.band_winners(rows,0,2,1)
+        self.assertEqual([r['id'] for r in chosen],['thrust','final'])
+        self.assertEqual([r['torque_band_count'] for r in chosen],[2,2])
+        self.assertEqual(chosen[0]['torque_band_min_nm'],0)
+        self.assertEqual(chosen[-1]['torque_band_max_nm'],2)
+        self.assertTrue(chosen[-1]['torque_band_includes_upper'])
+        self.assertEqual(frontier.band_winners(rows,0,5,1)[-1]['id'],'final')
+        self.assertEqual(len(frontier.band_winners(rows,0,5,1)),3) # Empty bands not invented.
+        self.assertEqual(frontier.band_winners([row('b',3,.8),row('a',3,.7)],0,1,1)[0]['id'],'a')
+        decimal=frontier.band_winners([row('edge',1,.3),row('below',.5,.2999999999999)],0,.5,.1)
+        self.assertEqual([r['torque_band_min_nm'] for r in decimal],[.2,.3])
+        for width in (0,-1,float('nan')):
+            with self.assertRaises(ValueError):frontier.band_winners(rows,0,2,width)
+
     def test_background_sampling_excludes_frontier_and_preserves_vertical_variety(self):
         rows=[row('top',10,1),row('mid',5,1),row('near',5.01,1.001),row('bottom',1,1)]
         sampled=frontier.sample_background(rows,[rows[0]],[rows[0]],.1,0,2)
@@ -81,6 +97,14 @@ class FrontierChecks(unittest.TestCase):
                     values=list(csv.DictReader(f))
                     self.assertEqual([r['case'] for r in values],['a','b'])
                     self.assertEqual(values[-1]['frequency_hz'],'1')
+                bands=frontier.generate(model,{'study':'saved','comparison_mode':'bands','torque_band_width_nm':3,'minimum_spacing_nm':100})
+                self.assertEqual([r['id'] for r in bands['points']],['b'])
+                self.assertEqual(bands['background_count'],0)
+                self.assertEqual(bands['points'][0]['torque_band_count'],2)
+                with (root/bands['files'][1]).open() as f:
+                    band_csv=list(csv.DictReader(f))
+                    self.assertEqual([r['case'] for r in band_csv if r['is_band_winner']=='True'],['b'])
+                    self.assertEqual(len(band_csv),2)
                 zoom=frontier.generate(model,{'study':'saved','torque_min_nm':.2,'torque_max_nm':3})
                 self.assertEqual(zoom['plotted_count'],1)
                 self.assertEqual(len(zoom['points']),2) # Lower-torque winner remains available to slider.

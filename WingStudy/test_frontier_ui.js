@@ -12,3 +12,5 @@ inputs.frontierTorque.value='.1';ctx.inspectFrontier();assert(inputs.frontierWin
 ctx.checkFrontierSelection();inputs.frontierResult.innerHTML='keep';ctx.checkFrontierSelection();assert.equal(inputs.frontierResult.innerHTML,'keep');
 inputs.oldMaster.checked=true;ctx.checkFrontierSelection();assert.equal(inputs.frontierResult.innerHTML,'');
 console.log('Frontier slider, exact boundaries, no-feasible state and source-change checks passed.');
+
+vm.runInContext("frontierData={comparison_mode:'bands',points:[{id:'winner',torque_band_min_nm:0,torque_band_max_nm:1,torque_band_count:12,single_wing_peak_abs_roll_moment_Nm:.8,single_wing_mean_thrust_N:3}]}",ctx);inputs.frontierPoint.value='0';inputs.frontierTorque.value='0';ctx.inspectFrontier();assert(inputs.frontierWing.innerHTML.includes('winner'));assert(inputs.frontierWing.innerHTML.includes('12 evaluated'));assert(inputs.frontierWing.innerHTML.includes('Highest observed'));
