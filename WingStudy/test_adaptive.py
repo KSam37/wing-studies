@@ -95,19 +95,43 @@ class AdaptiveChecks(unittest.TestCase):
         thrust=[e['case']['single_wing_mean_thrust_N'] for e in accepted]
         self.assertEqual(thrust,sorted(thrust))
 
-    def test_ratio_acceptance_has_no_torque_ceiling_or_thrust_only_preference(self):
-        # Higher absolute torque must be accepted when its ratio is better.
-        self.assertTrue(adaptive.better(row('new',20,4),row('old',4,1),.001))
-        # Higher thrust alone must not win when its ratio is lower.
-        self.assertFalse(adaptive.better(row('new',10,10),row('old',2,.5),.001))
-        self.assertTrue(adaptive.better(row('new',2,.4),row('old',4,1),.001))
-        bad=row('bad',100,.1);bad['cycle_repeatable']=False
-        self.assertFalse(adaptive.better(bad,row('old',1,.4),0))
-        for torque in (0,-1,float('nan')):self.assertIsNone(adaptive.score(row('bad',1,torque)))
+    def test_pareto_archive_preserves_tradeoffs_instead_of_maximizing_ratio(self):
+        archive=[]
+        def add(name,t,m):return adaptive.offer(archive,{'case':row(name,t,m),'chords':[t]})
+        self.assertTrue(add('seed',2,1))
+        self.assertTrue(add('higher_thrust_lower_ratio',10,10))
+        self.assertTrue(add('lower_torque',1,.2))
+        self.assertFalse(add('dominated',1,2))
+        self.assertFalse(add('duplicate_metrics',2,1))
+        self.assertEqual(len(archive),3)
+        self.assertTrue(add('improved_seed',3,1))
+        self.assertEqual({e['case']['id'] for e in archive},{'higher_thrust_lower_ratio','lower_torque','improved_seed'})
+        bad=row('unsettled',100,.1);bad['cycle_repeatable']=False
+        self.assertFalse(adaptive.offer(archive,{'case':bad}))
         c=self.config();c['adaptive_search'].update(torque_min_nm=-100,torque_max_nm=-1,torque_count=0)
         p=adaptive.plan(model,c)
         self.assertNotIn('torque_max_nm',p['adaptive_search'])
         self.assertNotIn('max_root_moment_nm',p['config']['optimization'])
+        self.assertEqual(p['config']['optimization']['objective'],'pareto_mean_thrust_peak_root_torque_v1')
+
+    def test_branch_search_retains_high_thrust_and_low_torque_with_true_parentage(self):
+        c=self.config();c['adaptive_search'].update(root_chord_m=.12,tip_chord_m=.04,max_passes=3,paired_moves=False)
+        r=adaptive.options(model,c);events=[];seen={};seed=adaptive.seed(r)
+        def evaluate(chords,meta):
+            key=tuple(chords)
+            self.assertNotIn(key,seen)
+            t=sum(chords);m=t*t
+            result=row(str(len(seen)),t,m);result['adaptive_trial']=meta
+            seen[key]=result
+            return result
+        adaptive.run_search(r,evaluate,events.append)
+        self.assertEqual(events[0]['chords'],seed)
+        self.assertTrue(any(e['case']['single_wing_mean_thrust_N']>sum(seed) for e in events))
+        self.assertTrue(any(e['case']['single_wing_mean_thrust_N']<sum(seed) for e in events))
+        self.assertGreater(events[-1]['frontier_size'],2)
+        for event in events[1:]:self.assertIn(event['parent_case'],[v['id'] for v in seen.values()])
+        parents=adaptive.frontier_parents([{'case':row(str(i),i+1,i+1),'chords':[i]} for i in range(10)],{},2,0)
+        self.assertEqual({p['case']['id'] for p in parents},{'0','9'})
 
     def test_jobs_are_interleaved_and_decreasing_shapes_stay_valid(self):
         c=self.config();c['adaptive_search'].update(span_min_m=.5,span_max_m=.7,span_count=2,decreasing=True,max_passes=1)

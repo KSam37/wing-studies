@@ -25,7 +25,7 @@ def default_config(model):
 def prepare(model,config):
     c=copy.deepcopy(config)
     if c.get('adaptive_search',{}).get('enabled'):
-        c['optimization']={'objective':'single_wing_thrust_roll_ratio_1pm','constraint':'none'}
+        c['optimization']={'objective':'pareto_mean_thrust_peak_root_torque_v1','objectives':{'single_wing_mean_thrust_N':'maximize','single_wing_peak_abs_roll_moment_Nm':'minimize'},'constraint':'none'}
     else:
         limit=model.number(c.get('optimization',{}).get('max_root_moment_nm'),'Maximum root moment',1e-12)
         c['optimization']={'max_root_moment_nm':limit,'objective':'single_wing_mean_thrust_N',

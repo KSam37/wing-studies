@@ -1,8 +1,10 @@
 # Wing Studies
 
-Private Windows app for rigid-wing geometry sweeps in water. Set a maximum single-wing root moment, sweep chord widths, and find the highest mean thrust among settled designs within the limit. The root limit is supplied by the user; no gearbox conversion or aeroelastic calculation is applied. Default motion: 1 Hz, −26° to +34°.
+Windows app for native Ptera wing studies in water. The default adaptive mode explores mean single-wing thrust versus peak absolute wing-root torque, with no torque ceiling. Each span starts from one truncated triangular seed (minimum chord 0.01 m). Coordinate perturbations branch from nondominated tradeoffs instead of maximizing thrust/torque. The existing grid / saved-wing span workflow is also available.
 
-Editable defaults: 0.625 N m peak root moment per wing, root chord 0.12–0.20 m, and 0.8 m reference total span (including the hinge gap).
+Pareto search retains every evaluated result, reuses matching simulations, and prioritizes frontier extremes and gaps when selecting parents. **Frontier parents per pass** controls breadth; **Frontier sampling resolution (%)** avoids expanding nearly identical load pairs at the same step size without deleting results. New-simulation and candidate budgets remain shared across the span linspace. Selected-wing evolution GIFs follow actual parent ancestry. The resulting frontier is a local, finite-budget sample, not a guarantee of global optimality.
+
+Editable Pareto defaults: four total spans from 0.4–0.8 m, eight chord nodes, 0.20 m seed/root maximum width, 0.01 m seed tip/minimum chord, and 500 new simulations. Motion defaults to 1 Hz and −26° to +34°. Root and tip can vary within the chosen geometry bounds. The optional legacy grid mode retains its separate root-moment limit.
 
 ## Daily use
 

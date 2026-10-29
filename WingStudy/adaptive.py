@@ -1,8 +1,7 @@
-"""Budgeted coordinate search of native isolated wings, with an auditable trial log.
+"""Budgeted Pareto coordinate exploration from one triangular seed per span.
 
-Each span owns a local ascent of mean thrust / peak absolute root torque. Jobs advance round-robin, share
-exact geometry results and keep all trials for the observed torque frontier.
-This is a local search, not a certificate of a global optimum.
+Retain nondominated mean-thrust / peak-root-torque tradeoffs, without a torque
+ceiling. This is a local sampled frontier, not proof of global optimality.
 """
 import copy
 import csv
@@ -16,21 +15,21 @@ DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
     'root_chord_m':.2,'maximum_root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':None,
     'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
     'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
-    'improvement_pct':.2,'decreasing':True,'paired_moves':True,'bounds':[]}
+    'improvement_pct':.2,'frontier_parents':8,'decreasing':True,'paired_moves':True,'bounds':[]}
 
 
 def options(model,config):
     r={**DEFAULT,**config.get('adaptive_search',{})}
     for obsolete in ('torque_min_nm','torque_max_nm','torque_count'):r.pop(obsolete,None)
-    r['objective']='single_wing_mean_thrust_over_peak_root_torque_v1'
-    for key in ('span_count','node_count','simulation_budget','evaluation_budget','max_passes'):
+    r['objective']='pareto_mean_thrust_peak_root_torque_v1'
+    for key in ('span_count','node_count','simulation_budget','evaluation_budget','max_passes','frontier_parents'):
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
     for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
         r[key]=model.number(r[key],key.replace('_',' '),.01 if 'chord' in key else 1e-12)
     upper=r.get('maximum_chord_m')
     r['maximum_chord_m']=None if upper in (None,'') else model.number(upper,'Maximum chord',r['minimum_chord_m'])
     r['shrink_factor']=model.number(r['shrink_factor'],'Step shrink factor',.01,.99)
-    r['improvement_pct']=model.number(r['improvement_pct'],'Minimum improvement (%)',0,100)
+    r['improvement_pct']=model.number(r['improvement_pct'],'Frontier sampling resolution (%)',0,100)
     for lo,hi,count,label in [('span_min_m','span_max_m','span_count','Span')]:
         if r[hi]<r[lo] or (r[count]==1 and r[lo]!=r[hi]):raise ValueError(label+' linspace needs ordered bounds and at least two samples for different endpoints.')
     jobs=1 if r['span_min_m']==r['span_max_m'] else r['span_count']
@@ -80,7 +79,7 @@ def design(r,span,gap,chords,name='Adaptive wing'):
 def plan(model,config):
     c=copy.deepcopy(config);r=options(model,c)
     c.pop('span_search',None);c.pop('refinement',None)
-    c['workflow']='adaptive_ratio';c['mode']='custom';c['limits']={}
+    c['workflow']='adaptive_pareto';c['mode']='custom';c['limits']={}
     c['adaptive_search']={**r,'enabled':True}
     import torque_study
     c=torque_study.prepare(model,c)
@@ -108,48 +107,104 @@ def score(row):
     return thrust/moment
 
 
-def better(row,incumbent,tolerance):
-    a=score(row);b=score(incumbent)
-    if a is None:return False
-    if b is None:return True
-    return a>b+max(abs(b)*tolerance,1e-10)
+def objectives(row):
+    if row.get('status')!='ok' or row.get('simulation_mode')!='isolated_single_wing_v1' or not row.get('cycle_repeatable',False):return None
+    t=row.get('single_wing_mean_thrust_N');m=row.get('single_wing_peak_abs_roll_moment_Nm')
+    if not all(isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) for v in (t,m)):return None
+    return (t,m) if t>0 and m>=0 else None
+
+
+def dominates(a,b):
+    """Exact observed dominance: at least as much thrust and no more torque."""
+    return a[0]>=b[0] and a[1]<=b[1] and (a[0]>b[0] or a[1]<b[1])
+
+
+def offer(archive,entry):
+    value=objectives(entry['case'])
+    if value is None:return False
+    if any(objectives(e['case'])==value or dominates(objectives(e['case']),value) for e in archive):return False
+    archive[:]=[e for e in archive if not dominates(value,objectives(e['case']))]
+    archive.append(entry)
+    return True
+
+
+def nearby(a,b,resolution):
+    return all(abs(x-y)<=resolution*max(abs(x),abs(y),1e-9) for x,y in zip(a,b))
+
+
+def frontier_parents(archive,expanded,count,resolution):
+    """Protect the two extremes and prioritize gaps in normalized objective space.
+
+    Resolution only thins parent expansion; all measured nondominated results
+    remain in the archive and in the results. It never imposes a torque cutoff.
+    """
+    ordered=sorted(archive,key=lambda e:objectives(e['case'])[1])
+    distance={id(e):0. for e in ordered}
+    if ordered:
+        distance[id(ordered[0])]=distance[id(ordered[-1])]=math.inf
+    for axis in (0,1):
+        values=[objectives(e['case'])[axis] for e in ordered]
+        width=max(values,default=0)-min(values,default=0)
+        if width>0:
+            for i in range(1,len(ordered)-1):distance[id(ordered[i])]+=abs(values[i+1]-values[i-1])/width
+    selected=[]
+    for e in sorted(ordered,key=lambda e:(-distance[id(e)],objectives(e['case'])[1])):
+        if tuple(e['chords']) in expanded:continue
+        value=objectives(e['case'])
+        if any(nearby(value,v,resolution) for v in [*expanded.values(),*[objectives(p['case']) for p in selected]]):continue
+        selected.append(e)
+        if len(selected)>=count:break
+    return selected
+
+
+def neighbor(chords,nodes,direction,steps,r):
+    candidate=chords[:]
+    for i in nodes:candidate[i]=round(candidate[i]+direction*steps[i],12)
+    if len(nodes)==1:
+        i=nodes[0];b=r['bounds'][i]
+        lo=b['min_m'];hi=b['max_m'] if b['max_m'] is not None else math.inf
+        if r['decreasing']:
+            if i:hi=min(hi,chords[i-1])
+            if i+1<len(chords):lo=max(lo,chords[i+1])
+        candidate[i]=round(max(lo,min(hi,candidate[i])),12)
+    return candidate if candidate!=chords and valid(candidate,r) else None
 
 
 def climb(r,span,job):
-    """Coroutine yields trial chords, accepts complete results via send()."""
+    """Branch over a sampled Pareto archive from one triangle; yield each solve."""
     chords=seed(r);steps=[b['step_m'] for b in r['bounds']]
-    meta={'job':job,'span_m':span,'objective':r['objective'],'pass':0,'node':None,'step_m':0.,'parent_case':None}
-    current=yield (chords[:],{**meta,'kind':'seed'})
-    yield_event={'accepted':True,'case':current,'chords':chords[:],**meta}
-    yield ('accepted',yield_event)
+    meta={'job':job,'span_m':span,'objective':r['objective'],'pass':0,'node':None,'step_m':0.,'parent_case':None,'kind':'seed'}
+    current=yield (chords[:],meta)
+    archive=[];visited={tuple(chords)};expanded={}
+    initial={'case':current,'chords':chords[:],**meta}
+    def event(entry):
+        return {'accepted':True,**entry,'frontier_case_ids':[e['case']['id'] for e in archive],
+            'frontier_size':len(archive),'frontier_max_thrust_N':max(objectives(e['case'])[0] for e in archive),
+            'frontier_min_torque_Nm':min(objectives(e['case'])[1] for e in archive)}
+    if offer(archive,initial):yield ('accepted',event(initial))
+    moves=[(i,) for i in range(len(chords))]
+    if r['paired_moves']:moves += [(i,i+1) for i in range(len(chords)-1)]
     for iteration in range(1,r['max_passes']+1):
-        improved=False
-        moves=[(i,) for i in range(len(chords))]
-        if r['paired_moves']:moves += [(i,i+1) for i in range(len(chords)-1)]
-        for nodes in moves:
-            parent=current;best=current;best_chords=chords
-            for direction in (1,-1):
-                candidate=chords[:]
-                for i in nodes:candidate[i]=round(candidate[i]+direction*steps[i],12)
-                # Shorten a coordinate step to its feasible interval. This also lets
-                # root and tip move when the requested step exceeds a neighbor gap.
-                if len(nodes)==1:
-                    i=nodes[0];b=r['bounds'][i]
-                    lo=b['min_m'];hi=b['max_m'] if b['max_m'] is not None else math.inf
-                    if r['decreasing']:
-                        if i:hi=min(hi,chords[i-1])
-                        if i+1<len(chords):lo=max(lo,chords[i+1])
-                    candidate[i]=round(max(lo,min(hi,candidate[i])),12)
-                if candidate==chords or not valid(candidate,r):continue
-                meta={'job':job,'span_m':span,'objective':r['objective'],'pass':iteration,'node':list(nodes),'step_m':max(steps[i] for i in nodes),'parent_case':parent.get('id'),'kind':'paired' if len(nodes)>1 else 'coordinate'}
-                trial=yield (candidate,meta)
-                if better(trial,best,r['improvement_pct']/100):best=trial;best_chords=candidate
-            if best is not current:
-                current=best;chords=best_chords;improved=True
-                yield ('accepted',{'accepted':True,'case':current,'chords':chords[:],**meta})
-        if not improved:
-            if max(steps)<=r['minimum_step_m']*(1+1e-12):return
-            steps=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps]
+        parents=frontier_parents(archive,expanded,r['frontier_parents'],r['improvement_pct']/100)
+        if not parents:
+            if not archive and not expanded:parents=[initial] # Probe neighbors of an unsettled/failed seed.
+            else:
+                if max(steps)<=r['minimum_step_m']*(1+1e-12):return
+                steps=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in steps];expanded={}
+                parents=frontier_parents(archive,expanded,r['frontier_parents'],r['improvement_pct']/100) or [initial]
+        for parent in parents:
+            expanded[tuple(parent['chords'])]=objectives(parent['case']) or (0.,0.)
+            for nodes in moves:
+                for direction in (1,-1):
+                    candidate=neighbor(parent['chords'],nodes,direction,steps,r)
+                    if candidate is None or tuple(candidate) in visited:continue
+                    visited.add(tuple(candidate))
+                    meta={'job':job,'span_m':span,'objective':r['objective'],'pass':iteration,'node':list(nodes),
+                        'step_m':max(abs(candidate[i]-parent['chords'][i]) for i in nodes),
+                        'parent_case':parent['case'].get('id'),'kind':'paired' if len(nodes)>1 else 'coordinate'}
+                    trial=yield (candidate,meta)
+                    entry={'case':trial,'chords':candidate,**meta}
+                    if offer(archive,entry):yield ('accepted',event(entry))
 
 
 def run_search(r,evaluate,on_accept=lambda event:None):
@@ -210,7 +265,7 @@ def worker(model,study):
         manifest['cases'].append(case);manifest['case_count']=len(manifest['cases'])
         model.write_json(study/'manifest.json',manifest)
         directory=study/case['id'];directory.mkdir(exist_ok=True)
-        state(f"Adaptive trial {case['id']} · span {meta['span_m']:g} m · maximizing thrust/peak torque",current=case['id'],current_case_started=time.time())
+        state(f"Adaptive trial {case['id']} · span {meta['span_m']:g} m · exploring thrust–torque frontier",current=case['id'],current_case_started=time.time())
         start=time.time();row={**case}
         try:
             cached=catalog.reuse(model,case,manifest['settings'],directory) if existing is not None else None
@@ -233,9 +288,9 @@ def worker(model,study):
         model.write_summary(study,rows)
         state('Adaptive search: evaluating neighbors')
         return row
-    reason='All coordinate searches reached their stopping condition'
+    reason='Pareto searches reached their stopping condition'
     try:
-        state('Preparing adaptive coordinate search')
+        state('Preparing Pareto search from one triangle per span')
         run_search(r,evaluate,accept)
     except BudgetReached as exc:reason=str(exc)
     except Exception as exc:
@@ -244,7 +299,7 @@ def worker(model,study):
         raise
     finally:
         model.write_json(study/'evolution.json',events)
-    model.write_json(study/'adaptive_summary.json',{'new_simulations':simulations,'cache_hits':cache_hits,'candidate_requests':requests,'unique_cases':len(rows),'accepted_changes':len(events),'stop_reason':reason})
+    model.write_json(study/'adaptive_summary.json',{'new_simulations':simulations,'cache_hits':cache_hits,'candidate_requests':requests,'unique_cases':len(rows),'accepted_changes':len(events),'objective':r['objective'],'frontier_case_ids':{str(job):next(e['frontier_case_ids'] for e in reversed(events) if e['job']==job) for job in {e['job'] for e in events}},'stop_reason':reason})
     artifacts(model,study,events)
     export_master(model,manifest.get('browser_url','http://127.0.0.1:8766'))
     if any(row.get('status')=='ok' for row in rows):
@@ -282,7 +337,7 @@ def results(model):
 
 
 def artifacts(model,study,events):
-    """Accepted-path history, one PNG, and one compact evolution animation."""
+    """Frontier discovery history, one PNG, and one compact animation."""
     if not events:return
     from PIL import Image
     import io
@@ -291,12 +346,12 @@ def artifacts(model,study,events):
     for job in sorted({e['job'] for e in events}):
         path=[e for e in events if e['job']==job and e['case'].get('status')=='ok']
         x=list(range(len(path)))
-        for ax,key,label in zip(axes,['single_wing_mean_thrust_N','single_wing_peak_abs_roll_moment_Nm','single_wing_thrust_roll_ratio_1pm'],['Mean thrust (N)','Peak root torque (N m)','Thrust / torque (1/m)']):
-            ax.plot(x,[e['case'].get(key,float('nan')) for e in path],marker='.',lw=.8,label=f"J{job}: {path[0]['span_m']:g} m" if path else f'J{job}')
+        for ax,key,label in zip(axes,['frontier_max_thrust_N','frontier_min_torque_Nm','frontier_size'],['Frontier max thrust (N)','Frontier min torque (N m)','Frontier design count']):
+            ax.plot(x,[e.get(key,float('nan')) for e in path],marker='.',lw=.8,label=f"J{job}: {path[0]['span_m']:g} m" if path else f'J{job}')
             ax.set_ylabel(label);ax.grid(alpha=.2)
     if len({e['job'] for e in events})<=12:axes[0].legend(fontsize=5,ncol=2)
-    axes[-1].set_xlabel('Accepted design changes (per search)')
-    axes[0].set_title('Coordinate ascent · maximize mean thrust / peak root torque at each span')
+    axes[-1].set_xlabel('Frontier discoveries (per span)')
+    axes[0].set_title('Pareto exploration · frontier progress at each span')
     fig.savefig(dest/'adaptive_progress.png',dpi=300);plt.close(fig)
     frames=[]
     # Bound media size independently of the auditable, complete event history.
@@ -304,11 +359,13 @@ def artifacts(model,study,events):
     ordered=sorted(enumerate(events),key=lambda pair:(pair[1]['job'],pair[0]))
     ordered=[e for _,e in ordered]
     frame_events=[ordered[i] for i in np.unique(np.linspace(0,len(ordered)-1,min(len(ordered),200),dtype=int))]
+    maximum_span=max(e['case']['sections'][-1]['y_m'] for e in frame_events)
+    maximum_chord=max(s['chord_m'] for e in frame_events for s in e['case']['sections'])
     for e in frame_events:
         fig,ax=plt.subplots(figsize=(5,3),layout='constrained')
         row=e['case'];sections=row['sections'];y=[s['y_m'] for s in sections];c=[s['chord_m'] for s in sections]
         ax.fill([*y,*reversed(y)],[*[0]*len(y),*reversed(c)],color='#92c9c2',edgecolor='#007f78')
-        ax.invert_yaxis();ax.set_aspect('equal');ax.set(xlabel='Root-to-tip position (m)',ylabel='Chord (m)')
+        ax.set_xlim(0,maximum_span*1.03);ax.set_ylim(maximum_chord*1.03,0);ax.set_aspect('equal');ax.set(xlabel='Root-to-tip position (m)',ylabel='Chord (m)')
         ax.set_title(f"Job {e['job']} · {row['id']} · span {e['span_m']:g} m\nThrust {row.get('single_wing_mean_thrust_N',0):.4g} N · ratio {score(row) or 0:.4g} 1/m",fontsize=9)
         buffer=io.BytesIO();fig.savefig(buffer,format='png',dpi=100);plt.close(fig)
         frames.append(Image.open(buffer).convert('RGB'))

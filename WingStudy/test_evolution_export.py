@@ -22,6 +22,12 @@ class EvolutionExportChecks(unittest.TestCase):
         self.assertEqual([r['id'] for r in evolution_export.lineage(model,self.study,'case_0002')],['case_0001','case_0002'])
     def test_rejected_trial_uses_its_own_parent_chain(self):
         self.assertEqual([r['id'] for r in evolution_export.lineage(model,self.study,'case_0004')],['case_0001','case_0004'])
+    def test_pareto_gif_follows_parents_not_sibling_discoveries(self):
+        for r in self.rows:r['adaptive_trial']['objective']='pareto_mean_thrust_peak_root_torque_v1'
+        model.write_json(self.study/'results.json',self.rows)
+        model.write_json(self.study/'evolution.json',[{'job':1,'case':r} for r in self.rows])
+        self.assertEqual([r['id'] for r in evolution_export.lineage(model,self.study,'case_0004')],['case_0001','case_0004'])
+
     def test_seed_and_missing_history(self):
         self.assertEqual(len(evolution_export.lineage(model,self.study,'case_0001')),1)
         with self.assertRaises(ValueError):evolution_export.lineage(model,self.study,'../case_0001')

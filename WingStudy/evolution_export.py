@@ -14,7 +14,7 @@ def lineage(model,study,case_id):
     if case_id not in lookup:raise ValueError('Selected case has no completed result yet.')
     events=model.read_json(study/'evolution.json') if (study/'evolution.json').exists() else []
     hits=[i for i,e in enumerate(events) if e.get('case',{}).get('id')==case_id]
-    if hits:
+    if hits and lookup[case_id].get('adaptive_trial',{}).get('objective')!='pareto_mean_thrust_peak_root_torque_v1':
         end=hits[-1];job=events[end]['job']
         path=[e['case'] for e in events[:end+1] if e['job']==job]
     else:
