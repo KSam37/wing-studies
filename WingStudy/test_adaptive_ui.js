@@ -33,3 +33,5 @@ families.forEach(f=>f.checked=false);assert.throws(()=>ctx.configuration(),/Sele
 console.log('Independent seed checkboxes preserve multiple families and validate empty selection.');
 
 assert.equal(c.adaptive_search.acceptance_rule,'torque_curve');assert.equal(c.adaptive_search.curve_torque_min_nm,null);assert.equal(c.adaptive_search.curve_torque_samples,12);
+
+families[0].checked=true;inputs.adaptiveZero={checked:true};assert.equal(ctx.configuration().adaptive_search.allow_zero_outboard,true);

@@ -83,7 +83,8 @@ def save_targets(model,study,states,samples):
             'case_id':row.get('id'),'mean_thrust_N':values[0] if values else None,
             'peak_root_torque_Nm':values[1] if values else None,
             'status':'best_observed' if winner else 'no_feasible_sample',
-            'local_search_exhausted':state['done']})
+            'local_search_exhausted':state['done'],
+            'current_max_adjustment_m':max(state['steps'])})
     model.write_json(study/'torque_targets.json',{'algorithm':ALGORITHM,'targets':rows,
         'note':'Best observed feasible designs at sampled available torques; not certified global optima.'})
     path=study/'comparisons/torque_curve.csv';path.parent.mkdir(exist_ok=True)
@@ -110,13 +111,16 @@ def run(r,pipeline):
     for span in adaptive.levels(r['span_min_m'],r['span_max_m'],r['span_count']):
         for q in targets:
             states.append({'job':len(states)+1,'span':span,'target':q,'last':None,'anchor':None,
-                'steps':[b['step_m'] for b in r['bounds']],'offset':0,'visited':set(),'done':False,'pass':0})
+                'steps':[b['step_m'] for b in r['bounds']],'offset':0,'visited':set(),'done':False,'pass':0,'basis':None})
     def update():
         for state in states:
             winner=best(samples,state['span'],state['target'])
             if winner and (state['last'] is None or winner['row']['id']!=state['last']['row']['id']):
                 pipeline.accept(event(r,winner,state['job'],state['target'],state['last']['row']['id'] if state['last'] else None))
-                state.update(last=winner,anchor=winner,offset=0,done=False)
+                # A growing shared sample pool must not keep restarting coarse
+                # polls forever. Give each improved incumbent a finer turn.
+                if state['last'] is not None:state['steps']=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in state['steps']]
+                state.update(last=winner,anchor=winner,offset=0,done=False,basis=None)
         save_targets(pipeline.model,pipeline.study,states,samples)
     update()
     if pipeline.stop_reason:raise adaptive.BudgetReached(pipeline.stop_reason)
@@ -130,9 +134,12 @@ def run(r,pipeline):
                 if not choices:state['done']=True;continue
                 feasible=[s for s in choices if adaptive.objectives(s['row'])[1]<=state['target']]
                 anchor=max(feasible,key=lambda s:adaptive.objectives(s['row'])[0]) if feasible else min(choices,key=lambda s:adaptive.objectives(s['row'])[1])
-                state.update(anchor=anchor,offset=0,steps=[b['step_m'] for b in r['bounds']])
+                state.update(anchor=anchor,offset=0,steps=[b['step_m'] for b in r['bounds']],basis=None)
             anchor=state['anchor'];state['pass']+=1
-            basis=poll_directions(anchor,samples,r,state['steps']);start=state['offset'];cap=8
+            # Freeze directions for the duration of a poll. Re-fitting while
+            # advancing an index can skip moves and misreport local exhaustion.
+            if state['basis'] is None:state['basis']=poll_directions(anchor,samples,r,state['steps'])
+            basis=state['basis'];start=state['offset'];cap=8
             block=basis[start:start+cap];state['offset']+=len(block);pending=[]
             for weights,kind in block:
                 chords=candidate(anchor['chords'],weights,state['steps'],r,adaptive.valid)
@@ -148,7 +155,7 @@ def run(r,pipeline):
                 if max(state['steps'])<=r['minimum_step_m']*(1+1e-12):
                     state['visited'].add(anchor['row']['id']);state['anchor']=None
                 else:state['steps']=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in state['steps']]
-                state['offset']=0
+                state['offset']=0;state['basis']=None
         # Interleave targets and deduplicate before planning native simulations.
         inputs=[]
         for i in range(max(map(len,groups),default=0)):
@@ -172,7 +179,9 @@ def run(r,pipeline):
             choices=[s for s in samples if s['span']==state['span'] and adaptive.objectives(s['row'])]
             if choices:
                 lower=min(choices,key=lambda s:adaptive.objectives(s['row'])[1])
-                if state['anchor'] and adaptive.objectives(lower['row'])[1]<adaptive.objectives(state['anchor']['row'])[1]:state.update(anchor=lower,offset=0)
+                if state['anchor'] and adaptive.objectives(lower['row'])[1]<adaptive.objectives(state['anchor']['row'])[1]:
+                    state.update(anchor=lower,offset=0,basis=None,
+                        steps=[max(r['minimum_step_m'],s*r['shrink_factor']) for s in state['steps']])
         update()
         if pipeline.stop_reason:raise adaptive.BudgetReached(pipeline.stop_reason)
     save_targets(pipeline.model,pipeline.study,states,samples)

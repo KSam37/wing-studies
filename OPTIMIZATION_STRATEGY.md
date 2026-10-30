@@ -15,8 +15,9 @@ Use the selected triangle, rectangular, concave/inset, convex/full and narrow
 rectangular seed families at each requested span. Narrow rectangles use half the
 seed root width before applying bounds. Chord variables are widths at fixed span
 stations; root and tip may vary within their bounds. Default positive minimum is
-0.01 m. Explicit zero minima permit an outboard removed suffix and shorten actual
-span. For fixed root width, set the root row minimum equal to its maximum; for a
+0.01 m. Outboard row minima now default to zero, permitting a contiguous
+removed suffix and shortening actual span; a checkbox restores positive minima.
+The root and second section stay positive because native Ptera requires them. For fixed root width, set the root row minimum equal to its maximum; for a
 fixed actual span, set span endpoints equal and retain positive outboard minima.
 
 ## Search and reuse
@@ -31,7 +32,9 @@ fixed actual span, set span endpoints equal and retain positive outboard minima.
    redistribution. Every proposal is verified by native Ptera. The model never
    substitutes a fitted result for a simulation.
 4. Share every evaluated candidate across all targets at the same reference span.
-   Shrink unsuccessful local steps; try other seed basins when stalled. Below the
+   Give improved incumbents a finer step, as well as shrinking unsuccessful
+   polls. Freeze each poll direction list until it finishes, so repeated shared
+   discoveries cannot starve fine refinement. Try other seed basins when stalled. Below the
    feasible range, explore lower torque even if thrust falls, but never label an
    infeasible sample a target winner.
 5. Interleave target requests, deduplicate geometry requests, and use the one
@@ -56,3 +59,8 @@ continuous/global optimum. In particular, an empty target has no feasible sample
 wing; it is not proof of physical impossibility. Verify finalists with finer mesh,
 time step, longer settling and tank tests. Compare only consistent driving settings;
 frequency variation is a separate study. Native aeroelasticity remains optional.
+
+Progress plots separate span classes, normalize thrust gain against the best
+feasible seed (or label a first-feasible baseline), collapse identical histories,
+and report late improvement and actual refinement settings. Budget exhaustion
+and flat traces are not convergence certificates.

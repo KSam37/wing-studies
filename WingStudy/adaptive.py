@@ -69,9 +69,11 @@ def options(model,config):
     root_max=r.get('maximum_root_chord_m',.2)
     r['maximum_root_chord_m']=model.number(root_max,'Maximum root width',r['minimum_chord_m'])
     r['bounds']=[]
+    r['allow_zero_outboard']=bool(r.get('allow_zero_outboard',r['acceptance_rule']=='torque_curve'))
     for i,b in enumerate(raw):
         floor=r['minimum_chord_m'] if i<2 else 0.
-        lo=model.number(b.get('min_m',r['minimum_chord_m']),f'Chord {i+1} minimum',floor)
+        default_min=0. if i>=2 and r['allow_zero_outboard'] else r['minimum_chord_m']
+        lo=model.number(b.get('min_m',default_min),f'Chord {i+1} minimum',floor)
         if 0<lo<r['minimum_chord_m']:raise ValueError('Chord bounds must be zero or at least the positive chord minimum.')
         upper=b.get('max_m',r['maximum_chord_m'])
         hi=None if upper in (None,'') else model.number(upper,f'Chord {i+1} maximum',lo,r['maximum_chord_m'])
@@ -389,32 +391,37 @@ def artifacts(model,study,events):
     from PIL import Image
     import io
     dest=study/'comparisons';dest.mkdir(exist_ok=True)
-    plt=model.ieee_style();fig,axes=plt.subplots(3,1,figsize=(7.16,6),layout='constrained')
     curve=any(e.get('search_algorithm')=='torque_envelope_search_v5' for e in events)
-    plotted=[e for e in events if not curve or e.get('torque_target_nm') is not None]
-    for job in sorted({e['job'] for e in plotted}):
-        path=[e for e in events if e['job']==job and e['case'].get('status')=='ok']
-        x=[e.get('evaluation',i+1) for i,e in enumerate(path)]
-        summary=model.read_json(study/'adaptive_summary.json') if (study/'adaptive_summary.json').exists() else {}
-        end=summary.get('unique_cases',x[-1] if x else 0)
-        keys=['frontier_max_thrust_N','frontier_min_torque_Nm','torque_target_nm' if curve else 'normalized_hypervolume']
-        labels=['Best feasible thrust (N)','Winner peak torque (N m)','Available torque (N m)'] if curve else ['Frontier max thrust (N)','Frontier min torque (N m)','Normalized hypervolume']
-        for ax,key,label in zip(axes,keys,labels):
-            ys=[e.get(key,float('nan')) for e in path]
-            ax.plot([*x,end] if x and end>x[-1] else x,[*ys,ys[-1]] if ys and end>x[-1] else ys,marker='.',lw=.8,label=f"J{job}: {path[0]['span_m']:g} m" if path else f'J{job}')
-            ax.set_ylabel(label);ax.grid(alpha=.2)
-    if len({e['job'] for e in events})<=12:axes[0].legend(fontsize=5,ncol=2)
-    axes[-1].set_xlabel('Unique evaluated designs (including cached results)')
-    reference=model.read_json(study/'adaptive_hypervolume.json') if (study/'adaptive_hypervolume.json').exists() else {}
-    reference_note=(f"\nHV reference: T = 0 N, M = {reference['reference_torque_Nm']:.4g} N m; scales: T = {reference['thrust_scale_N']:.4g} N, M = {reference['torque_scale_Nm']:.4g} N m" if reference else '')
-    axes[0].set_title(('Thrust improvement at each available root torque' if curve else 'Pareto exploration · frontier progress at each span')+reference_note,fontsize=8)
-    fig.savefig(dest/'adaptive_progress.png',dpi=300);plt.close(fig)
-    with (dest/'adaptive_progress.csv').open('w',newline='',encoding='utf-8') as f:
+    if curve:
+        import convergence_report
+        convergence_report.write(model,study,events)
+    else:
+        plt=model.ieee_style();fig,axes=plt.subplots(3,1,figsize=(7.16,6),layout='constrained')
+        curve=any(e.get('search_algorithm')=='torque_envelope_search_v5' for e in events)
+        plotted=[e for e in events if not curve or e.get('torque_target_nm') is not None]
+        for job in sorted({e['job'] for e in plotted}):
+            path=[e for e in events if e['job']==job and e['case'].get('status')=='ok']
+            x=[e.get('evaluation',i+1) for i,e in enumerate(path)]
+            summary=model.read_json(study/'adaptive_summary.json') if (study/'adaptive_summary.json').exists() else {}
+            end=summary.get('unique_cases',x[-1] if x else 0)
+            keys=['frontier_max_thrust_N','frontier_min_torque_Nm','torque_target_nm' if curve else 'normalized_hypervolume']
+            labels=['Best feasible thrust (N)','Winner peak torque (N m)','Available torque (N m)'] if curve else ['Frontier max thrust (N)','Frontier min torque (N m)','Normalized hypervolume']
+            for ax,key,label in zip(axes,keys,labels):
+                ys=[e.get(key,float('nan')) for e in path]
+                ax.plot([*x,end] if x and end>x[-1] else x,[*ys,ys[-1]] if ys and end>x[-1] else ys,marker='.',lw=.8,label=f"J{job}: {path[0]['span_m']:g} m" if path else f'J{job}')
+                ax.set_ylabel(label);ax.grid(alpha=.2)
+        if len({e['job'] for e in events})<=12:axes[0].legend(fontsize=5,ncol=2)
+        axes[-1].set_xlabel('Unique evaluated designs (including cached results)')
         reference=model.read_json(study/'adaptive_hypervolume.json') if (study/'adaptive_hypervolume.json').exists() else {}
-        reference_fields=['reference_thrust_N','reference_torque_Nm','thrust_scale_N','torque_scale_Nm']
-        fields=['evaluation','simulations','job','span_m','torque_target_nm','frontier_max_thrust_N','frontier_min_torque_Nm','frontier_size','normalized_hypervolume',*reference_fields]
-        writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
-        writer.writerows({k:reference.get(k) if k in reference_fields else e.get(k) for k in fields} for e in events)
+        reference_note=(f"\nHV reference: T = 0 N, M = {reference['reference_torque_Nm']:.4g} N m; scales: T = {reference['thrust_scale_N']:.4g} N, M = {reference['torque_scale_Nm']:.4g} N m" if reference else '')
+        axes[0].set_title(('Thrust improvement at each available root torque' if curve else 'Pareto exploration · frontier progress at each span')+reference_note,fontsize=8)
+        fig.savefig(dest/'adaptive_progress.png',dpi=300);plt.close(fig)
+        with (dest/'adaptive_progress.csv').open('w',newline='',encoding='utf-8') as f:
+            reference=model.read_json(study/'adaptive_hypervolume.json') if (study/'adaptive_hypervolume.json').exists() else {}
+            reference_fields=['reference_thrust_N','reference_torque_Nm','thrust_scale_N','torque_scale_Nm']
+            fields=['evaluation','simulations','job','span_m','torque_target_nm','frontier_max_thrust_N','frontier_min_torque_Nm','frontier_size','normalized_hypervolume',*reference_fields]
+            writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
+            writer.writerows({k:reference.get(k) if k in reference_fields else e.get(k) for k in fields} for e in events)
     frames=[]
     # Bound media size independently of the auditable, complete event history.
     import numpy as np

@@ -83,6 +83,17 @@ class TorqueSearchChecks(unittest.TestCase):
             lookup={x['id']:x for x in p.rows}
             self.assertTrue(any(e.get('parent_case') and e['case']['single_wing_peak_abs_roll_moment_Nm']>lookup[e['parent_case']]['single_wing_peak_abs_roll_moment_Nm'] for e in p.events))
             self.assertTrue((p.study/'comparisons/torque_curve.csv').exists())
+            adjustments={max(x['adaptive_trial']['poll_steps_m']) for x in p.rows if x['adaptive_trial'].get('poll_steps_m')}
+            self.assertIn(.02,adjustments)
+            self.assertIn(.01,adjustments)
+
+    def test_zero_outboard_is_default_but_two_positive_sections_remain(self):
+        c=self.config();c['adaptive_search'].update(node_count=5)
+        r=adaptive.options(model,c)
+        self.assertEqual([b['min_m'] for b in r['bounds']],[.01,.01,0,0,0])
+        self.assertTrue(adaptive.valid([.2,.1,0,0,0],r))
+        self.assertFalse(adaptive.valid([.2,0,0,0,0],r))
+        self.assertFalse(adaptive.valid([.2,.1,0,.01,0],r))
 
     def test_primary_view_uses_current_target_winners_not_superseded_events(self):
         old=row('case_0001',1,1);new=row('case_0002',2,2);trial=row('case_0003',3,4)
