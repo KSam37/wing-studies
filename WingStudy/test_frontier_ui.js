@@ -14,3 +14,11 @@ inputs.oldMaster.checked=true;ctx.checkFrontierSelection();assert.equal(inputs.f
 console.log('Frontier slider, exact boundaries, no-feasible state and source-change checks passed.');
 
 vm.runInContext("frontierData={comparison_mode:'bands',points:[{id:'winner',torque_band_min_nm:0,torque_band_max_nm:1,torque_band_count:12,single_wing_peak_abs_roll_moment_Nm:.8,single_wing_mean_thrust_N:3}]}",ctx);inputs.frontierPoint.value='0';inputs.frontierTorque.value='0';ctx.inspectFrontier();assert(inputs.frontierWing.innerHTML.includes('winner'));assert(inputs.frontierWing.innerHTML.includes('12 evaluated'));assert(inputs.frontierWing.innerHTML.includes('Highest observed'));
+
+const plot={innerHTML:''};const plotCtx={$:()=>plot,fmt:String,esc:String,document:{querySelectorAll:()=>[]}};
+vm.createContext(plotCtx);vm.runInContext(source.slice(source.indexOf('function mountFrontierPlot('),source.indexOf('function drawPreview(')),plotCtx);
+plotCtx.mountFrontierPlot({minimum_torque_nm:0,plot_maximum_torque_nm:2,comparison_mode:'evolution',displayed:[{id:'wing',outline_m:[[0,0],[.2,0],[.2,.1]],single_wing_mean_thrust_N:1,single_wing_peak_abs_roll_moment_Nm:1}],evolution_paths:[{points:[{torque_Nm:1.5,thrust_N:.5},{torque_Nm:1,thrust_N:1}]}]});
+assert(plot.innerHTML.includes('stroke-dasharray="6 4"'));
+assert(plot.innerHTML.indexOf('<polyline')<plot.innerHTML.indexOf('class="plot-wing"'));
+assert(plot.innerHTML.includes('666.75,')); // First ancestor stays first even with higher torque.
+console.log('Dashed ancestry renders behind wings without sorting by torque.');

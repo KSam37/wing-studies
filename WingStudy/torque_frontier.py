@@ -76,7 +76,7 @@ def evolution_rows(model,rows,include_seeds=True):
     can be a winner in another study. Never infer a history from all trials.
     """
     import adaptive
-    histories={};target_histories={};selected=[]
+    histories={};target_histories={};memberships={};selected=[]
     for row in rows:
         locations=[{'study':row.get('_study'),'local_case':row['id']},*row.get('occurrences',[])]
         roles=[]
@@ -89,11 +89,17 @@ def evolution_rows(model,rows,include_seeds=True):
                 curve_path=model.OUTPUTS/study/'torque_targets.json'
                 curve=model.read_json(curve_path) if curve_path.is_file() else None
                 lookup={e['case']['id']:e['case'] for e in events}
-                accepted={};target_histories[study]={}
-                for e in events:
+                accepted={};target_histories[study]={};memberships[study]={}
+                for sequence,e in enumerate(events):
                     parent=e.get('parent_case');case=e['case']
                     if e.get('kind')=='seed' or curve is None and parent is None:accepted[case['id']]='seed'
+                    elif e.get('search_algorithm')=='independent_coordinate_v1' and e.get('accepted'):
+                        accepted[case['id']]='improvement'
                     elif curve is None and parent in lookup and adaptive.improves(case,lookup[parent]):accepted[case['id']]='improvement'
+                    if e.get('search_algorithm')=='independent_coordinate_v1' and e.get('accepted'):
+                        memberships[study].setdefault(case['id'],[]).append({'study':study,'job':e['job'],
+                            'sequence':sequence,'seed_family':e['seed_family'],'span_m':e['span_m'],
+                            'weighted_score':e['weighted_score'],'parent_case':parent,'local_case':case['id']})
                 if curve is not None:
                     # Current best feasible designs across torque targets, not
                     # every historical incumbent or every evaluated candidate.
@@ -106,8 +112,21 @@ def evolution_rows(model,rows,include_seeds=True):
             if role=='improvement' or role=='seed' and include_seeds:roles.append(role)
         if roles:
             targets=sorted(set(q for loc in locations for q in target_histories.get(loc.get('study'),{}).get(loc['local_case'],[])))
-            selected.append({**row,'available_torque_targets_Nm':targets,'evolution_role':'improvement' if 'improvement' in roles else 'seed'})
+            nodes=[node for loc in locations for node in memberships.get(loc.get('study'),{}).get(loc['local_case'],[])]
+            selected.append({**row,'available_torque_targets_Nm':targets,'evolution_memberships':nodes,
+                'evolution_role':'improvement' if 'improvement' in roles else 'seed'})
     return selected
+
+
+def evolution_paths(rows):
+    """Group by recorded seed lineage, never by torque order or cache origin."""
+    groups={}
+    for row in rows:
+        for node in row.get('evolution_memberships',[]):
+            key=(node['study'],node['job'])
+            groups.setdefault(key,{})[node['sequence']]={**node,'torque_Nm':row[TORQUE],'thrust_N':row[THRUST]}
+    return [{'study':study,'job':job,'points':[points[k] for k in sorted(points)]}
+        for (study,job),points in sorted(groups.items())]
 
 
 def generate(model,data):
@@ -153,12 +172,13 @@ def generate(model,data):
     shown=spaced_points(in_range,spacing)
     all_range=[{**r,**dimensions(r)} for r in eligible if left<=r[TORQUE]<=right]
     if comparison not in ('frontier','bands','evolution'):raise ValueError('Choose winning evolution, full frontier or torque-band winners.')
-    band_width=model.number(data.get('torque_band_width_nm',.1),'Torque band width',1e-12) if comparison=='bands' else None
+    band_width=model.number(data.get('torque_band_width_nm',.25),'Torque band width',1e-12) if comparison=='bands' else None
     winners=band_winners(all_range,left,right,band_width) if comparison=='bands' else []
     if comparison=='bands':shown=winners
     if comparison=='evolution':shown=all_range
     background=[] if comparison in ('bands','evolution') else sample_background(all_range,points,shown,spacing,left,right)
-    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v8',family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    paths=evolution_paths(all_range) if comparison=='evolution' else []
+    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v9',paths,family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.offsetbox import DrawingArea, AnnotationBbox
     from matplotlib.patches import Polygon
@@ -170,6 +190,10 @@ def generate(model,data):
     norm=Normalize(low,high if high>low else low+1e-9);cmap=plt.get_cmap('viridis')
     frontier_ids={identity(r) for r in points};winner_map={identity(r):r for r in winners};displayed=[]
     import numpy as np
+    for path in paths:
+        ps=path['points'];color=FAMILY_COLORS.get(ps[0]['seed_family'],'#777')
+        ax.plot([p['torque_Nm'] for p in ps],[p['thrust_N'] for p in ps],linestyle='--',
+            lw=.7,color=color,alpha=.7,zorder=1)
     for row in [*background,*shown]:
         leading,frames=model.custom_frames(row)
         leading=np.asarray(leading);trailing=[p+f@np.array([s['chord_m'],0,0]) for p,f,s in zip(leading,frames,row['sections'])]
@@ -191,7 +215,7 @@ def generate(model,data):
     ax.margins(.06);ax.grid(alpha=.2)
     if lower is not None or upper is not None:ax.set_xlim(left,right)
     if not shown and not background:ax.text(.5,.5,'No improving designs in this torque range',ha='center',transform=ax.transAxes,fontsize=9)
-    title=(f'Highest observed thrust per {band_width:g} N m torque band' if comparison=='bands' else 'Winning evolution designs' if comparison=='evolution' else 'Observed thrust–torque frontier')
+    title=(f'Highest observed thrust per {band_width:g} N m torque band' if comparison=='bands' else 'Independent seed evolutions' if paths else 'Winning evolution designs' if comparison=='evolution' else 'Observed thrust–torque frontier')
     ax.set_title(title+' · common physical wing scale',fontsize=9)
     from matplotlib.lines import Line2D
     from matplotlib.text import Text
@@ -212,5 +236,5 @@ def generate(model,data):
             w.writerow(dict(zip(fields,[';'.join(str(q) for q in r.get('available_torque_targets_Nm',[])),r.get('evolution_role'),';'.join(families(r)),r.get('geometry_id'),r.get('simulation_id'),r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')],bool(winner),winner.get('torque_band_min_nm'),winner.get('torque_band_max_nm'),winner.get('torque_band_count')])))
     curve_path=model.OUTPUTS/study/'torque_targets.json' if study!='master' else None
     curve=model.read_json(curve_path) if curve_path and curve_path.is_file() else {}
-    return {'torque_targets':curve.get('targets',[]),'curve_csv':str((model.OUTPUTS/study/'comparisons/torque_curve.csv').relative_to(model.OUTPUTS)).replace(chr(92),'/') if curve else None,'seed_family':family,'color_mode':color_mode,'family_colors':FAMILY_COLORS,'family_labels':FAMILY_LABELS,'comparison_mode':comparison,'torque_band_width_nm':band_width,'model_mode':mode,'points':winners if comparison=='bands' else all_range if comparison=='evolution' else points,'displayed':displayed,'wing_size_percent':size,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'range_eligible_count':len(all_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'plot_maximum_torque_nm':right,'slider_maximum_torque_nm':right if comparison=='bands' else min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
+    return {'evolution_paths':paths,'torque_targets':curve.get('targets',[]),'curve_csv':str((model.OUTPUTS/study/'comparisons/torque_curve.csv').relative_to(model.OUTPUTS)).replace(chr(92),'/') if curve else None,'seed_family':family,'color_mode':color_mode,'family_colors':FAMILY_COLORS,'family_labels':FAMILY_LABELS,'comparison_mode':comparison,'torque_band_width_nm':band_width,'model_mode':mode,'points':winners if comparison=='bands' else all_range if comparison=='evolution' else points,'displayed':displayed,'wing_size_percent':size,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'range_eligible_count':len(all_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'plot_maximum_torque_nm':right,'slider_maximum_torque_nm':right if comparison=='bands' else min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],
         'files':[str((dest/name).relative_to(model.OUTPUTS)).replace(chr(92),'/') for name in ('thrust_torque_frontier.png','thrust_torque_frontier.csv')]}

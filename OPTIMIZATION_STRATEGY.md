@@ -1,66 +1,69 @@
-# Torque–thrust optimization strategy
+# Independent wing coordinate optimization
 
-The goal is the best observed thrust available across a range of peak single-wing
-root torques:
+Goal: evolve each shape/span seed independently using one editable torque weight,
+then compare the measured thrust–torque tradeoffs. Native Ptera physics is unchanged.
 
-`T_best(Q) = max mean_thrust(chords), subject to peak_root_torque(chords) <= Q`.
+## Objective
 
-Q is swept across a range, rather than imposing one chosen motor limit. Root
-moments are hydrodynamic loads; drivetrain conversion remains outside this model.
-Thrust/peak torque is a reported ratio, not the search objective or energy efficiency.
+S = T / Tref - lambda * M / Mref.
 
-## Geometry and initialization
+T is settled-cycle mean single-wing thrust. M is sampled peak absolute hydrodynamic
+roll moment about the wing root, not gearbox or motor-shaft torque. Tref is the
+largest absolute thrust of valid starting seeds; Mref is the largest seed torque.
+Both scales are fixed once for the whole study and saved in coordinate_objective.json.
+Lambda defaults to 0.75, giving normalized thrust changes slightly more weight.
+Acceptance requires score increase greater than the editable tolerance (default 1e-6).
+That tolerance is not a calibrated solver-uncertainty estimate. No torque ceiling applies.
 
-Use the selected triangle, rectangular, concave/inset, convex/full and narrow
-rectangular seed families at each requested span. Narrow rectangles use half the
-seed root width before applying bounds. Chord variables are widths at fixed span
-stations; root and tip may vary within their bounds. Default positive minimum is
-0.01 m. Outboard row minima now default to zero, permitting a contiguous
-removed suffix and shortening actual span; a checkbox restores positive minima.
-The root and second section stay positive because native Ptera requires them. For fixed root width, set the root row minimum equal to its maximum; for a
-fixed actual span, set span endpoints equal and retain positive outboard minima.
+## Search, exactly
 
-## Search and reuse
+1. Evaluate/reuse all selected shape/span seeds. Triangle, rectangle, concave,
+   convex and narrow rectangle are independent lineages. Duplicate physical cases
+   reuse simulations, but acceptance and parent links remain local to each seed.
+2. On the first root-to-tip pass, test +step and -step on one chord from the same
+   current parent. Default step is 0.02 m, editable per chord. Choose the larger
+   positive score change, accept it, remember its sign, and move to the NEXT chord.
+   These finite differences supply the local directional score sensitivity.
+3. On subsequent passes, test only each chord's remembered winning sign. Keep
+   the same full step following success, moving to the next chord after each trial.
+4. When that direction fails or is blocked, try one half step from the last
+   accepted parent. Accept it only if the score increases, then retire that chord
+   regardless of success. No recursive shrinking. If neither initial sign wins,
+   try both signs once at half size, choose the best positive change, and retire it.
+5. Continue root-to-tip passes until all chords are retired, or the shared new-
+   simulation budget is reached. Retired chords are not generally reopened when neighbors
+   change, except that a newly exposed tip gets another turn after its outer
+   neighbor disappears. This can stop short of a coordinate stationary point; do not claim global
+   convergence. Failed/unsettled cases cannot become accepted parents.
 
-1. Evaluate or reuse the seeds. Unless bounds are entered, sample available torque
-   from half the lowest seed torque to 1.25 times the highest, using 12 targets.
-2. At every target and span, use the highest-thrust feasible result from all seed
-   families and trials. A candidate may increase torque from its parent while
-   remaining feasible at Q. Ties in thrust favor lower torque.
-3. Poll coordinate and simultaneous opposite-sign chord changes. When enough
-   full-rank local data exist, fit torque sensitivities to propose balanced
-   redistribution. Every proposal is verified by native Ptera. The model never
-   substitutes a fitted result for a simulation.
-4. Share every evaluated candidate across all targets at the same reference span.
-   Give improved incumbents a finer step, as well as shrinking unsuccessful
-   polls. Freeze each poll direction list until it finishes, so repeated shared
-   discoveries cannot starve fine refinement. Try other seed basins when stalled. Below the
-   feasible range, explore lower torque even if thrust falls, but never label an
-   infeasible sample a target winner.
-5. Interleave target requests, deduplicate geometry requests, and use the one
-   shared maximum-new-simulations budget. Cache hits are free. Parallel native
-   cases remain isolated; one coordinator writes catalog and study outputs.
+## Geometry and execution
 
-`GEOM-...` references physical geometry. `SIM-...` includes exact motion, fluid,
-mesh, time step and native-solver provenance. Only an exact simulation match with
-available outputs authorizes reuse. No Ptera source modifications are introduced.
+Only chord WIDTH changes; station spacing remains fixed within a seed grid.
+Root maximum is adjustable, and root width may shrink. Positive widths default
+at least 0.01 m. Zero is permitted only as a contiguous outer suffix. Normal
+negative width steps can reach/snap to zero, so the previous positive section
+becomes the active tip. Positive section values below the floor snap to zero
+only for a removable active tip; no hidden tiny positive chords. Native Ptera
+omits zero sections, reducing actual span discretely, and requires two positive
+sections. Bounds and optional decreasing widths constrain each coordinate change.
+No extra beam model, geometry adapter, special deletion solver, or torque conversion.
 
-## Results and confidence
+The coordinator advances lineages together and batches independent native cases
+across the selected processes. One writer owns IDs, files and the master catalog.
+Exact physical AND numerical identity is required for cache reuse. Cached results
+are free against the new-simulation budget; all rejected results remain saved.
 
-The primary wing plot shows current target winners, with optional starting seeds;
-superseded incumbents and rejected trials remain saved. Choose an available torque
-to inspect its winning design. `comparisons/torque_curve.csv` records every target,
-its winner, thrust, actual torque and local-search status. Unattained targets stay
-explicitly empty. `torque_targets.json` updates during the search; evolution keeps
-incumbent history, and original native plots/animations remain per case.
+## Results
 
-This builds a sampled, locally optimized torque–thrust curve, not a certified
-continuous/global optimum. In particular, an empty target has no feasible sampled
-wing; it is not proof of physical impossibility. Verify finalists with finer mesh,
-time step, longer settling and tank tests. Compare only consistent driving settings;
-frequency variation is a separate study. Native aeroelasticity remains optional.
+The evolution view shows seeds and accepted descendants with dashed connections
+in ancestry order, never sorted-by-torque connections. Each lineage has its own
+score/thrust/torque progress trace and selected-wing evolution GIF. The final
+comparison can instead show the highest measured thrust per occupied 0.25 N m
+band (editable), breaking exact thrust ties by lower torque. Bands are display only.
+Raw cases, histories, native plots, animations, SVGs, trial CSV, accepted events,
+fixed objective scales and lineage statuses are autosaved.
 
-Progress plots separate span classes, normalize thrust gain against the best
-feasible seed (or label a first-feasible baseline), collapse identical histories,
-and report late improvement and actual refinement settings. Budget exhaustion
-and flat traces are not convergence certificates.
+This is local weighted coordinate ascent. Linear scalarization may miss nonconvex
+frontier regions. A finite budget, retired coordinates or flat traces do not certify
+an optimum. Finalists need mesh/time/wake/settling checks and water-tank validation.
+Legacy studies and their torque-envelope or Pareto histories remain readable.

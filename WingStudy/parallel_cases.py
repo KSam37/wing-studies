@@ -77,7 +77,7 @@ class CasePipeline:
     def accept(self,event):
         from pareto_poll import refresh_hypervolume
         self.events.append({**event,'evaluation':len(self.rows),'simulations':self.finished})
-        if event.get('search_algorithm')!='torque_envelope_search_v5':
+        if event.get('search_algorithm') not in ('torque_envelope_search_v5','independent_coordinate_v1'):
             reference=refresh_hypervolume(self.events)
             self.model.write_json(self.study/'adaptive_hypervolume.json',reference)
         self.model.write_json(self.study/'evolution.json',self.events)
@@ -226,11 +226,15 @@ def run_worker(model,study):
     study=Path(study);manifest=model.read_json(study/'manifest.json');r=manifest['adaptive_search']
     manifest['catalog_engine']=catalog.engine(model,manifest['settings']);manifest['cases']=[];manifest['case_count']=0
     model.write_json(study/'manifest.json',manifest)
-    reason='Pareto searches reached their stopping condition'
+    reason=('Independent seeds completed one half-step refinement per chord'
+        if r.get('acceptance_rule')=='coordinate' else 'Pareto searches reached their stopping condition')
     with CasePipeline(model,study,manifest) as pipeline:
         try:
             pipeline.state('Preparing native Ptera cases')
-            if r.get('acceptance_rule')=='torque_curve':
+            if r.get('acceptance_rule')=='coordinate':
+                import coordinate_search
+                coordinate_search.run(r,pipeline)
+            elif r.get('acceptance_rule')=='torque_curve':
                 import torque_search
                 torque_search.run(r,pipeline)
             elif r.get('parallel_workers',1)>1:parallel_search(r,pipeline)
@@ -250,7 +254,7 @@ def run_worker(model,study):
     if any(row.get('status')=='ok' for row in rows):
         import torque_frontier
         try:model.write_json(study/'frontier.json',torque_frontier.generate(model,{'study':study.name,
-            'comparison_mode':'evolution' if r.get('acceptance_rule') in ('strict_thrust_nonincreasing_torque','torque_curve') else 'frontier'}))
+            'comparison_mode':'evolution' if r.get('acceptance_rule') in ('coordinate','strict_thrust_nonincreasing_torque','torque_curve') else 'frontier'}))
         except ValueError:pass
     model.write_json(study/'status.json',{'state':'complete' if not any(x['status']=='failed' for x in rows) else 'complete_with_errors',
         'total':pipeline.simulations,'completed':pipeline.finished,'evaluated_cases':len(rows),

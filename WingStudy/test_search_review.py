@@ -54,7 +54,7 @@ class SearchReviewChecks(unittest.TestCase):
 
     def test_bounded_polls_reach_finer_steps_under_shared_budget(self):
         c=test_adaptive.AdaptiveChecks().config()
-        c['adaptive_search'].update(node_count=8,poll_candidates=8,max_passes=3)
+        c['adaptive_search'].update(node_count=8,poll_candidates=8,max_passes=3,initial_step_m=.04)
         r=adaptive.options(model,c);seen=[]
         def evaluate(chords,meta):
             seen.append(meta)

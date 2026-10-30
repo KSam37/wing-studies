@@ -30,6 +30,10 @@ def prepare(model,config):
             c['optimization']={'objective':'max_mean_thrust_across_root_torque_targets_v1',
                 'constraint':'peak_root_torque_le_available_target',
                 'note':'Available root torque is swept across a range, not one hardware cutoff.'}
+        elif c['adaptive_search'].get('acceptance_rule')=='coordinate':
+            c['optimization']={'objective':'normalized_thrust_minus_lambda_torque_v1',
+                'constraint':'none','tradeoff_lambda':c['adaptive_search']['tradeoff_lambda'],
+                'note':'Independent seeds; fixed study-wide seed scales; torque bands are display only.'}
     else:
         limit=model.number(c.get('optimization',{}).get('max_root_moment_nm'),'Maximum root moment',1e-12)
         c['optimization']={'max_root_moment_nm':limit,'objective':'single_wing_mean_thrust_N',

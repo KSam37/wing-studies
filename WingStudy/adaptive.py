@@ -10,12 +10,12 @@ import itertools
 from pathlib import Path
 
 
-DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':4,'node_count':8,
+DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':3,'node_count':8,
     'root_chord_m':.2,'maximum_root_chord_m':.2,'tip_chord_m':.01,'minimum_chord_m':.01,'maximum_chord_m':None,
-    'initial_step_m':.04,'minimum_step_m':.01,'shrink_factor':.5,
+    'initial_step_m':.02,'minimum_step_m':.01,'shrink_factor':.5,
     'simulation_budget':500,'evaluation_budget':1000,'max_passes':20,
     'improvement_pct':.2,'frontier_parents':3,'parallel_workers':1,'poll_candidates':0,'seed_families':['triangle'],
-    'acceptance_rule':'torque_curve',
+    'acceptance_rule':'coordinate','tradeoff_lambda':.75,'score_tolerance':1e-6,
     'coordinated_moves':True,'decreasing':True,'paired_moves':True,'bounds':[]}
 
 SEED_FAMILIES=('triangle','square','concave','convex','narrow')
@@ -30,6 +30,11 @@ def options(model,config):
     for obsolete in ('torque_min_nm','torque_max_nm','torque_count'):r.pop(obsolete,None)
     r['objective']='pareto_mean_thrust_peak_root_torque_v1'
     r['search_algorithm']='strict_parent_ascent_v4' if r['acceptance_rule']=='strict_thrust_nonincreasing_torque' else 'family_beam_direct_poll_v3'
+    if r['acceptance_rule']=='coordinate':
+        r['search_algorithm']='independent_coordinate_v1'
+        r['objective']='normalized_thrust_minus_lambda_torque_v1'
+        r['tradeoff_lambda']=model.number(r['tradeoff_lambda'],'Torque weight lambda',0)
+        r['score_tolerance']=model.number(r['score_tolerance'],'Minimum positive score change',0)
     if r['acceptance_rule']=='torque_curve':
         r['search_algorithm']='torque_envelope_search_v5'
         r['objective']='max_mean_thrust_across_root_torque_targets_v1'
@@ -40,7 +45,7 @@ def options(model,config):
             raise ValueError('Maximum available torque must exceed minimum available torque.')
     # New GUI studies have one user-facing budget. Retain legacy limits only
     # for old saved configurations and direct callers that explicitly use them.
-    budget_only=bool(r.get('budget_only',False)) or r['acceptance_rule']=='torque_curve'
+    budget_only=bool(r.get('budget_only',False)) or r['acceptance_rule'] in ('torque_curve','coordinate')
     r['budget_only']=budget_only
     if budget_only:
         r.update(max_passes=None,evaluation_budget=None,poll_candidates=8)
@@ -55,6 +60,9 @@ def options(model,config):
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
     for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
         r[key]=model.number(r[key],key.replace('_',' '),0 if key=='tip_chord_m' else .01 if 'chord' in key else 1e-12)
+    if r['acceptance_rule']=='coordinate':
+        # One half-step per chord, not recursive shrink-to-convergence.
+        r['minimum_step_m']=r['initial_step_m']*.5
     upper=r.get('maximum_chord_m')
     r['maximum_chord_m']=None if upper in (None,'') else model.number(upper,'Maximum chord',r['minimum_chord_m'])
     r['shrink_factor']=model.number(r['shrink_factor'],'Step shrink factor',.01,.99)
@@ -69,7 +77,7 @@ def options(model,config):
     root_max=r.get('maximum_root_chord_m',.2)
     r['maximum_root_chord_m']=model.number(root_max,'Maximum root width',r['minimum_chord_m'])
     r['bounds']=[]
-    r['allow_zero_outboard']=bool(r.get('allow_zero_outboard',r['acceptance_rule']=='torque_curve'))
+    r['allow_zero_outboard']=bool(r.get('allow_zero_outboard',r['acceptance_rule'] in ('torque_curve','coordinate')))
     for i,b in enumerate(raw):
         floor=r['minimum_chord_m'] if i<2 else 0.
         default_min=0. if i>=2 and r['allow_zero_outboard'] else r['minimum_chord_m']
@@ -80,7 +88,7 @@ def options(model,config):
         if hi is None:hi=r['maximum_chord_m']
         if i==0:hi=min(hi if hi is not None else math.inf,r['maximum_root_chord_m'])
         if hi is not None and hi<lo:raise ValueError('Chord minimum exceeds its maximum.')
-        step=model.number(b.get('step_m',r['initial_step_m']),f'Chord {i+1} step',r['minimum_step_m'])
+        step=model.number(b.get('step_m',r['initial_step_m']),f'Chord {i+1} step',1e-12 if r['acceptance_rule']=='coordinate' else r['minimum_step_m'])
         r['bounds'].append({'min_m':lo,'max_m':hi,'step_m':step})
     if r['span_min_m']<=config['settings']['gap_m']:raise ValueError('Adaptive span must exceed the hinge gap.')
     # Validate a feasible decreasing seed, including the per-node bounds.
@@ -392,7 +400,10 @@ def artifacts(model,study,events):
     import io
     dest=study/'comparisons';dest.mkdir(exist_ok=True)
     curve=any(e.get('search_algorithm')=='torque_envelope_search_v5' for e in events)
-    if curve:
+    if any(e.get('search_algorithm')=='independent_coordinate_v1' for e in events):
+        import coordinate_search
+        coordinate_search.artifacts(model,study,events)
+    elif curve:
         import convergence_report
         convergence_report.write(model,study,events)
     else:
@@ -422,7 +433,7 @@ def artifacts(model,study,events):
             fields=['evaluation','simulations','job','span_m','torque_target_nm','frontier_max_thrust_N','frontier_min_torque_Nm','frontier_size','normalized_hypervolume',*reference_fields]
             writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
             writer.writerows({k:reference.get(k) if k in reference_fields else e.get(k) for k in fields} for e in events)
-    frames=[]
+    plt=model.ieee_style();frames=[]
     # Bound media size independently of the auditable, complete event history.
     import numpy as np
     ordered=sorted(enumerate(events),key=lambda pair:(pair[1]['job'],pair[0]))
