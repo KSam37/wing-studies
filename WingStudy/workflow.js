@@ -178,7 +178,7 @@ async function refreshIndex(){
 function renderProgress(study){
  $('masterSources').classList.toggle('hidden',currentStudy!=='master');$('useStudy').disabled=currentStudy==='master';
  $('stopStudy').classList.add('hidden');
- if(currentStudy==='master'){$('progress').textContent='Select Current, Old, and/or Adaptive. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
+ if(currentStudy==='master'){$('progress').textContent='Select New and/or Old. Identical physical cases appear once when combined. This selection does not affect cached-result reuse.';return;}
  if(!study){$('progress').textContent='No saved studies yet.';return;}
  const s=study.status;$('progress').innerHTML=`<p>${esc(s.message||s.state)} · ${s.completed||0} / ${s.total||study.case_count}${s.parallel_workers?` · ${s.active_cases||0} active / ${s.parallel_workers} workers · ${s.pending_cases||0} unfinished cases`:''}</p><div class="progress"><div style="width:${100*(s.completed||0)/Math.max(1,s.total||study.case_count)}%"></div></div>`;
  $('stopStudy').classList.toggle('hidden',s.state!=='running');
@@ -210,7 +210,7 @@ function links(row){
 }
 function values(row){return `${row.aeroelastic_enabled?`<p class="help">Native aeroelastic · peak twist ${fmt(row.peak_abs_native_twist_deg)}° · damping ${fmt(row.damping_constant_rad)} N m s/rad</p>`:''}<p>Actual span: <strong>${fmt(row.single_wing_span_m)} m per wing</strong> (root to tip) · <strong>${fmt(row.effective_total_span_m??row.span_m)} m total</strong> (both wings + hinge gap)</p>${row.span_shortened_by_zero_chords?`<p class="help">Shortened from ${fmt(row.reference_total_span_m)} m reference total span: ${row.omitted_zero_chord_count} trailing zero-chord nodes removed.</p>`:''}<p>Mean single-wing thrust <strong>${fmt(row.single_wing_mean_thrust_N)} N</strong> · estimated pair <strong>${fmt(row.estimated_two_wing_mean_thrust_N)} N</strong></p><p>Peak |root moment| <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm)} N m</strong></p><p>Thrust / peak root torque: <strong>${fmt(row.single_wing_peak_abs_roll_moment_Nm>0?row.single_wing_mean_thrust_N/row.single_wing_peak_abs_roll_moment_Nm:null)} 1/m</strong></p>`;}
 function rowKey(row){return row.comparison_key||row.id;}
-function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':row.catalog_generation==='adaptive'?'Adaptive':'Current')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
+function sourceNote(row){return row.catalog_generation?`<p class="help">${esc(row.catalog_generation==='old'?'Old':'New')} · case #${esc(row.global_case_no)} · ${esc(row._studyName)} / ${esc(row.id)} · ${esc(row._settings.frequency_hz)} Hz · ${esc(row._settings.speed_mps)} m/s</p>`:'';}
 function evolutionSource(row){
  const study=row._study||currentStudy;
  if(row.adaptive_trial||studies.find(s=>s.id===study)?.config.adaptive_search?.enabled)return {study,case:row.id};
@@ -394,7 +394,7 @@ $('runStudy').onclick=async()=>{try{$('runStudy').disabled=true;const r=await ap
 $('resultsModel').onchange=()=>{page=0;evaluate();};
 $('studySelect').onchange=()=>{currentStudy=$('studySelect').value;page=0;report=null;$('exportLinks').innerHTML='';const study=studies.find(s=>s.id===currentStudy);$('resultsModel').disabled=currentStudy!=='master';if(study)$('resultsModel').value=study.config.settings.aeroelastic_enabled?'aeroelastic':'rigid';$('evolutionCard').classList.toggle('hidden',!study?.config.adaptive_search?.enabled);$('evolutionResult').innerHTML='';renderProgress(study);evaluate();};
 $('refreshResults').onclick=refreshIndex;$('exportComparison').onclick=()=>evaluate(true);$('showRejected').onchange=()=>{page=0;renderResults();};
-for(const g of ['current','old','adaptive'])$(g+'Master').onchange=()=>{page=0;$('exportLinks').innerHTML='';evaluate();};
+for(const g of ['current','old'])$(g+'Master').onchange=()=>{page=0;$('exportLinks').innerHTML='';evaluate();};
 $('previousPage').onclick=()=>{page--;renderResults();};$('nextPage').onclick=()=>{page++;renderResults();};
 $('useStudy').onclick=()=>{const s=studies.find(s=>s.id===currentStudy);if(s){fill(s.config);show('setup');preview();notify('Study settings loaded. Review the selected native model and motion range.');}};
 $('stopStudy').onclick=async()=>{try{await api('stop',{id:currentStudy});refreshIndex();}catch(error){notify(error.message);}};

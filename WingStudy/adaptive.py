@@ -384,6 +384,8 @@ def study_ids(model):
 
 def export_master(model,browser_url):
     import catalog
+    import catalog_partition
+    if catalog_partition.settings(model):return catalog.export(model,browser_url=browser_url)
     return catalog.export(model,metric=catalog.OBJECTIVE,browser_url=browser_url,filename='master_runs_adaptive.xlsx',study_filter=study_ids(model))
 
 

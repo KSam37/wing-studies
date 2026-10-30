@@ -17,6 +17,7 @@ import time
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 import zipfile
+import uuid
 
 OBJECTIVE = "single_wing_thrust_roll_ratio_1pm"
 METRICS = {
@@ -125,6 +126,11 @@ def cache_entries(model,signatures):
 def generations(model,selected=("current",)):
     if not isinstance(selected,(list,tuple)) or any(v not in ("current","old","adaptive") for v in selected):
         raise ValueError("Choose Current, Old and/or Adaptive master.")
+    import catalog_partition
+    partition=catalog_partition.settings(model)
+    if partition:
+        chosen=list(dict.fromkeys('current' if name=='adaptive' else name for name in selected))
+        return catalog_partition.views(model,chosen,partition,OBJECTIVE,True)
     rows=[];counts={};seen=set()
     for name in ("current","old","adaptive"):
         if name=='adaptive':
@@ -342,15 +348,30 @@ def preview(model,spec):
     reused=sum(sig in existing for sig in signatures)
     return {"cached_case_count":reused,"new_simulation_count":len(spec["cases"])-reused}
 
-def listing(model,metric=OBJECTIVE,descending=True,_db=None,check_outputs=True):
+def listing(model,metric=OBJECTIVE,descending=True,_db=None,check_outputs=True,_signatures=None):
     if metric not in METRICS:raise ValueError("Choose a supported ranking metric.")
+    if _db is None:
+        import catalog_partition
+        partition=catalog_partition.settings(model)
+        if partition:return catalog_partition.views(model,['current'],partition,metric,descending)
     db=_db or connect(model)
     try:
-        entries=list(db.execute("SELECT * FROM cases"));occurrences=list(db.execute("SELECT * FROM occurrences ORDER BY study,local_case"))
+        if _signatures is None:
+            entries=list(db.execute("SELECT * FROM cases"));occurrences=list(db.execute("SELECT * FROM occurrences ORDER BY study,local_case"))
+        else:
+            wanted=list(_signatures);entries=[];occurrences=[]
+            for start in range(0,len(wanted),900):
+                chunk=wanted[start:start+900];marks=','.join('?' for _ in chunk)
+                entries.extend(db.execute(f'SELECT * FROM cases WHERE signature IN ({marks})',chunk))
+            ids=[r['case_no'] for r in entries]
+            for start in range(0,len(ids),900):
+                chunk=ids[start:start+900];marks=','.join('?' for _ in chunk)
+                occurrences.extend(db.execute(f'SELECT * FROM occurrences WHERE case_no IN ({marks}) ORDER BY study,local_case',chunk))
         meta=dict(db.execute("SELECT key,value FROM meta"))
     finally:
         if _db is None:db.close()
-    rows=[]
+    rows=[];by_case={}
+    for occurrence in occurrences:by_case.setdefault(occurrence['case_no'],[]).append(dict(occurrence))
     for e in entries:
         payload=json.loads(e["payload"]);result=json.loads(e["result"] or "{}")
         case=payload["case"];s=payload["settings"];g=case.get("geometry",{})
@@ -364,7 +385,7 @@ def listing(model,metric=OBJECTIVE,descending=True,_db=None,check_outputs=True):
             "_study":e["origin_study"],"_studyName":payload["study_name"],"_settings":payload["settings"],
             "_ptera_version":payload.get("ptera_version"),"_signature":e["signature"],"_recorded":e["recorded"],
             "_verified":payload.get("reuse_verified",False),"outputs_available":available(model,e) if check_outputs else None,
-            "occurrences":[dict(o) for o in occurrences if o["case_no"]==e["case_no"]]})
+            "occurrences":by_case.get(e['case_no'],[])})
     def valid(r):return isinstance(r.get(metric),(int,float)) and math.isfinite(r[metric]) and r.get("status")=="ok"
     rows.sort(key=lambda r:(not valid(r),(-r[metric] if descending else r[metric]) if valid(r) else 0,r["global_case_no"]))
     last=None;rank=0
@@ -418,11 +439,20 @@ def column(i):
 
 def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:8765",force=True,filename="master_runs.xlsx",study_filter=None):
     """Fill the Artifact Tool-authored template using only the portable standard library."""
+    import catalog_partition
+    partition=catalog_partition.settings(model)
+    view=None
+    if partition:
+        generation='old' if filename=='master_runs_old.xlsx' else 'current'
+        if filename=='master_runs_adaptive.xlsx':filename='master_runs.xlsx'
+        view=catalog_partition.views(model,[generation],partition,metric,descending)
+        study_filter=None
     with connect(model) as db:
-        db.execute("BEGIN IMMEDIATE")
+        # Snapshot rows first. Building a large workbook must never reserve the
+        # live writer lock; active simulations save through this same database.
         previous=db.execute("SELECT value FROM meta WHERE key='excel_export_time'").fetchone()
         if not force and previous and time.time()-float(previous[0])<15:return
-        data=listing(model,metric,descending,_db=db);rows=data["rows"]
+        data=view if view is not None else listing(model,metric,descending,_db=db);rows=data["rows"]
         if study_filter is not None:
             rows=[r for r in rows if any(o['study'] in study_filter for o in r['occurrences'])]
             for rank,r in enumerate(rows,1):
@@ -450,7 +480,7 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
             for values,r in zip(table,ordered):
                 values.extend([r['geometry_id'],r['simulation_id'],', '.join(families(r))])
         template=Path(__file__).with_name("master_template.xlsx")
-        tmp=root(model)/(filename+".tmp")
+        tmp=root(model)/(filename+'.'+uuid.uuid4().hex+'.tmp')
         with zipfile.ZipFile(template) as source,zipfile.ZipFile(tmp,"w",zipfile.ZIP_DEFLATED) as dest:
             link_relationships={}
             for info in source.infolist():
@@ -480,7 +510,8 @@ def export(model,metric=OBJECTIVE,descending=True,browser_url="http://127.0.0.1:
                                 cell.set("t","inlineStr");inline=ET.SubElement(cell,f"{{{NS}}}is")
                                 ET.SubElement(inline,f"{{{NS}}}t").text=("Yes" if value else "No") if isinstance(value,bool) else str(value)[:32767]
                         return row
-                    add_row(1,["Wing parameters" if index==0 else "Ranked wing results"],30)
+                    prefix=('Old master · ' if generation=='old' else 'New master · ') if partition else ''
+                    add_row(1,[prefix+("Wing parameters" if index==0 else "Ranked wing results")],30)
                     add_row(2,[f"{len(rows)} parameter sets · {data['occurrence_count']} study/case occurrences · refreshed {stamp()}",None,None,("link",browser_url+"/#catalog","Open interactive catalog")])
                     if index==0:
                         add_row(3,["Generated from run records. Create/edit studies in the app; Excel edits do not alter cached simulations."])

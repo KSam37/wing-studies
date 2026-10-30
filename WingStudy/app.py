@@ -193,11 +193,19 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/studies":
                 return self.send(studies())
             if path == "/api/sweep-studies":
+                import catalog_partition
+                catalog_partition.refresh(model,f'http://127.0.0.1:{SERVER.server_port}')
                 return self.send(sweep_studies())
             if path == "/api/catalog":
                 return self.send(catalog.listing(model))
             if path in ("/master_runs.xlsx","/master_runs_old.xlsx","/master_runs_adaptive.xlsx"):
-                if path=='/master_runs_adaptive.xlsx':
+                import catalog_partition
+                if catalog_partition.settings(model):
+                    filename='master_runs_old.xlsx' if path=='/master_runs_old.xlsx' else 'master_runs.xlsx'
+                    if filename!='master_runs_old.xlsx' or not (catalog.root(model)/filename).is_file():
+                        catalog.export(model,browser_url=f'http://127.0.0.1:{SERVER.server_port}',filename=filename)
+                    path='/'+filename
+                elif path=='/master_runs_adaptive.xlsx':
                     import adaptive
                     adaptive.export_master(model,f'http://127.0.0.1:{SERVER.server_port}')
                 file=catalog.root(model)/path.lstrip('/')
