@@ -22,10 +22,10 @@ class AdaptiveChecks(unittest.TestCase):
         self.assertEqual((r['span_min_m'],r['span_max_m'],r['span_count'],r['node_count']),(.4,.8,4,8))
         self.assertEqual((r['initial_step_m'],r['minimum_step_m']),(.04,.01))
         self.assertNotIn('torque_max_nm',r)
-        self.assertEqual(p['config']['optimization']['constraint'],'none')
+        self.assertEqual(p['config']['optimization']['constraint'],'peak_root_torque_le_available_target')
         self.assertNotIn('max_root_moment_nm',p['config']['optimization'])
-        self.assertEqual((r['simulation_budget'],r['evaluation_budget']),(500,1000))
-        self.assertEqual(p['search_job_count'],4)
+        self.assertEqual((r['simulation_budget'],r['evaluation_budget']),(500,None))
+        self.assertEqual(p['search_job_count'],48)
         html=(model.HERE/'workflow.html').read_text(encoding='utf-8')
         for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveMinStep':'minimum_step_m','adaptiveBudget':'simulation_budget'}.items():
             value=re.search('id="'+field+'"[^>]*value="([^"]+)"',html)[1]

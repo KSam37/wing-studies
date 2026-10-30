@@ -77,8 +77,9 @@ class CasePipeline:
     def accept(self,event):
         from pareto_poll import refresh_hypervolume
         self.events.append({**event,'evaluation':len(self.rows),'simulations':self.finished})
-        reference=refresh_hypervolume(self.events)
-        self.model.write_json(self.study/'adaptive_hypervolume.json',reference)
+        if event.get('search_algorithm')!='torque_envelope_search_v5':
+            reference=refresh_hypervolume(self.events)
+            self.model.write_json(self.study/'adaptive_hypervolume.json',reference)
         self.model.write_json(self.study/'evolution.json',self.events)
 
     def commit(self,case,sig,result,started,chords,meta,request,reuse):
@@ -229,7 +230,10 @@ def run_worker(model,study):
     with CasePipeline(model,study,manifest) as pipeline:
         try:
             pipeline.state('Preparing native Ptera cases')
-            if r.get('parallel_workers',1)>1:parallel_search(r,pipeline)
+            if r.get('acceptance_rule')=='torque_curve':
+                import torque_search
+                torque_search.run(r,pipeline)
+            elif r.get('parallel_workers',1)>1:parallel_search(r,pipeline)
             else:adaptive.run_search(r,pipeline.evaluate,pipeline.accept)
         except adaptive.BudgetReached as exc:reason=str(exc)
         except Exception as exc:
@@ -240,13 +244,13 @@ def run_worker(model,study):
     model.write_json(study/'adaptive_summary.json',{'new_simulations':pipeline.simulations,'cache_hits':pipeline.cache_hits,
         'candidate_requests':pipeline.requests,'unique_cases':len(rows),'accepted_changes':len(events),'parallel_workers':r.get('parallel_workers',1),
         'objective':r['objective'],'search_algorithm':r['search_algorithm'],
-        'hypervolume':model.read_json(study/'adaptive_hypervolume.json') if events else None,
+        'hypervolume':model.read_json(study/'adaptive_hypervolume.json') if (study/'adaptive_hypervolume.json').exists() else None,
         'frontier_case_ids':{str(job):next(e['frontier_case_ids'] for e in reversed(events) if e['job']==job) for job in {e['job'] for e in events}},'stop_reason':reason})
     adaptive.artifacts(model,study,events);adaptive.export_master(model,manifest.get('browser_url','http://127.0.0.1:8766'))
     if any(row.get('status')=='ok' for row in rows):
         import torque_frontier
         try:model.write_json(study/'frontier.json',torque_frontier.generate(model,{'study':study.name,
-            'comparison_mode':'evolution' if r.get('acceptance_rule')=='strict_thrust_nonincreasing_torque' else 'frontier'}))
+            'comparison_mode':'evolution' if r.get('acceptance_rule') in ('strict_thrust_nonincreasing_torque','torque_curve') else 'frontier'}))
         except ValueError:pass
     model.write_json(study/'status.json',{'state':'complete' if not any(x['status']=='failed' for x in rows) else 'complete_with_errors',
         'total':pipeline.simulations,'completed':pipeline.finished,'evaluated_cases':len(rows),

@@ -26,6 +26,10 @@ def prepare(model,config):
     c=copy.deepcopy(config)
     if c.get('adaptive_search',{}).get('enabled'):
         c['optimization']={'objective':'pareto_mean_thrust_peak_root_torque_v1','objectives':{'single_wing_mean_thrust_N':'maximize','single_wing_peak_abs_roll_moment_Nm':'minimize'},'constraint':'none'}
+        if c['adaptive_search'].get('acceptance_rule')=='torque_curve':
+            c['optimization']={'objective':'max_mean_thrust_across_root_torque_targets_v1',
+                'constraint':'peak_root_torque_le_available_target',
+                'note':'Available root torque is swept across a range, not one hardware cutoff.'}
     else:
         limit=model.number(c.get('optimization',{}).get('max_root_moment_nm'),'Maximum root moment',1e-12)
         c['optimization']={'max_root_moment_nm':limit,'objective':'single_wing_mean_thrust_N',

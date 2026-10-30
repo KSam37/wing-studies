@@ -1,60 +1,58 @@
-# Wing optimization strategy
+# Torque–thrust optimization strategy
 
-Improve **settled-cycle mean single-wing thrust** while keeping **peak absolute
-single-wing root roll moment equal or lower than the current design**. There is no torque
-ceiling in the search. Thrust/torque is a useful reported ratio, not the sole
-objective and not an energy efficiency. Estimated pair thrust is twice the
-isolated-wing result; wing interaction is not modeled.
+The goal is the best observed thrust available across a range of peak single-wing
+root torques:
 
-## Search
+`T_best(Q) = max mean_thrust(chords), subject to peak_root_torque(chords) <= Q`.
 
-- Start each requested span from selected families: triangle, rectangular,
-  concave/inset, convex/full, and long/narrow. Narrow seeds use a constant half-root chord width (a thin rectangle)
-  before applying fabrication bounds. These labels describe
-  starting families, not constraints on their descendants.
-- Chords are **widths**, at fixed equally spaced span stations. Vary root and
-  tip too. Default minimum width is 0.01 m; explicit zero minima on outboard
-  stations permit a contiguous removed suffix, leaving two positive sections.
-  Root maximum, per-node bounds/steps, and optional decreasing widths apply.
-- Poll coordinate, adjacent-pair, and optional coordinated shape changes.
-  A candidate wins only if its settled-cycle mean thrust is equal or greater
-  than the current parent's and its peak root torque is equal or lower, with
-  at least one strict improvement.
-  There is no torque tolerance that permits an increase. A torque reduction
-  with unchanged thrust is a win; an exact tie is not. Of the qualifying neighbors, continue the highest
-  thrust (break ties with lower torque). Each family/span follows one chain.
-  All trials remain saved, but only the chosen winner enters evolution history.
-  Neighborhood sampling is automatic. Cover the remaining directions before
-  shrinking steps after an unsuccessful neighborhood; stop when useful local
-  moves are exhausted at the smallest adjustment or the budget is reached.
-- Advance family/span jobs fairly. The GUI uses one maximum-new-simulations
-  budget, with no separate pass or candidate-request limit. Four Ptera processes are the
-  GUI default; use fewer for memory-heavy cases. One coordinator writes IDs,
-  histories, results and catalog records. Duplicate requests share a solve.
+Q is swept across a range, rather than imposing one chosen motor limit. Root
+moments are hydrodynamic loads; drivetrain conversion remains outside this model.
+Thrust/peak torque is a reported ratio, not the search objective or energy efficiency.
 
-## Reuse and comparison
+## Geometry and initialization
 
-`GEOM-…` identifies the undeformed physical outline; redundant collinear
-stations share this reference. `SIM-…` identifies the exact simulation,
-including section discretization, motion, fluid, numerical settings and solver
-provenance. Only an exact simulation match with available outputs authorizes
-reuse. Current and Old catalogs are both checked through indexed lookups.
-Different time steps correctly require new simulations even for the same wing.
+Use the selected triangle, rectangular, concave/inset, convex/full and narrow
+rectangular seed families at each requested span. Narrow rectangles use half the
+seed root width before applying bounds. Chord variables are widths at fixed span
+stations; root and tip may vary within their bounds. Default positive minimum is
+0.01 m. Explicit zero minima permit an outboard removed suffix and shorten actual
+span. For fixed root width, set the root row minimum equal to its maximum; for a
+fixed actual span, set span endpoints equal and retain positive outboard minima.
 
-Display **winning evolution designs, with optional seeds**, by default.
-Only recorded improvements meeting the strict parent rule appear. Historical
-tradeoff events are filtered by that same measured parent rule; no history is
-invented for ordinary grid runs. The highest-thrust-per-0.1-N-m-band and full
-frontier views remain optional. Bands and plot filters affect comparison only. Color/filter by seed
-family to compare search basins; retain common physical silhouette scale.
-Results and ancestry save automatically; exports produce additional views.
+## Search and reuse
 
-## Confidence and stopping
+1. Evaluate or reuse the seeds. Unless bounds are entered, sample available torque
+   from half the lowest seed torque to 1.25 times the highest, using 12 targets.
+2. At every target and span, use the highest-thrust feasible result from all seed
+   families and trials. A candidate may increase torque from its parent while
+   remaining feasible at Q. Ties in thrust favor lower torque.
+3. Poll coordinate and simultaneous opposite-sign chord changes. When enough
+   full-rank local data exist, fit torque sensitivities to propose balanced
+   redistribution. Every proposal is verified by native Ptera. The model never
+   substitutes a fitted result for a simulation.
+4. Share every evaluated candidate across all targets at the same reference span.
+   Shrink unsuccessful local steps; try other seed basins when stalled. Below the
+   feasible range, explore lower torque even if thrust falls, but never label an
+   infeasible sample a target winner.
+5. Interleave target requests, deduplicate geometry requests, and use the one
+   shared maximum-new-simulations budget. Cache hits are free. Parallel native
+   cases remain isolated; one coordinator writes catalog and study outputs.
 
-This is a budgeted local direct search, not a global-optimum certificate.
-Hypervolume and repeated fine polls indicate progress, not physical validation.
-Compare designs under common driving conditions and verify promising designs
-with finer panels/time steps, more settled cycles and tank measurements.
-Native aeroelasticity is optional; increased damping alone does not establish
-stability or physical accuracy. Root moments omit drivetrain conversion and
-any structural inertia absent from the chosen native model.
+`GEOM-...` references physical geometry. `SIM-...` includes exact motion, fluid,
+mesh, time step and native-solver provenance. Only an exact simulation match with
+available outputs authorizes reuse. No Ptera source modifications are introduced.
+
+## Results and confidence
+
+The primary wing plot shows current target winners, with optional starting seeds;
+superseded incumbents and rejected trials remain saved. Choose an available torque
+to inspect its winning design. `comparisons/torque_curve.csv` records every target,
+its winner, thrust, actual torque and local-search status. Unattained targets stay
+explicitly empty. `torque_targets.json` updates during the search; evolution keeps
+incumbent history, and original native plots/animations remain per case.
+
+This builds a sampled, locally optimized torque–thrust curve, not a certified
+continuous/global optimum. In particular, an empty target has no feasible sampled
+wing; it is not proof of physical impossibility. Verify finalists with finer mesh,
+time step, longer settling and tank tests. Compare only consistent driving settings;
+frequency variation is a separate study. Native aeroelasticity remains optional.
