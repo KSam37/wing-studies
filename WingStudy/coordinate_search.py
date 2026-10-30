@@ -73,7 +73,8 @@ def climb(r,span,job,family,initial,scales):
                         'direction':sign,'step_m':amount,'parent_case':row['id'],
                         'actual_delta_m':proposed[node]-chords[node],'refinement':refinement}
                     pending.append((proposed,meta))
-                results=yield ('batch',pending)
+                # Blocked coordinates need no solver or synchronization turn.
+                results=(yield ('batch',pending)) if pending else []
                 current_score=score(row,scales,r['tradeoff_lambda']);best=None
                 for (proposed,meta),trial in zip(pending,results):
                     value=score(trial,scales,r['tradeoff_lambda'])
