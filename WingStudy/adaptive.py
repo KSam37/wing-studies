@@ -59,7 +59,7 @@ def options(model,config):
         if budget_only and key in ('evaluation_budget','max_passes'):continue
         r[key]=model.number(r[key],key.replace('_',' '),2 if key=='node_count' else 1,64 if key=='node_count' else None,True)
     for key in ('span_min_m','span_max_m','root_chord_m','tip_chord_m','minimum_chord_m','initial_step_m','minimum_step_m'):
-        r[key]=model.number(r[key],key.replace('_',' '),0 if key=='tip_chord_m' else .01 if 'chord' in key else 1e-12)
+        r[key]=model.number(r[key],key.replace('_',' '),0 if key in ('tip_chord_m','minimum_chord_m') else 1e-12)
     if r['acceptance_rule']=='coordinate':
         # One half-step per chord, not recursive shrink-to-convergence.
         r['minimum_step_m']=r['initial_step_m']*.5
@@ -75,7 +75,7 @@ def options(model,config):
     n=r['node_count'];raw=r.get('bounds') or [{} for _ in range(n)]
     if len(raw)!=n:raise ValueError('Provide a chord bound/step row for every adaptive node.')
     root_max=r.get('maximum_root_chord_m',.2)
-    r['maximum_root_chord_m']=model.number(root_max,'Maximum root width',r['minimum_chord_m'])
+    r['maximum_root_chord_m']=model.number(root_max,'Maximum root width',max(r['minimum_chord_m'],1e-12))
     r['bounds']=[]
     r['allow_zero_outboard']=bool(r.get('allow_zero_outboard',r['acceptance_rule'] in ('torque_curve','coordinate')))
     for i,b in enumerate(raw):
@@ -147,7 +147,7 @@ def valid(chords,r):
     if len(chords)!=len(r['bounds']):return False
     zero=next((i for i,c in enumerate(chords) if c==0),len(chords))
     return (zero>=2 and all(c==0 for c in chords[zero:])
-        and all(c==0 or c>=r['minimum_chord_m']-1e-12 for c in chords)
+        and all(math.isfinite(c) and c>=0 and (c==0 or c>=r['minimum_chord_m']-1e-12) for c in chords)
         and all(b['min_m']-1e-12<=c<=(b['max_m'] if b['max_m'] is not None else math.inf)+1e-12 for c,b in zip(chords,r['bounds']))
         and (not r['decreasing'] or all(a>=b-1e-12 for a,b in zip(chords,chords[1:]))))
 

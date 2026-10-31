@@ -35,3 +35,11 @@ console.log('Independent seed checkboxes preserve multiple families and validate
 assert.equal(c.adaptive_search.acceptance_rule,'coordinate');assert.equal(c.adaptive_search.curve_torque_samples,undefined);
 
 families[0].checked=true;inputs.adaptiveZero={checked:true};assert.equal(ctx.configuration().adaptive_search.allow_zero_outboard,true);
+
+inputs.adaptiveChordMin.dataset={previousMinimum:'0.01'};inputs.adaptiveChordMin.value='0';
+const minima=[{value:'.01'},{value:'.01'},{value:'0'},{value:'.03'}];
+inputs.adaptiveBounds={querySelectorAll:()=>minima.map(input=>({querySelector:()=>input,querySelectorAll:()=>[]}))};
+ctx.applyAdaptiveMinimum();assert.deepEqual(minima.map(i=>Number(i.value)),[0,0,0,.03]);
+assert.equal(inputs.adaptiveZero.checked,true);
+assert.equal(inputs.adaptiveChordMin.dataset.previousMinimum,'0');
+console.log('Zero global minimum updates inherited node minima and preserves higher custom bounds.');

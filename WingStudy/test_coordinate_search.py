@@ -12,6 +12,20 @@ from test_torque_study import row
 
 
 class CoordinateChecks(unittest.TestCase):
+    def test_zero_global_minimum_plans_and_builds_native_connected_wing(self):
+        c=AdaptiveChecks().config()
+        c['adaptive_search'].update(acceptance_rule='coordinate',minimum_chord_m=0,
+            node_count=4,bounds=[{'min_m':0} for _ in range(4)])
+        spec=adaptive.plan(model,c);r=spec['adaptive_search']
+        self.assertEqual(r['minimum_chord_m'],0)
+        self.assertTrue(adaptive.valid([.2,.001,0,0],r))
+        self.assertFalse(adaptive.valid([.2,0,.01,0],r))
+        self.assertFalse(adaptive.valid([.2,0,0,0],r))
+        self.assertFalse(adaptive.valid([.2,-1e-13,0,0],r))
+        case=model.custom_case(adaptive.design(r,.6,spec['settings']['gap_m'],[.2,.001,0,0]),spec['settings'])
+        self.assertEqual(case['active_chord_count'],2)
+        self.assertIsNotNone(model.build_solver(case,spec['settings']))
+
     def options(self,**kwargs):
         c=AdaptiveChecks().config()
         c['adaptive_search'].update(acceptance_rule='coordinate',initial_step_m=.02,

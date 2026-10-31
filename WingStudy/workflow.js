@@ -44,7 +44,18 @@ function adaptiveConfiguration(c){
 }
 function renderAdaptiveBounds(bounds){
  const n=Number($('adaptiveNodes').value);if(!Number.isInteger(n)||n<2||n>64)throw Error('Use 2–64 chord nodes.');
- $('adaptiveBounds').innerHTML=Array.from({length:n},(_,i)=>{const r=bounds?.[i]||{min_m:i>=2&&($('adaptiveZero')?.checked??true)?0:Number($('adaptiveChordMin').value),max_m:$('adaptiveChordMax').value===''?null:Number($('adaptiveChordMax').value),step_m:Number($('adaptiveStep').value)};return `<tr><td>${i+1}${i===0?' · root':i===n-1?' · tip':''}</td>${['min_m','max_m','step_m'].map(key=>`<td><input type="number" min="${key==='step_m'||i>=2?'0':'0.01'}" step="any" data-key="${key}" aria-label="Adaptive chord ${i+1} ${key}" value="${esc(r[key])}"></td>`).join('')}</tr>`;}).join('');
+ $('adaptiveBounds').innerHTML=Array.from({length:n},(_,i)=>{const r=bounds?.[i]||{min_m:i>=2&&($('adaptiveZero')?.checked??true)?0:Number($('adaptiveChordMin').value),max_m:$('adaptiveChordMax').value===''?null:Number($('adaptiveChordMax').value),step_m:Number($('adaptiveStep').value)};return `<tr><td>${i+1}${i===0?' · root':i===n-1?' · tip':''}</td>${['min_m','max_m','step_m'].map(key=>`<td><input type="number" min="${key==='step_m'||i>=2?'0':Number($('adaptiveChordMin').value)}" step="any" data-key="${key}" aria-label="Adaptive chord ${i+1} ${key}" value="${esc(r[key])}"></td>`).join('')}</tr>`;}).join('');
+}
+function applyAdaptiveMinimum(){
+ const field=$('adaptiveChordMin'),minimum=Number(field.value),previous=Number(field.dataset?.previousMinimum??0.01);
+ if(!Number.isFinite(minimum)||minimum<0)return;
+ for(const [index,row] of [...$('adaptiveBounds').querySelectorAll('tr')].entries()){
+  const input=row.querySelector('[data-key="min_m"]');
+  if(Number(input.value)===previous)input.value=String(minimum);
+  for(const item of row.querySelectorAll('input'))item.min=String(item.dataset.key==='step_m'||index>=2?0:minimum);
+ }
+ if(field.dataset)field.dataset.previousMinimum=String(minimum);
+ if(minimum===0&&$('adaptiveZero'))$('adaptiveZero').checked=true;
 }
 function updateSearchMode(){
  const adaptive=$('searchMode').value==='adaptive';$('adaptiveControls').classList.toggle('hidden',!adaptive);$('geometryCard').classList.toggle('hidden',adaptive);
@@ -104,6 +115,7 @@ function fill(c,initial=false){
  for(const [id,key] of Object.entries({nativeStiffness:'spring_constant_rad',nativeDamping:'damping_constant_rad',nativeMass:'wing_density',nativeHold:'step_discards'}))$(id).value=settings[key];
  if($('adaptiveFamilies'))for(const o of $('adaptiveFamilies').querySelectorAll('input'))o.checked=(c.adaptive_search?.seed_families??(initial?['triangle','square','concave','convex','narrow']:['triangle'])).includes(o.value);
  if($('adaptiveZero'))$('adaptiveZero').checked=c.adaptive_search?.allow_zero_outboard??(c.adaptive_search?.bounds?.length?c.adaptive_search.bounds.some((b,i)=>i>=2&&Number(b.min_m)===0):true);
+ if($('adaptiveChordMin').dataset)$('adaptiveChordMin').dataset.previousMinimum=$('adaptiveChordMin').value;
  renderAdaptiveBounds(c.adaptive_search?.bounds);updateSearchMode();updateBaseline();preview();
 }
 function wingPoints(row){
@@ -377,6 +389,7 @@ $('regularGrid').onclick=()=>{$('spanSearch').checked=false;baseline=null;refine
 $('applyLocalBounds').onclick=()=>{const rows=[...$('ranges').querySelectorAll('tr')],chosen=rows.filter(r=>r.querySelector('[data-vary]')?.checked);if(!chosen.length){notify('Select the chord rows you want to vary first, or edit their min/max/samples directly.');return;}const pct=Number($('localVariation').value)/100;if(!Number.isFinite(pct)||pct<0||pct>1){notify('Use a variation between 0 and 100%.');return;}rows.forEach((row,i)=>{if(!row.querySelector('[data-vary]')?.checked)return;const chord=baseline.sections[i].chord_m;row.querySelector('[data-key="min_m"]').value=Number((chord*(1-pct)).toPrecision(12));row.querySelector('[data-key="max_m"]').value=Number((chord*(1+pct)).toPrecision(12));row.querySelector('[data-key="count"]').value=pct?3:1;});preview();};
 $('fixAllChords').onclick=()=>{if(!baseline)return;renderRanges(baseline.sections.map(s=>({min_m:s.chord_m,max_m:s.chord_m,count:1})));updateBaseline();preview();};
 $('adaptiveZero').onchange=()=>{[...$('adaptiveBounds').querySelectorAll('tr')].forEach((row,i)=>{if(i<2)return;const input=row.querySelector('[data-key="min_m"]');if($('adaptiveZero').checked)input.value=0;else if(Number(input.value)===0)input.value=$('adaptiveChordMin').value;});preview();};
+$('adaptiveChordMin').onchange=()=>{applyAdaptiveMinimum();preview();};
 $('adaptiveElastic').onchange=()=>{updateSearchMode();preview();};
 $('nativeDampingPreset').onclick=()=>{$('nativeDamping').value=10;preview();};
 $('searchMode').onchange=()=>{updateSearchMode();preview();};

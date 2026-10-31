@@ -58,7 +58,7 @@ class AdaptiveChecks(unittest.TestCase):
         self.assertAlmostEqual(case['span_m'],.6)
         self.assertTrue(all(s['chord_m']>=.01 for s in case['sections']))
         self.assertIsNotNone(model.build_solver(case,p['settings']))
-        for key,value in [('minimum_chord_m',.001),('tip_chord_m',-1),('minimum_step_m',.1),('span_max_m',.4),('shrink_factor',1)]:
+        for key,value in [('minimum_chord_m',-.001),('tip_chord_m',-1),('minimum_step_m',.1),('span_max_m',.4),('shrink_factor',1)]:
             invalid=copy.deepcopy(c);invalid['adaptive_search'][key]=value
             with self.assertRaises(ValueError):adaptive.plan(model,invalid)
 
