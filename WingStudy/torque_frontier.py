@@ -76,7 +76,7 @@ def evolution_rows(model,rows,include_seeds=True):
     can be a winner in another study. Never infer a history from all trials.
     """
     import adaptive
-    histories={};target_histories={};memberships={};selected=[]
+    histories={};target_histories={};memberships={};final_histories={};selected=[]
     for row in rows:
         locations=[{'study':row.get('_study'),'local_case':row['id']},*row.get('occurrences',[])]
         roles=[]
@@ -89,6 +89,10 @@ def evolution_rows(model,rows,include_seeds=True):
                 curve_path=model.OUTPUTS/study/'torque_targets.json'
                 curve=model.read_json(curve_path) if curve_path.is_file() else None
                 lookup={e['case']['id']:e['case'] for e in events}
+                latest={}
+                for e in events:
+                    if e.get('accepted',True):latest[e.get('job',0)]=e['case']['id']
+                final_histories[study]=set(latest.values())
                 accepted={};target_histories[study]={};memberships[study]={}
                 for sequence,e in enumerate(events):
                     parent=e.get('parent_case');case=e['case']
@@ -114,6 +118,7 @@ def evolution_rows(model,rows,include_seeds=True):
             targets=sorted(set(q for loc in locations for q in target_histories.get(loc.get('study'),{}).get(loc['local_case'],[])))
             nodes=[node for loc in locations for node in memberships.get(loc.get('study'),{}).get(loc['local_case'],[])]
             selected.append({**row,'available_torque_targets_Nm':targets,'evolution_memberships':nodes,
+                'is_final_evolution':any(loc['local_case'] in final_histories.get(loc.get('study'),set()) for loc in locations),
                 'evolution_role':'improvement' if 'improvement' in roles else 'seed'})
     return selected
 
@@ -151,7 +156,11 @@ def generate(model,data):
     chosen_span=data.get('span_class','all')
     if chosen_span!='all':rows=[r for r in rows if span_class(r)==chosen_span]
     comparison=data.get('comparison_mode','frontier')
-    if comparison=='evolution':rows=evolution_rows(model,rows,data.get('include_seeds',True))
+    history=evolution_rows(model,rows,data.get('include_seeds',True) if comparison=='evolution' else True)
+    if comparison=='evolution':rows=history
+    else:
+        finals={identity(r) for r in history if r.get('is_final_evolution')}
+        rows=[{**r,'is_final_evolution':identity(r) in finals} for r in rows]
     eligible,points=envelope(rows,allow_aeroelastic=mode=='aeroelastic')
     if comparison=='evolution':points=[{**r,**dimensions(r)} for r in eligible]
     if not points:
@@ -178,7 +187,7 @@ def generate(model,data):
     if comparison=='evolution':shown=all_range
     background=[] if comparison in ('bands','evolution') else sample_background(all_range,points,shown,spacing,left,right)
     paths=evolution_paths(all_range) if comparison=='evolution' else []
-    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v9',paths,family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST]) for r in eligible]]).encode()).hexdigest()[:12]
+    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v10',paths,family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST],r.get('is_final_evolution',False)) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.offsetbox import DrawingArea, AnnotationBbox
     from matplotlib.patches import Polygon
@@ -206,9 +215,9 @@ def generate(model,data):
         width,height=(hi-lo)*points_per_m
         box=DrawingArea(max(width,1),max(height,1),0,0)
         vertices=(polygon-lo)*points_per_m;vertices[:,1]=height-vertices[:,1]
-        emphasized=row['is_frontier'] or row['is_representative']
+        emphasized=row.get('is_final_evolution',False)
         color=FAMILY_COLORS[families(row)[0]] if color_mode=='family' else cmap(norm(row[THRUST]/row[TORQUE])) if row[TORQUE]>0 else '#aaa'
-        box.add_artist(Polygon(vertices,facecolor=color,edgecolor='#172f36' if emphasized else '#888',linewidth=.8 if emphasized else .35))
+        box.add_artist(Polygon(vertices,facecolor=color,edgecolor='#172f36' if emphasized else 'none',linewidth=.8 if emphasized else 0))
         ax.add_artist(AnnotationBbox(box,(row[TORQUE],row[THRUST]),frameon=False,pad=0,zorder=3 if emphasized else 2))
         ax.plot(row[TORQUE],row[THRUST],alpha=0)
     ax.set(xlabel='Peak wing-root torque (N m)',ylabel='Mean single-wing thrust (N)')
@@ -227,13 +236,13 @@ def generate(model,data):
         ax.legend(handles=[Line2D([],[],marker='s',linestyle='',color=FAMILY_COLORS[f],label=FAMILY_LABELS[f]) for f in FAMILY_LABELS if any(f in families(r) for r in displayed)],fontsize=6,loc='lower right')
     else:fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label='Mean thrust / peak root torque (1/m)',pad=.02)
     fig.savefig(dest/'thrust_torque_frontier.png',dpi=600);plt.close(fig)
-    fields=['available_torque_targets_Nm','evolution_role','seed_families','geometry_id','simulation_id','peak_root_torque_Nm','mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles','thrust_to_torque_1pm','is_frontier','displayed','model_mode','spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg','is_band_winner','band_min_torque_Nm','band_max_torque_Nm','band_design_count']
+    fields=['available_torque_targets_Nm','evolution_role','seed_families','geometry_id','simulation_id','peak_root_torque_Nm','mean_single_wing_thrust_N','global_case_no','study','case','design_name','single_wing_span_m','effective_total_span_m','frequency_hz','speed_mps','dt_s','cycles','thrust_to_torque_1pm','is_frontier','displayed','model_mode','spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg','is_band_winner','band_min_torque_Nm','band_max_torque_Nm','band_design_count','is_final_evolution']
     with (dest/'thrust_torque_frontier.csv').open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=fields);w.writeheader()
         displayed_ids={identity(r) for r in [*shown,*background]}
         for r in all_range:
             winner=winner_map.get(identity(r),{})
-            w.writerow(dict(zip(fields,[';'.join(str(q) for q in r.get('available_torque_targets_Nm',[])),r.get('evolution_role'),';'.join(families(r)),r.get('geometry_id'),r.get('simulation_id'),r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')],bool(winner),winner.get('torque_band_min_nm'),winner.get('torque_band_max_nm'),winner.get('torque_band_count')])))
+            w.writerow(dict(zip(fields,[';'.join(str(q) for q in r.get('available_torque_targets_Nm',[])),r.get('evolution_role'),';'.join(families(r)),r.get('geometry_id'),r.get('simulation_id'),r[TORQUE],r[THRUST],r.get('global_case_no'),r.get('_study',study),r['id'],r.get('design_name'),r.get('single_wing_span_m'),r.get('effective_total_span_m'),*[r.get('_settings',{}).get(k) for k in ('frequency_hz','speed_mps','dt_s','cycles')],r[THRUST]/r[TORQUE] if r[TORQUE]>0 else None,identity(r) in frontier_ids,identity(r) in displayed_ids,mode,*[r.get(k,r.get('_settings',{}).get(k)) for k in ('spring_constant_rad','damping_constant_rad','wing_density','peak_abs_native_twist_deg')],bool(winner),winner.get('torque_band_min_nm'),winner.get('torque_band_max_nm'),winner.get('torque_band_count'),bool(r.get('is_final_evolution'))])))
     curve_path=model.OUTPUTS/study/'torque_targets.json' if study!='master' else None
     curve=model.read_json(curve_path) if curve_path and curve_path.is_file() else {}
     return {'evolution_paths':paths,'torque_targets':curve.get('targets',[]),'curve_csv':str((model.OUTPUTS/study/'comparisons/torque_curve.csv').relative_to(model.OUTPUTS)).replace(chr(92),'/') if curve else None,'seed_family':family,'color_mode':color_mode,'family_colors':FAMILY_COLORS,'family_labels':FAMILY_LABELS,'comparison_mode':comparison,'torque_band_width_nm':band_width,'model_mode':mode,'points':winners if comparison=='bands' else all_range if comparison=='evolution' else points,'displayed':displayed,'wing_size_percent':size,'plotted_count':len(shown),'background_count':len(background),'range_count':len(in_range),'range_eligible_count':len(all_range),'minimum_spacing_nm':spacing,'minimum_torque_nm':left,'plot_maximum_torque_nm':right,'slider_maximum_torque_nm':right if comparison=='bands' else min(right,eligible[-1][TORQUE]),'eligible_count':len(eligible),'maximum_torque_nm':eligible[-1][TORQUE],

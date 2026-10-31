@@ -22,7 +22,9 @@ def run_isolated(case,settings,study):
     vtkMultiThreader.SetGlobalMaximumNumberOfThreads(1)
     vtkMultiThreader.SetGlobalDefaultNumberOfThreads(1)
     vtkSMPTools.Initialize(1)
-    with tempfile.TemporaryDirectory(prefix='.parallel-'+case_id+'-',dir=study) as temp:
+    # Native plotting libraries can fail beyond Windows' 260-character path
+    # limit. Stage in the short OS temp directory, then copy to the study.
+    with tempfile.TemporaryDirectory(prefix='wing-'+case_id+'-') as temp:
         directory=Path(temp)/case_id;directory.mkdir()
         try:
             metrics=model.run_case(case,settings,directory)

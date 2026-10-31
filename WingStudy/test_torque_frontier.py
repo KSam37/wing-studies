@@ -8,6 +8,26 @@ import torque_frontier as frontier
 from test_torque_study import row
 
 class FrontierChecks(unittest.TestCase):
+    def test_only_true_final_seed_states_are_marked_even_with_range_filter(self):
+        sections=[{'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':0,'chord_m':.2},
+            {'x_m':0,'pitch_deg':0,'roll_deg':0,'y_m':.3,'chord_m':.1}]
+        rows=[row(f'case_{i:04d}',i,i*.1,sections=sections) for i in (1,2,3)]
+        events=[{'case':r,'job':1,'seed_family':'triangle','span_m':.64,'accepted':True,
+            'search_algorithm':'independent_coordinate_v1','weighted_score':i,
+            'parent_case':rows[i-1]['id'] if i else None,'kind':'coordinate' if i else 'seed'} for i,r in enumerate(rows)]
+        with tempfile.TemporaryDirectory(dir=model.HERE) as temp,patch.object(model,'OUTPUTS',Path(temp)):
+            study=Path(temp)/'saved';study.mkdir()
+            model.write_json(study/'manifest.json',{'settings':{'gap_m':.04}})
+            model.write_json(study/'results.json',rows);model.write_json(study/'evolution.json',events)
+            data=frontier.generate(model,{'study':'saved','comparison_mode':'evolution'})
+            self.assertEqual([r['id'] for r in data['displayed'] if r['is_final_evolution']],['case_0003'])
+            zoom=frontier.generate(model,{'study':'saved','comparison_mode':'evolution','torque_max_nm':.25})
+            self.assertFalse(any(r['is_final_evolution'] for r in zoom['displayed']))
+            band=frontier.generate(model,{'study':'saved','comparison_mode':'bands','torque_band_width_nm':.5})
+            self.assertTrue(band['displayed'][0]['is_final_evolution'])
+            with (Path(temp)/data['files'][1]).open() as f:
+                self.assertEqual([r['case'] for r in csv.DictReader(f) if r['is_final_evolution']=='True'],['case_0003'])
+
     def test_band_winner_is_highest_thrust_not_highest_ratio(self):
         rows=[row('ratio',2,.1),row('thrust',3,.8),row('boundary',4,1),row('final',5,2)]
         chosen=frontier.band_winners(rows,0,2,1)
