@@ -23,11 +23,11 @@ assert(plot.innerHTML.indexOf('<polyline')<plot.innerHTML.indexOf('class="plot-w
 assert(plot.innerHTML.includes('666.75,')); // First ancestor stays first even with higher torque.
 console.log('Dashed ancestry renders behind wings without sorting by torque.');
 
-assert(!plot.innerHTML.includes('stroke="#b0b0b0"'));
+assert(!plot.innerHTML.includes('stroke="#000000"'));
 const shape={outline_m:[[0,0],[.2,0],[.2,.1]],single_wing_mean_thrust_N:1,single_wing_peak_abs_roll_moment_Nm:1,is_frontier:true};
 plotCtx.mountFrontierPlot({minimum_torque_nm:0,plot_maximum_torque_nm:2,displayed:[{...shape,id:'earlier'},{...shape,id:'final',is_final_evolution:true}]});
-assert.equal((plot.innerHTML.match(/stroke="#b0b0b0"/g)||[]).length,1);
-assert(plot.innerHTML.includes('stroke="none" stroke-width="0"'));
+assert.equal((plot.innerHTML.match(/stroke="#000000"/g)||[]).length,1);
+assert(plot.innerHTML.includes('stroke="#b0b0b0" stroke-width="1"'));
 let scheduled=null,regenerations=0;
 ctx.clearTimeout=()=>{scheduled=null;};ctx.setTimeout=callback=>{scheduled=callback;return 1;};
 for(const id of ['frontierMin','frontierMax','frontierBandWidth','frontierSize','frontierSpacing','frontierFamily','frontierColor','frontierSeeds'])inputs[id]={value:''};
@@ -36,4 +36,4 @@ vm.runInContext(source.slice(source.indexOf('function scheduleFrontierUpdate('),
 inputs.frontierResult.innerHTML='existing plot';inputs.frontierBandWidth.oninput();assert.equal(inputs.frontierResult.innerHTML,'existing plot');assert(scheduled);scheduled();assert.equal(regenerations,1);
 inputs.frontierBandWidth.value='0';scheduled=null;inputs.frontierBandWidth.oninput();assert.equal(scheduled,null);assert(inputs.frontierStatus.textContent.includes('Previous plot'));
 inputs.frontierBandWidth.value='.25';inputs.frontierMin.value='.2';inputs.frontierMax.value='1.2';inputs.frontierMax.oninput();assert(scheduled);scheduled();assert.equal(regenerations,2);
-console.log('Only final states have light grey outlines; band width and torque limits regenerate automatically.');
+console.log('Final states have black outlines; earlier states have light grey outlines; band width and torque limits regenerate automatically.');

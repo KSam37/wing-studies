@@ -187,7 +187,7 @@ def generate(model,data):
     if comparison=='evolution':shown=all_range
     background=[] if comparison in ('bands','evolution') else sample_background(all_range,points,shown,spacing,left,right)
     paths=evolution_paths(all_range) if comparison=='evolution' else []
-    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v11',paths,family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST],r.get('is_final_evolution',False)) for r in eligible]]).encode()).hexdigest()[:12]
+    digest=hashlib.sha256(catalog.compact(['physical-wing-markers-v12',paths,family,color_mode,comparison,band_width,mode,lower,upper,spacing,size,[(r.get('_study'),r['id'],r[TORQUE],r[THRUST],r.get('is_final_evolution',False)) for r in eligible]]).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('torque-frontier-'+digest);dest.mkdir(exist_ok=True)
     from matplotlib.offsetbox import DrawingArea, AnnotationBbox
     from matplotlib.patches import Polygon
@@ -217,7 +217,7 @@ def generate(model,data):
         vertices=(polygon-lo)*points_per_m;vertices[:,1]=height-vertices[:,1]
         emphasized=row.get('is_final_evolution',False)
         color=FAMILY_COLORS[families(row)[0]] if color_mode=='family' else cmap(norm(row[THRUST]/row[TORQUE])) if row[TORQUE]>0 else '#aaa'
-        box.add_artist(Polygon(vertices,facecolor=color,edgecolor='#b0b0b0' if emphasized else 'none',linewidth=.8 if emphasized else 0))
+        box.add_artist(Polygon(vertices,facecolor=color,edgecolor='#000000' if emphasized else '#b0b0b0',linewidth=.8 if emphasized else .5))
         ax.add_artist(AnnotationBbox(box,(row[TORQUE],row[THRUST]),frameon=False,pad=0,zorder=3 if emphasized else 2))
         ax.plot(row[TORQUE],row[THRUST],alpha=0)
     ax.set(xlabel='Peak wing-root torque (N m)',ylabel='Mean single-wing thrust (N)')
