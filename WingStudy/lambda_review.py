@@ -104,15 +104,16 @@ def selection(bundle,data):
 def export(model,data):
     b=bundle(model);rows,winners,lo,hi,width=selection(b,data)
     if not rows:raise ValueError('No eligible designs in this selection.')
-    digest=hashlib.sha256(json.dumps(['lambda-review-v2',data,[(r['study'],r['id'],r[THRUST],r[TORQUE]) for r in rows]],sort_keys=True).encode()).hexdigest()[:12]
+    series=[w for s in b['studies'] for w in band_winners([r for r in rows if r['study']==s['id']],lo,hi,width)]
+    digest=hashlib.sha256(json.dumps(['lambda-review-v3',data,[(r['study'],r['id'],r[THRUST],r[TORQUE]) for r in rows]],sort_keys=True).encode()).hexdigest()[:12]
     dest=model.OUTPUTS/('lambda-review-'+digest);dest.mkdir(exist_ok=True)
-    files=['lambda_comparison.png','evolution_audit.png','band_winners.csv','evaluated_designs.csv','methods.md','summary.md']
+    files=['lambda_comparison.png','seed_evolutions.png','evolution_audit.png','band_winners_by_lambda.csv','band_winners.csv','evaluated_designs.csv','methods.md','summary.md']
     if not all((dest/f).is_file() for f in files):
-        figures(model,b,rows,winners,lo,hi,width,dest,data.get('scope','all'))
+        figures(model,b,rows,series,lo,hi,width,dest,data.get('scope','all'))
         fields=['study','lambda_value','global_case_no','id','geometry_id','simulation_id',THRUST,TORQUE,
             'single_wing_span_m','effective_total_span_m','area_m2','is_final','is_accepted','chords_m',
             'torque_band_min_nm','torque_band_max_nm','torque_band_count']
-        for name,values in [('evaluated_designs.csv',rows),('band_winners.csv',winners)]:
+        for name,values in [('evaluated_designs.csv',rows),('band_winners.csv',winners),('band_winners_by_lambda.csv',series)]:
             with (dest/name).open('w',newline='',encoding='utf-8') as f:
                 w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore');w.writeheader();w.writerows(values)
         (dest/'methods.md').write_text(methods(b),encoding='utf-8')
@@ -133,7 +134,7 @@ Root width is capped at 0.2 m and may shrink. Chords are nonincreasing outboard.
 
 Native rigid Ptera UVLM: water density {c['rho']:g} kg/m³, kinematic viscosity {c['nu']:g} m²/s; {c['frequency_hz']:g} Hz, nominal −26° to +34° prescribed flap, {c['speed_mps']:g} m/s forward speed, Δt = {c['dt_s']:g} s, {c['cycles']} cycles, {c['span_panels']} span and {c['chord_panels']} chord panels, {c['wake_model']} wake retaining {c['wake_cycles']:g} cycles. All values are read from the saved studies. Only successful isolated-wing cases with positive mean thrust and the recorded cycle-repeatability flag are selected. This flag is an internal settling check, not a discretization uncertainty estimate.
 
-The best-under-torque envelope is a step function of observed results: F(m) = max T_i for M_i ≤ m. Torque-band representatives instead maximize T within each interval, breaking equal-thrust ties by lower M. Bands start at the selected minimum; upper edges are exclusive except the final edge. No interpolation or extrapolation is used. All evaluated designs are available by default, including trials rejected by their own λ score. Identical simulations appearing in multiple studies are not independent evidence. Color denotes λ, not energy efficiency. Wing silhouettes share a physical scale within the figure.
+The best-under-torque envelope is a step function of observed results: F(m) = max T_i for M_i ≤ m. Torque-band representatives instead maximize T within each interval separately for each lambda, breaking equal-thrust ties by lower M. The band plot overlays these three series; a separate pooled-winners CSV selects across all included studies. Bands start at the selected minimum; upper edges are exclusive except the final edge. No interpolation or extrapolation is used. All evaluated designs are available by default, including trials rejected by their own λ score. Identical simulations appearing in multiple studies are not independent evidence. Color in the band plot denotes λ, not energy efficiency. Shared identical simulations have striped silhouettes. Wing silhouettes share a physical scale within each figure. Evolution plots group all seed paths within each lambda, use shared axes, family colors and starting-span line styles, and show complete histories regardless of the torque-band filter.
 
 {b['limitations']}
 '''
@@ -172,19 +173,35 @@ def figures(model,b,rows,winners,lo,hi,width,dest,scope='all'):
             axes[0].step([*xs,hi],[*ys,ys[-1]],where='post',lw=1.1,color=study['color'],label=study['name'])
         axes[0].legend(fontsize=7,frameon=False,loc='lower right')
         axes[0].set_title('(a) Best observed thrust below each torque',fontsize=8)
-        # Space silhouettes in 2D; keep all exact winners in CSV and the interactive table.
+        # Sample each lambda independently, so one series cannot suppress the others.
         ymax=max(r[THRUST] for r in rows)*1.07;shown=[]
-        for r in sorted(winners,key=lambda r:-r[THRUST]):
-            if all(((r[TORQUE]-p[TORQUE])/(hi-lo))**2+((r[THRUST]-p[THRUST])/ymax)**2>.065**2 for p in shown):shown.append(r)
+        for study in b['studies']:
+            kept=[]
+            for r in sorted((r for r in winners if r['study']==study['id']),key=lambda r:-r[THRUST]):
+                if all(((r[TORQUE]-p[TORQUE])/(hi-lo))**2+((r[THRUST]-p[THRUST])/ymax)**2>.065**2 for p in kept):kept.append(r)
+            shown.extend(kept)
+        coincident={}
+        for r in shown:
+            key=r['simulation_id'] or (r['study'],r['id'])
+            if key not in coincident:coincident[key]={**r,'sources':[r['study']]}
+            else:
+                coincident[key]['sources'].append(r['study']);coincident[key]['is_final']|=r['is_final']
+        shown=list(coincident.values())
         extent=max((max(p[0] for p in r['outline_m'])-min(p[0] for p in r['outline_m']) for r in rows),default=.4)
         scale=20/max(extent,1e-9)
         for r in shown:
             poly=np.array(r['outline_m']);lower=poly.min(axis=0);upper=poly.max(axis=0);size=(upper-lower)*scale
             box=DrawingArea(max(size[0],1),max(size[1],1));v=(poly-lower)*scale;v[:,1]=size[1]-v[:,1]
-            box.add_artist(Polygon(v,facecolor=colors[r['study']],edgecolor='black' if r['is_final'] else '#b0b0b0',lw=.7 if r['is_final'] else .4))
+            patch=Polygon(v,facecolor=colors[r['study']],edgecolor='none');box.add_artist(patch)
+            if len(r['sources'])>1:
+                from matplotlib.patches import Rectangle
+                for j in range(int(size[0]/2)+1):
+                    stripe=Rectangle((j*2,0),2,max(size[1],1),facecolor=colors[r['sources'][j%len(r['sources'])]],lw=0)
+                    stripe.set_clip_path(patch);box.add_artist(stripe)
+            box.add_artist(Polygon(v,fill=False,edgecolor='black' if r['is_final'] else '#b0b0b0',lw=.7 if r['is_final'] else .4))
             axes[1].add_artist(AnnotationBbox(box,(r[TORQUE],r[THRUST]),frameon=False,pad=0))
             axes[1].plot(r[TORQUE],r[THRUST],'.',ms=1.5,color=colors[r['study']])
-        axes[1].set_title(f'(b) Highest thrust in {width:g} N m bands',fontsize=8)
+        axes[1].set_title(f'(b) Band winners by lambda · {width:g} N m',fontsize=8)
         axes[1].add_artist(AnnotationBbox(DrawingArea(1,1),(lo,0),frameon=False))
         axes[1].plot([],[],color='#17313d',label=f'0.10 m = {scale*.1:.1f} pt')
         # Scale bar in physical drawing points, independent of torque/thrust axes.
@@ -208,3 +225,25 @@ def figures(model,b,rows,winners,lo,hi,width,dest,scope='all'):
         keys.extend(Line2D([],[],color='#52616b',lw=1,linestyle=style,label=f'{span:g} m start') for span,style in ((.4,':'),(.6,'--'),(.8,'-')))
         fig.legend(handles=keys,loc='outside lower center',ncol=4,fontsize=6,frameon=False)
         fig.savefig(dest/'evolution_audit.png',dpi=600);plt.close(fig)
+        groups=[s for s in b['studies'] if any(p['study']==s['id'] for p in paths)]
+        fig,axes=plt.subplots(len(groups),1,figsize=(7.16,3*len(groups)),layout='constrained',squeeze=False,sharex=True,sharey=True)
+        xmax=max(p['torque'] for path in paths for p in path['points'])*1.08
+        ymax=max(p['thrust'] for path in paths for p in path['points'])*1.08
+        max_span=max(max(p[0] for p in point['outline_m']) for path in paths for point in path['points'])
+        scale=26/max(max_span,1e-9)
+        for ax,study in zip(axes[:,0],groups):
+            for path in [p for p in paths if p['study']==study['id']]:
+                ps=path['points'];color=FAMILY_COLORS[path['family']];style={.4:':',.6:'--',.8:'-.'}[round(path['starting_total_span_m'],1)]
+                ax.plot([p['torque'] for p in ps],[p['thrust'] for p in ps],ls=style,lw=.7,color=color,alpha=.7)
+                for point,final in ((ps[0],False),(ps[-1],True)):
+                    poly=np.array(point['outline_m']);lower=poly.min(axis=0);size=(poly.max(axis=0)-lower)*scale;v=(poly-lower)*scale;v[:,1]=size[1]-v[:,1]
+                    box=DrawingArea(max(size[0],1),max(size[1],1));box.add_artist(Polygon(v,facecolor=color,alpha=1 if final else .25,edgecolor='black' if final else '#b0b0b0',lw=.7 if final else .4))
+                    ax.add_artist(AnnotationBbox(box,(point['torque'],point['thrust']),frameon=False,pad=0,zorder=3 if final else 2))
+            ax.set(xlim=(0,xmax),ylim=(0,ymax),title=f"{study['name']} · all {sum(p['study']==study['id'] for p in paths)} seeds",ylabel='Mean single-wing thrust (N)');ax.grid(alpha=.18)
+            bar=DrawingArea(scale*.1,8);bar.add_artist(Line2D([0,scale*.1],[4,4],color='#17313d',lw=1.5))
+            ax.add_artist(AnnotationBbox(bar,(.04,.92),xycoords='axes fraction',frameon=False));ax.text(.04,.84,'0.10 m',transform=ax.transAxes,fontsize=7)
+        axes[-1,0].set_xlabel('Peak wing-root torque (N m)')
+        keys=[Line2D([],[],color=FAMILY_COLORS[k],lw=1,label=FAMILY_LABELS[k]) for k in FAMILY_COLORS if any(p['family']==k for p in paths)]
+        keys.extend(Line2D([],[],color='#52616b',lw=1,linestyle=style,label=f'{span:g} m start') for span,style in ((.4,':'),(.6,'--'),(.8,'-.')))
+        fig.legend(handles=keys,loc='outside lower center',ncol=4,fontsize=6,frameon=False)
+        fig.savefig(dest/'seed_evolutions.png',dpi=600);plt.close(fig)

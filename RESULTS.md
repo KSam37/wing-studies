@@ -16,8 +16,9 @@ Each search includes 15 independent lineages: five seed families at three
 starting spans. Shared settings and fixed seed-derived objective scales match.
 Scores increase along every accepted path; that is not a global convergence test.
 
+The objective and dimensionless lambda weight are defined at the top.
 Use the lambda checkboxes, torque minimum/maximum and torque-band width to
-compare the data. Each occupied band selects the greatest observed mean thrust,
+compare the data. Each occupied band selects the greatest observed mean thrust separately for each lambda,
 breaking equal-thrust ties by smaller peak torque. Click a wing or table row for
 actual span, chord widths, global case number, original native plots and SVGs.
 The step plot answers a different question: greatest observed thrust at or below
@@ -25,7 +26,8 @@ each torque budget. It does not interpolate new simulated results.
 
 All evaluated trials are available by default, because a trial rejected by its
 lambda score may be valuable in another torque band. Switch to accepted evolution
-or final designs to see only those subsets. Select a seed lineage to play its
+or final designs to see only those subsets. Each lambda has a plot containing all 15 seed histories, with shared axes and family colors. Final-shape galleries use a common physical scale. Filter by starting span, or show seed/final shapes versus all accepted shapes.
+Select a seed lineage to play its
 geometry evolution or export its recorded GIF. Native flapping animations remain
 separate. Figures export as 600 dpi PNG with source CSV, methods and a summary.
 
