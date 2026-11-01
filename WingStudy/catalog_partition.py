@@ -60,6 +60,8 @@ def scoped(row,archived,generation):
 
 def views(model,selected,config,metric,descending):
     import catalog
+    import study_organization
+    organization=study_organization.read(model)
     archived=set(config['archived_studies']);raw=[];base=None
     membership={'current':set(),'old':set()}
     stores=['current']+(['old'] if (catalog.root(model)/'master_runs_old.sqlite3').exists() else [])
@@ -68,6 +70,7 @@ def views(model,selected,config,metric,descending):
             locations=list(db.execute('SELECT c.signature,o.study FROM cases c JOIN occurrences o ON o.case_no=c.case_no'))
             wanted=set()
             for location in locations:
+                if not study_organization.visible(organization,location['study']):continue
                 if location['study'][:8].isdigit() and location['study']<config['first_current_study']:
                     archived.add(location['study'])
                 generation='old' if location['study'] in archived else 'current'
@@ -84,8 +87,10 @@ def views(model,selected,config,metric,descending):
         # simulation occurs in both storage generations; merge all locations.
         chosen={}
         for row in raw:
+            row={**row,'occurrences':[o for o in row['occurrences'] if study_organization.visible(organization,o['study'])]}
             item=scoped(row,archived,generation)
             if not item:continue
+            item['_studyName']=study_organization.name(organization,item['_study'],item.get('_studyName'))
             key=item['_signature']
             if key not in chosen:chosen[key]=item
             else:

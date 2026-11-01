@@ -19,6 +19,7 @@ import webbrowser
 
 import model
 import catalog
+import study_organization
 
 LOCK = threading.Lock()
 PROCESS = None
@@ -37,10 +38,12 @@ def study_path(name):
 
 def studies():
     result = []
+    organization=study_organization.read(model)
     with catalog.connect(model) as db:
         numbers={(r["study"],r["local_case"]):r["case_no"] for r in db.execute("SELECT study,local_case,case_no FROM occurrences")}
     if model.OUTPUTS.exists():
         for p in sorted(model.OUTPUTS.iterdir(), reverse=True):
+            if not study_organization.visible(organization,p.name):continue
             if not (p/"manifest.json").is_file():
                 continue
             try:
@@ -52,7 +55,7 @@ def studies():
                     status.update(state="interrupted", message="Worker stopped; completed cases remain available.")
                 rows = model.read_json(p/"results.json") if (p/"results.json").exists() else []
                 rows = [{**r,"global_case_no":r.get("global_case_no",numbers.get((p.name,r["id"]))),"simulation_mode":r.get("simulation_mode","legacy_paired"),"wake_model":r.get("wake_model","free"),"wake_cycles":r.get("wake_cycles",0),"waveform_signature":r.get("waveform_signature","sine"),"has_profile_svg":(p/r["id"]/"wing_profile.svg").is_file(),"has_paired_profiles":all((p/r["id"]/f"wing_{side}.svg").is_file() for side in ("left","right"))} for r in rows]
-                result.append({"id": p.name, "name": manifest["name"], "created": manifest["created"],
+                result.append({"id": p.name, "name": study_organization.name(organization,p.name,manifest["name"]), "created": manifest["created"],
                                "status": {**status,**model.runtime_status(manifest,status,rows)}, "rows": rows, "config": manifest["config"],
                                "simulation_mode":manifest.get("settings",{}).get("simulation_mode","legacy_paired"),"tail":manifest.get("tail"),"tail_profiles":manifest.get("tail_profiles"),
                                "lean_outputs":manifest.get("companion_version") in ("1.2.0","1.3.0","1.4.0","1.4.1","1.5.0","1.6.0","1.7.0","2.1.1") or
@@ -65,13 +68,15 @@ def studies():
 def sweep_studies():
     """Small study index: avoid probing thousands of individual result files."""
     result=[]
+    organization=study_organization.read(model)
     if not model.OUTPUTS.exists():return result
     for p in sorted(model.OUTPUTS.iterdir(),reverse=True):
+        if not study_organization.visible(organization,p.name):continue
         try:
             manifest=model.read_json(p/'manifest.json');status=model.read_json(p/'status.json')
             if status.get('state')=='running' and not pid_alive(manifest.get('worker_pid')):
                 status={**status,'state':'interrupted','message':'Worker stopped; completed results retained.'}
-            result.append({'id':p.name,'name':manifest['name'],'created':manifest['created'],
+            result.append({'id':p.name,'name':study_organization.name(organization,p.name,manifest['name']),'created':manifest['created'],
                 'config':manifest['config'],'status':status,'case_count':manifest['case_count'],'retention':manifest.get('retention'),
                 'rigid':not manifest['settings'].get('aeroelastic_enabled',False),
                 'isolated':manifest['settings'].get('simulation_mode')==model.SIMULATION_MODE})
@@ -177,6 +182,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path in ("/", "/index.html"):
                 return self.send((model.HERE/"workflow.html").read_bytes(), kind="text/html; charset=utf-8")
+            if path in ('/comparison','/comparison.js'):
+                filename='lambda_review.html' if path=='/comparison' else 'lambda_review.js'
+                return self.send((model.HERE/filename).read_bytes(),kind='text/html; charset=utf-8' if path=='/comparison' else 'application/javascript; charset=utf-8')
+            if path=='/api/lambda-comparison':
+                import lambda_review
+                return self.send(lambda_review.bundle(model))
             if path == "/catalog-ui.js":
                 return self.send((model.HERE/"catalog-ui.js").read_bytes(),kind="application/javascript; charset=utf-8")
             if path == "/ui.js":
@@ -260,7 +271,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/evolution-gif":
                 import evolution_export
                 directory=study_path(data['study'])
-                with LOCK:return self.send(evolution_export.export_gif(model,directory,data['case']))
+                with LOCK:return self.send(evolution_export.export_gif(model,directory,data['case'],job=data.get('job')))
+            if path=='/api/lambda-report':
+                import lambda_review
+                with LOCK:return self.send(lambda_review.export(model,data))
             if path == "/api/adaptive-evolution":
                 directory=study_path(data['study'])
                 events=model.read_json(directory/'evolution.json') if (directory/'evolution.json').exists() else []

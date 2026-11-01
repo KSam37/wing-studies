@@ -4,6 +4,7 @@
 !/.gitattributes
 !/.gitmodules
 !/README.md
+!/RESULTS.md
 !/OPTIMIZATION_STRATEGY.md
 !/requirements-windows.lock
 !/ptera-source.json
@@ -35,6 +36,7 @@ WingStudy/tmp*/
 /outputs/*
 !/outputs/studies/
 !/outputs/provenance/
+!/outputs/study_organization.json
 !/outputs/master_runs.xlsx
 !/outputs/master_runs.sqlite3
 !/outputs/master_runs_old.xlsx

@@ -6,13 +6,17 @@ import re
 from pathlib import Path
 
 
-def lineage(model,study,case_id):
+def lineage(model,study,case_id,job=None):
     if not re.fullmatch(r'case_\d{4,}',case_id):raise ValueError('Invalid case identifier.')
     study=Path(study)
     rows=model.read_json(study/'results.json') if (study/'results.json').exists() else []
     lookup={r['id']:r for r in rows}
     if case_id not in lookup:raise ValueError('Selected case has no completed result yet.')
     events=model.read_json(study/'evolution.json') if (study/'evolution.json').exists() else []
+    if job is not None:
+        if type(job) is not int or job<1:raise ValueError('Invalid seed lineage.')
+        events=[e for e in events if e.get('job')==job]
+        if not any(e.get('case',{}).get('id')==case_id for e in events):raise ValueError('Selected wing is not on this seed lineage.')
     hits=[i for i,e in enumerate(events) if e.get('case',{}).get('id')==case_id]
     if hits and (events[hits[-1]].get('search_algorithm')=='independent_coordinate_v1' or
             lookup[case_id].get('adaptive_trial',{}).get('objective')!='pareto_mean_thrust_peak_root_torque_v1'):
@@ -36,10 +40,10 @@ def lineage(model,study,case_id):
     return unique
 
 
-def export_gif(model,study,case_id):
+def export_gif(model,study,case_id,job=None):
     import numpy as np
     from PIL import Image
-    study=Path(study);path=lineage(model,study,case_id)
+    study=Path(study);path=lineage(model,study,case_id,job=job)
     indices=np.unique(np.linspace(0,len(path)-1,min(len(path),200),dtype=int))
     shown=[path[i] for i in indices]
     polygons=[]
