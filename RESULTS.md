@@ -30,10 +30,12 @@ or final designs to see only those subsets. Each lambda has a plot containing al
 Select a seed lineage to play its
 geometry evolution or export its recorded GIF. Native flapping animations remain
 separate. Figures export as 600 dpi PNG with source CSV, methods and a summary.
-Use **Export PDF report** to make a self-contained sharing document with the
+Use **Export wing design report · PDF** to make a self-contained sharing document with the
 current lambda selections, torque limits, band width and design filter. It
-includes the delta-score equation, comparison and evolution figures, concise
-methods, limitations and a complete pooled band-winner appendix with case IDs.
+uses embedded Times New Roman and leads with the highest-thrust observed wing,
+a pooled thrust-torque frontier and a short list of nondominated alternatives.
+It includes the selected design evolution, a typeset delta-score equation and
+concise methods with traceable case IDs.
 
 The acceptance equation is `deltaS = (Tnew-Tcurrent)/Tref - lambda*(Mnew-Mcurrent)/Mref`, using final-cycle mean single-wing
 thrust and peak absolute root roll moment. Current is the last accepted wing; accept
