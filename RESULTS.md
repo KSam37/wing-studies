@@ -74,3 +74,9 @@ These are rigid UVLM screening results. The saved root torque excludes wing
 inertia and drivetrain conversion. Repeatable cycles are not a mesh/time-step/
 wake-convergence test. Finalists need those checks and physical validation before
 claiming an optimal or hardware-qualified design.
+
+## All retained wings atlas
+
+Open `http://127.0.0.1:8766/atlas` (or the **All tested wings** navigation link). Includes successful New and Old catalog simulations; exact simulation signatures are merged while all source-study memberships remain filterable. The initial view contains every single-wing result, with a spaced sample of silhouettes. Legacy paired-wing runs are available in separate conditions groups because their total roll moment is not a wing-root torque.
+
+Filter to matching saved conditions before attributing performance differences to shape. Color by span, area, taper, fullness or other metrics; switch to density for crowded regions, or normalize silhouette sizes to compare shape independently of display size. Hover/click inspects the actual case. Export saves one 600-dpi PNG and a CSV of every matching case with source identifiers and driving/numerical settings. No simulations or interpolated designs are generated.

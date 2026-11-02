@@ -182,6 +182,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path in ("/", "/index.html"):
                 return self.send((model.HERE/"workflow.html").read_bytes(), kind="text/html; charset=utf-8")
+            if path in ('/atlas','/atlas.js'):
+                filename='wing_atlas.html' if path=='/atlas' else 'wing_atlas.js'
+                return self.send((model.HERE/filename).read_bytes(),kind='text/html; charset=utf-8' if path=='/atlas' else 'application/javascript; charset=utf-8')
+            if path=='/api/wing-atlas':
+                import wing_atlas
+                with LOCK:return self.send(wing_atlas.bundle(model))
             if path in ('/comparison','/comparison.js'):
                 filename='lambda_review.html' if path=='/comparison' else 'lambda_review.js'
                 return self.send((model.HERE/filename).read_bytes(),kind='text/html; charset=utf-8' if path=='/comparison' else 'application/javascript; charset=utf-8')
@@ -276,6 +282,9 @@ class Handler(BaseHTTPRequestHandler):
                 import wing_template
                 directory=study_path(data['study'])
                 with LOCK:return self.send(wing_template.export(model,directory,data['case']))
+            if path=='/api/wing-atlas-plot':
+                import wing_atlas
+                with LOCK:return self.send(wing_atlas.export(model,data))
             if path=='/api/lambda-report':
                 import lambda_review
                 with LOCK:return self.send(lambda_review.export(model,data))
