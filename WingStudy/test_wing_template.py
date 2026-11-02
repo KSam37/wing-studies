@@ -26,12 +26,15 @@ class TemplateChecks(unittest.TestCase):
             self.assertTrue(b['frame'].covers(Point(center+[.99,0])))
             self.assertFalse(b['frame'].covers(Point(center+[1.01,0])))
         self.assertLess(b['reconstruction_error_mm2'],1e-7)
-        # Shared cut is exactly centered on the 2 mm rib, not a 2 mm overlap.
-        seam=b['parts'][0]['end'];a,z=b['chords'][seam];mid=np.mean([a,z],axis=0)
-        self.assertTrue(b['parts'][0]['polygon'].covers(Point(mid+[-.99,0])))
-        self.assertFalse(b['parts'][0]['polygon'].covers(Point(mid+[.01,0])))
-        self.assertTrue(b['parts'][1]['polygon'].covers(Point(mid+[.99,0])))
-        self.assertFalse(b['parts'][1]['polygon'].covers(Point(mid+[-.01,0])))
+        # Matching teeth partition the same rib without enlarging the frame.
+        from shapely.geometry import LineString
+        joint=b['joints'][0];self.assertTrue(joint['active'])
+        seam=LineString(joint['points']);shared=b['parts'][0]['polygon'].boundary.intersection(b['parts'][1]['polygon'].boundary)
+        self.assertLess(shared.hausdorff_distance(seam),1e-7)
+        chord=b['chords'][joint['chord']-1]
+        self.assertGreater(seam.length,LineString(chord).length)
+        self.assertAlmostEqual(joint['minimum_nominal_half_rib_mm'],.65)
+        self.assertEqual(joint['points'][0],list(chord[0]));self.assertEqual(joint['points'][-1],list(chord[1]))
     def test_small_wing_is_not_split_unnecessarily_and_can_rotate(self):
         fake,c,s=self.fake(span=180);self.assertEqual(len(template.build(fake,c,s)['parts']),1)
         layout=template.bed_layout(Polygon([(0,0),(300,0),(300,10),(0,10)]))

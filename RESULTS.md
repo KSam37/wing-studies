@@ -40,9 +40,11 @@ Choose **Export wing template STL** in a wing's details or its standard results
 row to download a ZIP of numbered print parts and an assembly guide. The cutting
 outline extends inward by 2 mm; every chord reinforcement is 2 mm wide. All lines
 are 3 mm high. Parts are split only at existing chord centers when needed to fit
-the 250 × 250 mm bed, with 1 mm of shared rib on either side of each glue seam.
+the 250 × 250 mm bed, with matching zigzag joints around each shared chord centerline. Tooth depth is
+±0.35 mm at approximately 6 mm pitch, leaving at least 0.65 mm of the nominal
+1 mm half-rib on each side. The first/last 3 mm stay straight at the cutting rim.
 Parts fit 248 × 248 mm to leave bed clearance; slicer brims need extra space.
-Import STL files in millimeters at 100% scale and butt-glue as shown. One wing is
+Import STL files in millimeters at 100% scale and dry-fit the registering teeth and glue as shown. Mating faces have zero designed clearance. One wing is
 exported; flip it for the mirror. Saved geometry is preserved, including its tip.
 Stored smooth functions use ≤0.02 mm curve flattening; no new smoothing is added.
 Untwisted developable bends unfold; unsupported twist reports an error. A single
