@@ -1,4 +1,4 @@
-"""Concise design-selection report, with embedded Times New Roman typography."""
+"""Thrust-torque results by lambda, with embedded Times New Roman typography."""
 from pathlib import Path
 import math
 import os
@@ -21,46 +21,54 @@ def font_paths():
     return paths
 
 
-def figures(model,rows,points,best,path,dest,lo,hi,fonts):
+def band_series(rows,studies,lo,hi,width):
+    return [r for study in studies for r in review.band_winners([r for r in rows if r['study']==study['id']],lo,hi,width)]
+
+
+def figures(model,rows,studies,series,envelope_rows,dest,lo,hi,fonts):
     import numpy as np
     from matplotlib import font_manager
     from matplotlib.offsetbox import DrawingArea,AnnotationBbox
-    from matplotlib.patches import Polygon
+    from matplotlib.patches import Polygon,Rectangle
     from matplotlib.lines import Line2D
     for file in fonts.values():font_manager.fontManager.addfont(str(file))
-    plt=model.ieee_style()
+    colors={s['id']:s['color'] for s in studies};plt=model.ieee_style()
     with plt.rc_context({'font.family':'Times New Roman','font.size':10,'axes.spines.top':False,'axes.spines.right':False}):
-        fig,ax=plt.subplots(figsize=(4.5,2.5),layout='constrained')
-        poly=np.array(best['outline_m'])*1000
-        ax.fill(*poly.T,facecolor='#d6e1e5',edgecolor='black',lw=1)
-        ax.set_aspect('equal');ax.invert_yaxis();ax.set(xlabel='Root-to-tip direction (mm)',ylabel='Chord direction (mm)')
-        ax.grid(alpha=.15);fig.savefig(dest/'selected_wing.png',dpi=350);plt.close(fig)
-        fig,ax=plt.subplots(figsize=(7.16,3.5),layout='constrained')
+        fig,ax=plt.subplots(figsize=(7.16,4.4),layout='constrained')
         unique={r['simulation_id'] or (r['study'],r['id']):r for r in rows}.values()
-        ax.scatter([r[review.TORQUE] for r in unique],[r[review.THRUST] for r in unique],s=6,c='#c5c5c5',alpha=.6,linewidths=0)
-        ymax=max(r[review.THRUST] for r in rows)*1.08;shown=[]
-        for r in reversed(points):
-            if all(math.hypot((r[review.TORQUE]-q[review.TORQUE])/(hi-lo),(r[review.THRUST]-q[review.THRUST])/ymax)>.07 for q in shown):shown.append(r)
-        span=max(max(p[0] for p in r['outline_m'])-min(p[0] for p in r['outline_m']) for r in rows)
-        scale=27/max(span,1e-9)
-        for r in reversed(shown):
+        ax.scatter([r[review.TORQUE] for r in unique],[r[review.THRUST] for r in unique],s=4,c='#c5c5c5',alpha=.4,linewidths=0)
+        ymax=max(r[review.THRUST] for r in rows)*1.09;sampled=[]
+        for study in studies:
+            kept=[]
+            for r in sorted((r for r in series if r['study']==study['id']),key=lambda r:-r[review.THRUST]):
+                if all(math.hypot((r[review.TORQUE]-q[review.TORQUE])/(hi-lo),(r[review.THRUST]-q[review.THRUST])/ymax)>.075 for q in kept):kept.append(r)
+            sampled.extend(kept)
+        shared={}
+        for r in sampled:
+            key=r['simulation_id'] or (r['study'],r['id'])
+            if key not in shared:shared[key]={**r,'sources':[r['study']]}
+            else:shared[key]['sources'].append(r['study']);shared[key]['is_final']|=r['is_final']
+        shown=sorted(shared.values(),key=lambda r:r['is_final'])
+        span=max(max(p[0] for p in r['outline_m'])-min(p[0] for p in r['outline_m']) for r in rows);scale=26/max(span,1e-9)
+        for r in shown:
             poly=np.array(r['outline_m']);lower=poly.min(axis=0);size=(poly.max(axis=0)-lower)*scale;v=(poly-lower)*scale;v[:,1]=size[1]-v[:,1]
-            box=DrawingArea(max(size[0],1),max(size[1],1));box.add_artist(Polygon(v,facecolor='#d6e1e5',edgecolor='black',lw=.6))
-            ax.add_artist(AnnotationBbox(box,(r[review.TORQUE],r[review.THRUST]),frameon=False,pad=0,zorder=3))
+            box=DrawingArea(max(size[0],1),max(size[1],1));patch=Polygon(v,facecolor=colors[r['study']],edgecolor='none');box.add_artist(patch)
+            if len(r['sources'])>1:
+                for j in range(int(size[0]/2)+1):
+                    stripe=Rectangle((j*2,0),2,max(size[1],1),facecolor=colors[r['sources'][j%len(r['sources'])]],lw=0);stripe.set_clip_path(patch);box.add_artist(stripe)
+            box.add_artist(Polygon(v,fill=False,edgecolor='black' if r['is_final'] else '#b0b0b0',lw=.7 if r['is_final'] else .4))
+            ax.add_artist(AnnotationBbox(box,(r[review.TORQUE],r[review.THRUST]),frameon=False,pad=0,zorder=3 if r['is_final'] else 2))
         ax.set(xlim=(lo,hi),ylim=(0,ymax),xlabel='Peak wing-root torque (N m)',ylabel='Mean single-wing thrust (N)');ax.grid(alpha=.17);ax.set_axisbelow(True)
         bar=DrawingArea(scale*.1,8);bar.add_artist(Line2D([0,scale*.1],[4,4],color='black',lw=1.2));ax.add_artist(AnnotationBbox(bar,(.06,.91),xycoords='axes fraction',frameon=False));ax.text(.06,.82,'0.10 m',transform=ax.transAxes,fontsize=9)
-        fig.savefig(dest/'design_frontier.png',dpi=450);plt.close(fig)
-        if path:
-            ids=sorted({0,(len(path)-1)//2,len(path)-1});chosen=[path[i] for i in ids]
-            all_points=np.array([q for p in chosen for q in p['outline_m']])*1000;loxy=all_points.min(axis=0);hixy=all_points.max(axis=0);pad=max(hixy-loxy)*.06
-            fig,axes=plt.subplots(1,len(chosen),figsize=(7.16,1.75),layout='constrained',squeeze=False)
-            for ax,i,p in zip(axes[0],ids,chosen):
-                poly=np.array(p['outline_m'])*1000;ax.fill(*poly.T,facecolor='#d6e1e5',edgecolor='black',lw=.8)
-                ax.set_aspect('equal');ax.set(xlim=(loxy[0]-pad,hixy[0]+pad),ylim=(hixy[1]+pad,loxy[1]-pad))
-                ax.set_title('Seed' if i==0 else 'Selected design' if i==len(path)-1 else f'Accepted step {i}',fontsize=10)
-                ax.set_xlabel(f"{p['thrust']:.4g} N; {p['torque']:.4g} N m",fontsize=9);ax.set_xticks([]);ax.set_yticks([])
-                for spine in ax.spines.values():spine.set_visible(False)
-            fig.savefig(dest/'selected_evolution.png',dpi=350);plt.close(fig)
+        ax.legend(handles=[Line2D([],[],marker='s',linestyle='',color=s['color'],label=f"λ = {s['lambda_value']:g}") for s in studies],loc='lower right',frameon=False,fontsize=10)
+        fig.savefig(dest/'torque_band_shapes.png',dpi=450);plt.close(fig)
+        fig,ax=plt.subplots(figsize=(7.16,2.15),layout='constrained')
+        for study,style in zip(studies,('-','--','-.')):
+            path=frontier([r for r in envelope_rows if r['study']==study['id'] and r[review.TORQUE]<=hi])
+            if not path:continue
+            ax.step([*[r[review.TORQUE] for r in path],hi],[*[r[review.THRUST] for r in path],path[-1][review.THRUST]],where='post',color=study['color'],ls=style,lw=1.25,label=f"λ = {study['lambda_value']:g}")
+        ax.set(xlim=(lo,hi),ylim=(0,ymax),xlabel='Available peak root torque (N m)',ylabel='Best mean thrust (N)');ax.grid(alpha=.17);ax.legend(loc='lower right',frameon=False,ncol=len(studies),fontsize=9)
+        fig.savefig(dest/'thrust_torque_envelopes.png',dpi=450);plt.close(fig)
 
 
 def export(model,data):
@@ -78,10 +86,11 @@ def export(model,data):
     pdfmetrics.registerFontFamily('ReportTimes',normal='ReportTimes',bold='ReportTimesBold',italic='ReportTimesItalic',boldItalic='ReportTimesBoldItalic')
     result=review.export(model,data);b=review.bundle(model);rows,winners,lo,hi,width=review.selection(b,data)
     selected=data.get('studies',[s['id'] for s in b['studies']]);studies=[s for s in b['studies'] if s['id'] in selected]
-    points=frontier(rows);best=points[-1];paths=[p for p in b['lineages'] if p['study'] in selected]
-    history=next((p['points'][:i+1] for p in paths if p['study']==best['study'] for i,point in enumerate(p['points']) if point['id']==best['id']),None)
-    baseline=next((p['points'][0] for p in paths if p['family']=='square' and abs((p['starting_total_span_m']-b['conditions']['gap_m'])/2-best['single_wing_span_m'])<1e-8),None)
-    dest=(model.OUTPUTS/result['files'][0]).parent;figures(model,rows,points,best,history,dest,lo,hi,fonts)
+    series=band_series(rows,studies,lo,hi,width)
+    scope=data.get('scope','all')
+    envelope_rows=[r for r in b['rows'] if r['study'] in selected and
+        (scope=='all' or scope=='accepted' and r['is_accepted'] or scope=='final' and r['is_final'])]
+    dest=(model.OUTPUTS/result['files'][0]).parent;figures(model,rows,studies,series,envelope_rows,dest,lo,hi,fonts)
     width_page=A4[0]-84;ref=b['references'];c=b['conditions'];a=studies[0]['search']
     styles={k:ParagraphStyle(k,fontName=font,fontSize=size,leading=leading,spaceAfter=after,textColor=colors.black) for k,font,size,leading,after in [
         ('title','ReportTimesBold',22,26,10),('heading','ReportTimesBold',12,15,7),
@@ -89,7 +98,7 @@ def export(model,data):
     def clean(value):return str(value).replace('−','-').replace('–','-').replace('—','-').replace('\u2011','-')
     def p(text,style='body'):return Paragraph(clean(text),styles[style])
     def lit(text,style='body'):return p(escape(clean(text)),style)
-    def num(x):return f'{x:.5g}'
+    def num(x):return f'{x:.6g}'
     def image(file,width=width_page,height=300):
         from PIL import Image as PI
         with PI.open(dest/file) as im:w,h=im.size
@@ -122,27 +131,27 @@ def export(model,data):
             cv.setFont('ReportTimes',10);cv.drawRightString(width_page,25,'(1)')
 
     sources={s['id']:chr(65+i) for i,s in enumerate(studies)}
-    root=best['chords_m'][0];distinct=len({r['simulation_id'] for r in rows})
-    story=[p('Optimal Wing Shape Selection','title'),
-        p(f"The highest mean single-wing thrust in the selected dataset is <b>{num(best[review.THRUST])} N</b>, requiring <b>{num(best[review.TORQUE])} N m</b> peak root torque. The corresponding design is master case <b>#{best.get('global_case_no') or '-'} ({sources[best['study']]}/{escape(best['id'])})</b>.")]
-    if baseline and baseline['thrust']>0 and baseline['torque']>0:
-        dt=100*(best[review.THRUST]/baseline['thrust']-1);dm=100*(best[review.TORQUE]/baseline['torque']-1)
-        story.append(lit(f"Relative to the rectangular seed at the same span, thrust is {abs(dt):.1f}% {'higher' if dt>=0 else 'lower'} and peak torque is {abs(dm):.1f}% {'higher' if dm>=0 else 'lower'} ({baseline['thrust']:.4g} N, {baseline['torque']:.4g} N m for the seed)."))
-    metrics=table(['Selected geometry','Value'],[['Root-to-tip span',f"{1000*best['single_wing_span_m']:.2f} mm"],['Root chord',f'{root*1000:.2f} mm'],['Wing area',f"{best['area_m2']:.5g} m²"],['Chord nodes',str(len(best['sections']))]],[109,width_page-323-109])
-    layout=Table([[image('selected_wing.png',315,185),metrics]],colWidths=[323,width_page-323]);layout.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(-1,-1),0)]));story.append(layout)
-    story.append(lit('Root-to-tip station / chord width (mm): '+ '; '.join(f"{s['y_m']*1000:.2f} / {s['chord_m']*1000:.2f}" for s in best['sections'])+'.','caption'))
-    story += [lit('Thrust available across root-torque demand','heading'),image('design_frontier.png',height=265),
-        lit('Grey points: evaluated designs. Wing silhouettes: sampled nondominated designs, each at its simulated thrust and torque and drawn to a common physical scale. A design is dominated if another supplies at least as much thrust with no greater torque.','caption'),
-        lit(f"Selection: {distinct} distinct simulations; torque {lo:g}-{hi:g} N m; "+{'all':'all evaluated designs','accepted':'accepted evolution and seeds','final':'final accepted designs'}[data.get('scope','all')]+'. The maximum-thrust design is one endpoint of this tradeoff, not the preferred design for every actuator.','caption'),PageBreak()]
-    story.append(lit('Design alternatives','heading'))
-    ids=sorted({round(i*(len(points)-1)/min(5,len(points)-1)) for i in range(min(6,len(points)))}) if len(points)>1 else [0]
-    short=[points[i] for i in ids]
-    col=[69,65,65,65,61,width_page-325]
-    story.append(table(['Peak torque\n(N m)','Mean thrust\n(N)','Span\n(mm)','Root chord\n(mm)','Master #','Source / case'],[
-        [num(r[review.TORQUE]),num(r[review.THRUST]),f"{1000*r['single_wing_span_m']:.2f}",f"{1000*r['chords_m'][0]:.2f}",str(r.get('global_case_no') or '-'),sources[r['study']]+'/'+r['id']] for r in short],col))
-    if history:
-        stages='Seed, intermediate accepted state and selected design' if len(history)>2 else 'Seed and selected design' if len(history)==2 else 'Selected seed; no accepted shape changes were recorded'
-        story += [Spacer(1,10),lit('Evolution of the selected design','heading'),image('selected_evolution.png',height=115),lit(stages+'. Shapes share a physical scale; labels give mean thrust and peak root torque.','caption')]
+    distinct=len({r['simulation_id'] for r in rows})
+    scope_label={'all':'all evaluated designs','accepted':'accepted evolution and seeds','final':'final accepted designs'}[scope]
+    story=[p('Wing Shape Optimization Results','title'),
+        lit(f"Mean single-wing thrust versus peak wing-root torque. Each search is shown separately: "+', '.join(f"λ = {s['lambda_value']:g}" for s in studies)+'.'),
+        lit(f"Selection: {distinct} distinct simulations; {scope_label}; torque range {lo:g}-{hi:g} N m; band width {width:g} N m.",'caption'),
+        lit('Highest-thrust shapes within each torque band','heading'),image('torque_band_shapes.png',height=320),
+        lit('Each silhouette is the highest-thrust observed design in its torque interval for one lambda. Sampling is applied separately to each series for readability. Shapes share a physical scale and are centered on their simulated loads. Stripes indicate an identical simulation shared by studies. Black borders denote final accepted designs; grey borders denote earlier designs.','caption'),
+        lit('Best observed thrust at or below each torque','heading'),image('thrust_torque_envelopes.png',height=155),
+        lit('Step curves give max(T) among eligible designs with peak torque M no greater than the available torque. Lower-torque designs remain eligible even below the displayed minimum. These envelopes differ from within-band selection above; neither plot interpolates new simulations.','caption'),PageBreak(),
+        lit('Representative torque-band results','heading')]
+    ids=sorted({round(i*(len(winners)-1)/min(3,len(winners)-1)) for i in range(min(4,len(winners)))}) if len(winners)>1 else [0]
+    values=[]
+    for index in ids:
+        band=winners[index]
+        for study in studies:
+            r=next((r for r in series if r['study']==study['id'] and abs(r['torque_band_min_nm']-band['torque_band_min_nm'])<1e-10),None)
+            interval=f"{band['torque_band_min_nm']:.6g}-{band['torque_band_max_nm']:.6g}"
+            values.append([interval,f"{study['lambda_value']:g}",num(r[review.THRUST]) if r else '-',num(r[review.TORQUE]) if r else '-',f"{1000*r['single_wing_span_m']:.2f}" if r else '-',str(r.get('global_case_no') or '-') if r else '-',sources[r['study']]+'/'+r['id'] if r else 'No eligible case'])
+    story.append(table(['Torque band\n(N m)','λ','Mean thrust\n(N)','Peak torque\n(N m)','Span\n(mm)','Master #','Source / case'],values,[74,31,65,67,57,57,width_page-351]))
+    story.append(Spacer(1,6))
+    story.append(lit('Intervals start at the selected minimum. Internal upper edges belong to the next band; the final upper edge is included. A dash means that search has no eligible design in the interval. Full per-lambda band results remain in the CSV export.','caption'))
     tolerance='10<super>-6</super>' if a['score_tolerance']==1e-6 else f"{a['score_tolerance']:g}"
     story += [lit('Optimization method','heading'),Equation(),
         p(f"Accept a change only when ΔS &gt; {tolerance}. <i>T</i> denotes final-cycle mean single-wing thrust and <i>M</i> peak absolute root roll moment; current denotes the last accepted wing. Fixed normalization references are {ref['thrust_scale_N']:.6g} N for thrust and {ref['torque_scale_Nm']:.6g} N m for torque. λ weights torque reduction relative to thrust gain; selected searches use "+', '.join(f"{s['lambda_value']:g}" for s in studies)+'.'),
@@ -154,10 +163,10 @@ def export(model,data):
     with tempfile.TemporaryDirectory(prefix='wing-design-report-') as temp:
         path=Path(temp)/output.name
         doc=SimpleDocTemplate(str(path),pagesize=A4,leftMargin=42,rightMargin=42,topMargin=34,bottomMargin=34,
-            title='Optimal Wing Shape Selection',author='Wing Studies',pageCompression=1)
+            title='Wing Shape Optimization Results',author='Wing Studies',pageCompression=1)
         def footer(cv,document):
             cv.saveState();cv.setFont('ReportTimes',8);cv.setStrokeColor(colors.HexColor('#999999'));cv.setLineWidth(.3);cv.line(42,26,A4[0]-42,26)
-            cv.drawString(42,15,'Wing design selection | Simulation results');cv.drawRightString(A4[0]-42,15,str(document.page));cv.restoreState()
+            cv.drawString(42,15,'Wing shape optimization | Simulation results');cv.drawRightString(A4[0]-42,15,str(document.page));cv.restoreState()
         doc.build(story,onFirstPage=footer,onLaterPages=footer);os.replace(path,output)
     return {'file':str(output.relative_to(model.OUTPUTS)).replace('\\','/'),
-        'note':'Concise wing-design report with embedded Times New Roman, design alternatives and the delta-score equation.'}
+        'note':'Results report with all selected lambdas on the thrust-torque shape plot; no single overall wing is selected.'}
