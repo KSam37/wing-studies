@@ -272,6 +272,10 @@ class Handler(BaseHTTPRequestHandler):
                 import evolution_export
                 directory=study_path(data['study'])
                 with LOCK:return self.send(evolution_export.export_gif(model,directory,data['case'],job=data.get('job')))
+            if path=='/api/wing-template-stl':
+                import wing_template
+                directory=study_path(data['study'])
+                with LOCK:return self.send(wing_template.export(model,directory,data['case']))
             if path=='/api/lambda-report':
                 import lambda_review
                 with LOCK:return self.send(lambda_review.export(model,data))

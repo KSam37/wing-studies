@@ -18,6 +18,7 @@ glfw==2.10.2
 idna==3.20
 kiwisolver==1.5.1
 llvmlite==0.50.0
+mapbox-earcut==2.1.0
 markdown-it-py==4.2.0
 matplotlib==3.11.2
 mdurl==0.1.2
@@ -38,9 +39,11 @@ rich==15.0.0
 rich-rst==2.2.0
 scipy==1.18.1
 scooby==0.12.0
+shapely==2.2.0
 six==1.17.0
 threadpoolctl==3.7.0
 tqdm==4.70.1
+trimesh==5.2.0
 typing_extensions==4.16.0
 urllib3==2.8.0
 vtk==9.7.1

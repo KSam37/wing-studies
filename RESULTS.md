@@ -36,6 +36,21 @@ thrust and peak absolute root roll moment. Tref = 11.5995490753 N and Mref =
 14.4132303436 N m. There is no search-time torque ceiling. Larger lambda penalizes
 torque more strongly. Thrust/torque is not an energy-efficiency measure.
 
+Choose **Export wing template STL** in a wing's details or its standard results
+row to download a ZIP of numbered print parts and an assembly guide. The cutting
+outline extends inward by 2 mm; every chord reinforcement is 2 mm wide. All lines
+are 3 mm high. Parts are split only at existing chord centers when needed to fit
+the 250 × 250 mm bed, with 1 mm of shared rib on either side of each glue seam.
+Parts fit 248 × 248 mm to leave bed clearance; slicer brims need extra space.
+Import STL files in millimeters at 100% scale and butt-glue as shown. One wing is
+exported; flip it for the mirror. Saved geometry is preserved, including its tip.
+Stored smooth functions use ≤0.02 mm curve flattening; no new smoothing is added.
+Untwisted developable bends unfold; unsupported twist reports an error. A single
+chord bay too large for the bed requires more chord sections or smaller geometry.
+The exporter checks bed fit, closed connected solids, saved dimensions/volume and
+the assembled frame before offering the ZIP. Existing Windows installs should
+rerun **Setup Windows.cmd** once to install the pinned CAD dependencies.
+
 The **New** master contains the three primary studies and future runs. The
 **Old** master contains 20 substantial earlier studies, labeled by date, name,
 successful case count and partial completion where relevant. On 2026-11-01,
