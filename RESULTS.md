@@ -31,8 +31,9 @@ Select a seed lineage to play its
 geometry evolution or export its recorded GIF. Native flapping animations remain
 separate. Figures export as 600 dpi PNG with source CSV, methods and a summary.
 
-The score is `S = T/Tref - lambda*M/Mref`, using final-cycle mean single-wing
-thrust and peak absolute root roll moment. Tref = 11.5995490753 N and Mref =
+The acceptance equation is `deltaS = (Tnew-Tcurrent)/Tref - lambda*(Mnew-Mcurrent)/Mref`, using final-cycle mean single-wing
+thrust and peak absolute root roll moment. Current is the last accepted wing; accept
+only when deltaS exceeds the saved positive tolerance. Tref = 11.5995490753 N and Mref =
 14.4132303436 N m. There is no search-time torque ceiling. Larger lambda penalizes
 torque more strongly. Thrust/torque is not an energy-efficiency measure.
 

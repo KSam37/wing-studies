@@ -118,6 +118,7 @@ def export(model,data):
                 w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore');w.writeheader();w.writerows(values)
         (dest/'methods.md').write_text(methods(b),encoding='utf-8')
         (dest/'summary.md').write_text(summary(b,rows,winners,lo,hi,width),encoding='utf-8')
+    (dest/'methods.md').write_text(methods(b),encoding='utf-8')
     return {'files':[str((dest/f).relative_to(model.OUTPUTS)).replace('\\','/') for f in files],
         'winner_count':len(winners),'summary':summary(b,rows,winners,lo,hi,width)}
 
@@ -126,7 +127,7 @@ def methods(b):
     s=b['studies'][0];a=s['search'];c=b['conditions'];ref=b['references']
     return f'''# Methods — independent seed wing search
 
-Score: S = T / Tref − λ M / Mref, with mean single-wing thrust T and final-cycle peak absolute single-wing root roll moment M. Tref = {ref['thrust_scale_N']:.12g} N and Mref = {ref['torque_scale_Nm']:.12g} N m are fixed seed-derived scales. A candidate replaces its current parent only if ΔS > {a['score_tolerance']:g}. These references are shared across the three studies. No torque ceiling is applied during search.
+Acceptance equation: ΔS = (Tnew − Tcurrent) / Tref − λ (Mnew − Mcurrent) / Mref, with mean single-wing thrust T and final-cycle peak absolute single-wing root roll moment M. Current means the last accepted wing, not the initial seed. Tref = {ref['thrust_scale_N']:.12g} N and Mref = {ref['torque_scale_Nm']:.12g} N m are fixed seed-derived scales. A candidate replaces its current parent only if ΔS > {a['score_tolerance']:g}. These references are shared across the three studies. No torque ceiling is applied during search.
 
 Each study starts five families (triangle, rectangle, concave, convex, narrow rectangle), each at total starting spans 0.4, 0.6 and 0.8 m, including a {c['gap_m']:g} m hinge gap. Each isolated wing initially has eight chord sections. Chord widths are independently varied; section spacing is fixed for each seed. Initial +/− {a['initial_step_m']:g} m trials select a direction. Root-to-tip passes then test the remembered sign; a failed/blocked full step receives one half-step trial, after which that chord is retired. A newly exposed tip may be revisited. This is a bounded coordinate finite-difference heuristic, not a convergence or global-optimality certificate.
 
