@@ -66,7 +66,7 @@ for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
  if line and not line.startswith('#'):
   name,version=line.split('==');assert m.version(name)==version,(name,m.version(name),version)
 assert m.version('PteraSoftware')=='5.1.0'
-import numpy,scipy,numba,matplotlib,pyvista,vtk,mujoco,webp,shapely,trimesh,mapbox_earcut
+import numpy,scipy,numba,matplotlib,pyvista,vtk,mujoco,webp,shapely,trimesh,mapbox_earcut,reportlab
 print('Pinned packages and scientific imports verified.',flush=True)
 """
     run([python,"-I","-c",code,LOCK])

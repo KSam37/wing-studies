@@ -279,6 +279,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/lambda-report':
                 import lambda_review
                 with LOCK:return self.send(lambda_review.export(model,data))
+            if path=='/api/lambda-report-pdf':
+                import lambda_pdf
+                with LOCK:return self.send(lambda_pdf.export(model,data))
             if path == "/api/adaptive-evolution":
                 directory=study_path(data['study'])
                 events=model.read_json(directory/'evolution.json') if (directory/'evolution.json').exists() else []

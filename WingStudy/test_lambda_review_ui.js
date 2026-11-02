@@ -22,3 +22,8 @@ context.paths=[{study:'a',lambda_value:.75,job:1,family:'triangle',starting_tota
 vm.runInContext('saved.lineages=paths;',context);node('lineage').value='0';node('evolutionSpan').value='all';node('evolutionStages').value='ends';vm.runInContext('evolution()',context);assert(node('evolutionPlots').innerHTML.includes('2 independent seeds'));assert(node('evolutionPlots').innerHTML.includes('1 independent seeds'));assert.equal((node('evolutionPlots').innerHTML.match(/<polyline/g)||[]).length,3);assert(node('evolutionPlots').innerHTML.includes('Final shapes at a common physical scale'));
 node('evolutionSpan').value='0.4';vm.runInContext('evolution()',context);assert.equal((node('evolutionPlots').innerHTML.match(/<polyline/g)||[]).length,1);
 console.log('Lambda comparison: live filters, tie-breaking, boundaries, scope, and final/earlier borders passed.');
+
+const code=fs.readFileSync(__dirname+'/lambda_review.js','utf8');
+vm.runInContext(code.slice(code.indexOf(" $('exportPdf').onclick="),code.indexOf(" $('export').onclick=")),context);
+let pdfRequest;context.api=async(path,data)=>{pdfRequest={path,data};return {file:'selected/lambda_report.pdf'};};
+(async()=>{await node('exportPdf').onclick();assert.equal(pdfRequest.path,'lambda-report-pdf');assert.equal(pdfRequest.data.band_width,.25);assert.equal(pdfRequest.data.maximum,.75);assert.equal(pdfRequest.data.scope,'all');assert.equal(pdfRequest.data.studies.length,2);assert(node('pdfExport').innerHTML.includes('selected/lambda_report.pdf'));assert.equal(node('exportPdf').disabled,false);console.log('PDF button forwards current filters and offers the PDF download.');})().catch(e=>{console.error(e);process.exitCode=1;});
