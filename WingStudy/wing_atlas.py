@@ -163,6 +163,11 @@ def export(model,data):
     scope=rows[0]['load_scope'];ylabel=METRICS[y] if y!='thrust' else ('Mean single-wing thrust (N)' if scope=='single' else 'Mean paired-wing thrust (N)')
     ax.set(xlabel=METRICS[x],ylabel=ylabel,title=f"{len(rows):,} simulations · "+('mixed conditions overview' if len({r['cohort'] for r in rows})>1 else 'matched saved conditions'))
     ax.grid(alpha=.18);ax.margins(.04);fig.colorbar(ScalarMappable(norm=norm,cmap=cmap),ax=ax,label=METRICS[color],pad=.02)
+    # Preserve the interactive viewport instead of fitting the exported points.
+    if data.get('xmin') not in (None,''):ax.set_xlim(left=float(data['xmin']))
+    if data.get('xmax') not in (None,''):ax.set_xlim(right=float(data['xmax']))
+    if data.get('ymin') not in (None,''):ax.set_ylim(bottom=float(data['ymin']))
+    if data.get('ymax') not in (None,''):ax.set_ylim(top=float(data['ymax']))
     ax.text(.02,.98,'Silhouette sizes normalized' if normalized else 'Common physical silhouette scale',transform=ax.transAxes,va='top',fontsize=7)
     fig.savefig(dest/'all_tested_wings.png',dpi=600);plt.close(fig)
     fields=['number','study','id','geometry_id','simulation_id','cohort','load_scope','settled',*AXES,'chords','generations','studies','silhouette_shown',
