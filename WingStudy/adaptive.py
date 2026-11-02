@@ -21,6 +21,7 @@ DEFAULT={'span_min_m':.4,'span_max_m':.8,'span_count':3,'node_count':8,
 SEED_FAMILIES=('triangle','square','concave','convex','narrow')
 
 def search_jobs(r):
+    if r.get('seed_design'):return [(r['span_min_m'],'refined')]
     return [(span,family) for span in levels(r['span_min_m'],r['span_max_m'],r['span_count'])
         for family in r.get('seed_families',['triangle'])]
 
@@ -49,8 +50,11 @@ def options(model,config):
     r['budget_only']=budget_only
     if budget_only:
         r.update(max_passes=None,evaluation_budget=None,poll_candidates=8)
+    if r.get('seed_design'):
+        if r['acceptance_rule']!='coordinate':raise ValueError('Selected-wing refinement requires the coordinate objective.')
+        r['seed_families']=['refined']
     families=r['seed_families']
-    if not isinstance(families,list) or not families or any(f not in SEED_FAMILIES for f in families):
+    if not isinstance(families,list) or not families or any(f not in (*SEED_FAMILIES,'refined') or (f=='refined' and not r.get('seed_design')) for f in families):
         raise ValueError('Select at least one supported seed family.')
     r['seed_families']=list(dict.fromkeys(families))
     r['parallel_workers']=model.number(r['parallel_workers'],'Parallel Ptera processes',1,61,True)
@@ -91,6 +95,14 @@ def options(model,config):
         step=model.number(b.get('step_m',r['initial_step_m']),f'Chord {i+1} step',1e-12 if r['acceptance_rule']=='coordinate' else r['minimum_step_m'])
         r['bounds'].append({'min_m':lo,'max_m':hi,'step_m':step})
     if r['span_min_m']<=config['settings']['gap_m']:raise ValueError('Adaptive span must exceed the hinge gap.')
+    if r.get('seed_design'):
+        import refinement
+        r['seed_sections']=refinement.coordinate_seed(model,r['seed_design'],n,config['settings'])['sections']
+        span=2*r['seed_sections'][-1]['y_m']+config['settings']['gap_m']
+        r.update(span_min_m=span,span_max_m=span,span_count=1)
+        scales=r.get('reference_scales')
+        if scales is not None:
+            r['reference_scales']={k:model.number(scales.get(k),k,1e-12) for k in ('thrust_scale_N','torque_scale_Nm')}
     # Validate a feasible decreasing seed, including the per-node bounds.
     for family in r['seed_families']:seed(r,family)
     return r
@@ -102,6 +114,10 @@ def levels(lo,hi,count):
 
 
 def seed(r,family='triangle'):
+    if r.get('seed_sections'):
+        chords=[s['chord_m'] for s in r['seed_sections']]
+        if not valid(chords,r):raise ValueError('Selected wing lies outside the chord bounds; widen the bounds to include it.')
+        return chords
     n=r['node_count'];out=[]
     for i,b in enumerate(r['bounds']):
         eta=i/(n-1);root=r['root_chord_m'];tip=r['tip_chord_m']
@@ -120,6 +136,8 @@ def seed(r,family='triangle'):
 
 
 def design(r,span,gap,chords,name='Adaptive wing'):
+    if r.get('seed_sections'):
+        return {'name':name,'sections':[{**s,'chord_m':c} for s,c in zip(r['seed_sections'],chords)]}
     half=(span-gap)/2
     return {'name':name,'sections':[{'y_m':half*i/(len(chords)-1),'x_m':0.,'chord_m':c,'pitch_deg':0.,'roll_deg':0.} for i,c in enumerate(chords)]}
 

@@ -111,9 +111,12 @@ def run(r,pipeline):
     if not valid:raise ValueError('No settled seed loads are available. Inspect the native case errors.')
     scales={'thrust_scale_N':max(max(abs(t) for t,m in valid),1e-9),
         'torque_scale_Nm':max(max(m for t,m in valid),1e-9)}
+    inherited=bool(r.get('seed_design') and r.get('reference_scales'))
+    if inherited:scales=dict(r['reference_scales'])
     pipeline.model.write_json(pipeline.study/'coordinate_objective.json',{
         'algorithm':ALGORITHM,'tradeoff_lambda':r['tradeoff_lambda'],**scales,
-        'score_tolerance':r['score_tolerance'],'note':'Fixed scales from maximum absolute seed thrust and maximum seed torque; no torque ceilings.'})
+        'score_tolerance':r['score_tolerance'],'reference_source':r.get('refinement_source') if inherited else None,
+        'note':'Fixed scales inherited from the source study; no torque ceilings.' if inherited else 'Fixed scales from maximum absolute seed thrust and maximum seed torque; no torque ceilings.'})
     for (chords,meta),row in zip(initial,rows):
         state={**meta,'case_id':row['id'],'status':'running' if loads(row) else 'invalid_seed'};states.append(state)
         if loads(row):

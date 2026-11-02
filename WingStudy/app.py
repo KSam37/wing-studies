@@ -259,6 +259,9 @@ class Handler(BaseHTTPRequestHandler):
                 spec=adaptive.plan(model,data) if data.get("adaptive_search",{}).get("enabled") else model.plan(data)
                 spec.update(catalog.preview(model,spec))
                 return self.send(spec)
+            if path == '/api/refinement-search':
+                import refinement
+                return self.send({'config':refinement.coordinate_config(model,study_path(data['study']),data['case'])})
             if path == "/api/refinement-nodes":
                 import refinement
                 return self.send(refinement.resample(model,data['design'],data['count'],data['variation_pct'],data['settings'],linspace=data.get('search_method')=='linspace'))

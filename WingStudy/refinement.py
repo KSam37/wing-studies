@@ -12,6 +12,51 @@ import shutil
 import uuid
 
 
+def coordinate_seed(model,design,count,settings):
+    """Add linear sections without changing the saved piecewise-linear outline."""
+    import numpy as np
+    count=model.number(count,'Refinement chord nodes',2,64,True)
+    source=model.custom_case(design,{**settings,'span_panels':max(settings['span_panels'],len(design['sections'])-1)})['sections']
+    if count<len(source):raise ValueError('Refinement node count must include all existing active chord nodes.')
+    ys=[s['y_m'] for s in source];positions=ys[:]
+    while len(positions)<count:
+        i=max(range(len(positions)-1),key=lambda j:positions[j+1]-positions[j])
+        positions.insert(i+1,(positions[i]+positions[i+1])/2)
+    sections=[{'y_m':y,**{key:float(np.interp(y,ys,[s[key] for s in source])) for key in ('x_m','chord_m','pitch_deg','roll_deg')}} for y in positions]
+    return {'name':design.get('name','Selected wing'),'sections':sections}
+
+
+def coordinate_config(model,study,case_id):
+    """Create a reviewable one-seed refinement; never start a simulation here."""
+    import adaptive
+    manifest=model.read_json(study/'manifest.json')
+    row=next((r for r in model.read_json(study/'results.json') if r['id']==case_id),None)
+    if row is None or row.get('status')!='ok' or not row.get('sections'):raise ValueError('Choose a completed wing with saved chord sections.')
+    c=copy.deepcopy(manifest['config']);settings=copy.deepcopy(manifest['settings']);c['settings']=settings
+    source={'name':row.get('design_name',case_id),'sections':copy.deepcopy(row['sections'])}
+    previous=c.get('adaptive_search',{});n=min(64,max(16,2*len(source['sections'])-1))
+    steps=[b.get('step_m',previous.get('initial_step_m',.02)) for b in previous.get('bounds',[])]
+    step=min(steps or [previous.get('initial_step_m',.02)])*.5
+    root=source['sections'][0]['chord_m'];minimum=min(.01,min(s['chord_m'] for s in source['sections'] if s['chord_m']>0))
+    span=2*source['sections'][-1]['y_m']+settings['gap_m']
+    r={**adaptive.DEFAULT,**previous,'enabled':True,'acceptance_rule':'coordinate','seed_families':['refined'],
+        'seed_design':source,'refinement_source':{'study':study.name,'case':case_id,'global_case_no':row.get('global_case_no')},
+        'span_min_m':span,'span_max_m':span,'span_count':1,'node_count':n,'bounds':[],
+        'initial_step_m':step,'minimum_step_m':step*.5,'minimum_chord_m':minimum,
+        'root_chord_m':root,'tip_chord_m':source['sections'][-1]['chord_m'],
+        'maximum_root_chord_m':max(root,previous.get('maximum_root_chord_m',.2)),
+        'decreasing':all(a['chord_m']>=b['chord_m'] for a,b in zip(source['sections'],source['sections'][1:]))}
+    objective=study/'coordinate_objective.json'
+    if objective.is_file():
+        saved=model.read_json(objective)
+        r['tradeoff_lambda']=saved['tradeoff_lambda']
+        r['reference_scales']={k:saved[k] for k in ('thrust_scale_N','torque_scale_Nm')}
+    else:r.pop('reference_scales',None)
+    c.update(name=(source['name']+' refinement')[:80],workflow='adaptive_pareto',mode='custom',adaptive_search=r,designs=[source])
+    c.pop('refinement',None);c.pop('span_search',None)
+    return c
+
+
 def resize_span(model,design,total_span_m,settings):
     """Stretch only spanwise positions; preserve every active chord exactly."""
     gap=model.number(settings.get('gap_m'),'Hinge gap',0)

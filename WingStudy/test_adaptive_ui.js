@@ -43,3 +43,18 @@ ctx.applyAdaptiveMinimum();assert.deepEqual(minima.map(i=>Number(i.value)),[0,0,
 assert.equal(inputs.adaptiveZero.checked,true);
 assert.equal(inputs.adaptiveChordMin.dataset.previousMinimum,'0');
 console.log('Zero global minimum updates inherited node minima and preserves higher custom bounds.');
+
+// A selected wing is the only seed even when all family checkboxes are off.
+families.forEach(f=>f.checked=false);
+inputs.adaptiveBounds={querySelectorAll:()=>rows};
+ctx.baseConfig.adaptive_search={seed_design:{name:'Saved wing',sections:[{y_m:0,chord_m:.2},{y_m:.2,chord_m:.01}]},
+ reference_scales:{thrust_scale_N:12,torque_scale_Nm:14},refinement_source:{study:'saved',case:'case_0001'}};
+const refined=ctx.configuration().adaptive_search;
+assert.deepEqual(Array.from(refined.seed_families),['refined']);
+assert.equal(refined.seed_design.name,'Saved wing');
+assert.equal(refined.reference_scales.thrust_scale_N,12);
+assert.equal(refined.reference_scales.torque_scale_Nm,14);
+assert.equal(refined.refinement_source.case,'case_0001');
+assert(source.includes("api('refinement-search'"));
+assert(source.includes("refineQuery.get('refineCase')"));
+console.log('Selected-wing refinement preserves its one seed, fixed objective references and source identity.');
