@@ -80,6 +80,7 @@ def bundle(model):
             'study':r['_study'],'id':r['id'],'number':r['global_case_no'],'name':r.get('design_name',r['id']),
             'cohort':key,'generations':sorted(gens),'studies':sorted({s for s,_ in occ}),
             'locations':[{'study':s,'case':i} for s,i in occ],'outline':poly,
+            'sections':section,'requested_sections':r.get('requested_sections') or section,
             'chords':[s['chord_m'] for s in section] if section else [root,tip],
             'settled':bool(r.get('cycle_repeatable')),'load_scope':c['load_scope'],
             'thrust':thrust,'torque':torque,'span':span,'area':area,'root':root,

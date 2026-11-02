@@ -88,3 +88,9 @@ Filter to matching saved conditions before attributing performance differences t
 The search uses the same accepted-change objective and one half-step rule. Widths change at fixed section positions; a zero outboard suffix may shorten the wing. Native span-panel count increases to cover the added intervals, so refined-seed loads can differ due to mesh resolution. A source without recorded objective scales uses fixed scales from its refined seed. Original studies and every refinement trial remain saved. No simulations start just by clicking Refine.
 
 The atlas supports cursor-centered wheel zoom, pointer dragging to pan, +/− buttons and double-click/Reset view to fit all filtered cases. Focus the plot for keyboard +/−, arrow-key pan and 0/Home reset. Zooming updates the spatial silhouette sample and gallery; all original filtered data remain available on reset. Changing data filters or axes resets the view; color/display changes preserve it. PNG axes and CSV selection follow the current viewport.
+
+## Share results without Ptera
+
+Use **Download shareable offline plot · all wings** in the atlas. It saves a small ZIP containing a self-contained HTML viewer and README. Extract and open the HTML in a browser: no installation, server, internet connection or full repository is required. All retained successful wing geometries, plot metrics, source identities and saved driving/numerical condition groups are embedded. Filter, zoom/pan and inspect cases; download the current view as CSV or a browser PNG snapshot, or extract the complete embedded dataset as JSON.
+
+Each package is a dated snapshot, independent of later master-catalog changes. Large raw simulation histories, original PNG outputs and animations are excluded. The source app still produces paper-resolution plots and runs simulations.

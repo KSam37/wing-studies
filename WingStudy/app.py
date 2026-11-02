@@ -285,6 +285,9 @@ class Handler(BaseHTTPRequestHandler):
                 import wing_template
                 directory=study_path(data['study'])
                 with LOCK:return self.send(wing_template.export(model,directory,data['case']))
+            if path=='/api/wing-atlas-package':
+                import atlas_package
+                with LOCK:return self.send(atlas_package.export(model))
             if path=='/api/wing-atlas-plot':
                 import wing_atlas
                 with LOCK:return self.send(wing_atlas.export(model,data))
