@@ -52,8 +52,12 @@ def event(r,row,chords,meta,scales):
         'frontier_size':1,'frontier_max_thrust_N':t,'frontier_min_torque_Nm':m}
 
 
-def climb(r,span,job,family,initial,scales):
-    """Generator batches only +/- trials of the same parent; never other seeds."""
+def climb(r,span,job,family,initial,scales,score_fn=None):
+    """Generator batches only +/- trials of the same parent; never other seeds.
+
+    score_fn(row) -> float|None optionally replaces the lambda score (default unchanged).
+    """
+    sc=score_fn or (lambda row:score(row,scales,r['tradeoff_lambda']))
     chords,row=initial;directions=[None]*len(chords);finished=[False]*len(chords)
     base={'job':job,'lineage_id':f'seed_{job:03d}','span_m':span,'seed_family':family,
         'objective':r['objective'],'search_algorithm':ALGORITHM}
@@ -75,9 +79,9 @@ def climb(r,span,job,family,initial,scales):
                     pending.append((proposed,meta))
                 # Blocked coordinates need no solver or synchronization turn.
                 results=(yield ('batch',pending)) if pending else []
-                current_score=score(row,scales,r['tradeoff_lambda']);best=None
+                current_score=sc(row);best=None
                 for (proposed,meta),trial in zip(pending,results):
-                    value=score(trial,scales,r['tradeoff_lambda'])
+                    value=sc(trial)
                     if value is None:continue
                     if value>current_score+r['score_tolerance'] and (best is None or value>best[0]):best=(value,proposed,meta,trial)
                 if best:
@@ -96,7 +100,7 @@ def climb(r,span,job,family,initial,scales):
                 # No initial winner: test both signs once at half size, then stop.
                 # Remembered sign failed: test only that sign at half size.
     return {'job':job,'lineage_id':base['lineage_id'],'span_m':span,'seed_family':family,
-        'case_id':row['id'],'passes':passes,'score':score(row,scales,r['tradeoff_lambda']),
+        'case_id':row['id'],'passes':passes,'score':sc(row),
         'status':'one_refinement_per_chord_complete','chord_directions':directions}
 
 

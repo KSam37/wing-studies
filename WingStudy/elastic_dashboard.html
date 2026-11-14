@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elastic Wing Campaign</title>
+<style>
+:root{
+  --bg:#f6f6f4; --surface:#fcfcfb; --surface-2:#f0efec; --border:#e2e1dc;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#8a8984; --grid:#e8e7e2;
+  --accent:#2a78d6; --good:#1a7f37; --warn:#b26a00; --bad:#c62828;
+  --f1:#2a78d6; --f2:#eb6834; --f3:#1baf7a;
+  /* stiffness: rigid = neutral reference; then stiff -> soft runs cool -> warm */
+  --s0:#6b6a66; --s1:#4b4bc8; --s2:#2a78d6; --s3:#1a9e8f; --s4:#6aa121; --s5:#e08a00; --s6:#d9502a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --border:#33332f;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86; --grid:#2b2b28;
+    --accent:#3987e5; --good:#3fb950; --warn:#e3a008; --bad:#f06060;
+    --f1:#3987e5; --f2:#d95926; --f3:#199e70;
+    --s0:#a8a79f; --s1:#8787f0; --s2:#4b98ee; --s3:#2cc2b0; --s4:#8cc63f; --s5:#f0a52a; --s6:#f07a52;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --border:#33332f;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86; --grid:#2b2b28;
+  --accent:#3987e5; --good:#3fb950; --warn:#e3a008; --bad:#f06060;
+  --f1:#3987e5; --f2:#d95926; --f3:#199e70;
+  --s0:#a8a79f; --s1:#8787f0; --s2:#4b98ee; --s3:#2cc2b0; --s4:#8cc63f; --s5:#f0a52a; --s6:#f07a52;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;font-weight:650}
+.badge{padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--surface-2);color:var(--text-2)}
+.badge.running{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.badge.paused,.badge.stopping{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.badge.done{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}
+nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav button,.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font:inherit}
+nav button.active{background:var(--text);color:var(--surface);border-color:var(--text)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+main{padding:18px 20px;max-width:1400px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:14px;margin:0 0 10px;font-weight:650}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--text-2);font-size:12px}
+.bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.phase{display:grid;grid-template-columns:28px 1fr 170px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--grid)}
+.phase:last-child{border-bottom:0}
+.phase .id{font-weight:700;color:var(--text-2)}
+.phase .n{font-size:12px;color:var(--text-2);text-align:right;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+th{color:var(--text-2);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+@media (max-width:900px){.two,.split{grid-template-columns:1fr}}
+.muted{color:var(--text-2)}
+.small{font-size:12px}
+.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px}
+.controls label{display:inline-flex;gap:5px;align-items:center;font-size:13px;cursor:pointer}
+.sw{display:inline-block;width:11px;height:11px;border-radius:50%}
+svg text{fill:var(--text-2);font-size:11px}
+.axis line,.axis path{stroke:var(--border)}
+.gridl{stroke:var(--grid)}
+#tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.15);display:none;z-index:20;max-width:260px}
+.cellgrid{display:grid;gap:10px}
+.cell{background:var(--surface-2);border-radius:10px;padding:8px;cursor:pointer;min-height:120px}
+.cell:hover{outline:2px solid var(--accent)}
+.cell .t{font-size:12px;color:var(--text-2)}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;background:var(--surface-2);color:var(--text-2);margin-right:4px}
+.pill.verified,.pill.ok{color:var(--good)} .pill.uncertain{color:var(--warn)} .pill.unresolved,.pill.failed,.pill.unverified{color:var(--bad)}
+.log{font-family:ui-monospace,monospace;font-size:12px;color:var(--text-2);max-height:180px;overflow:auto}
+.anim img{max-width:100%;border-radius:8px;background:#000;margin-top:8px}
+a{color:var(--accent)}
+code{background:var(--surface-2);padding:1px 5px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Elastic wing campaign</h1>
+  <span id="state" class="badge">loading</span>
+  <button class="btn primary" id="startBtn" onclick="control('start')">Start</button>
+  <button class="btn" id="pauseBtn" onclick="control(STATE==='paused'?'resume':'pause')">Pause</button>
+  <button class="btn" id="stopBtn" onclick="if(confirm('Stop after running solves finish? You can restart later and it resumes where it left off.'))control('stop')">Stop</button>
+  <label class="small" title="Off: the campaign waits after each chunk so you can check the report"><input type="checkbox" id="auto" onchange="post('/api/control',{action:'auto',value:this.checked})"> continue to next chunk automatically</label>
+  <nav>
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="plan">Plan</button>
+    <button data-tab="explore">Explore</button>
+    <button data-tab="best">Best shapes</button>
+    <button data-tab="effect">Stiffness effect</button>
+  </nav>
+</header>
+<main>
+<section class="tab active" id="tab-overview">
+  <div class="card"><h2>Chunks — run one, check its report, then start the next</h2><div id="chunks"></div>
+    <div class="small muted" id="overall" style="margin-top:8px"></div></div>
+  <div class="kpis">
+    <div class="kpi"><div class="v" id="k-done">–</div><div class="l">designs solved (fresh)</div></div>
+    <div class="kpi"><div class="v" id="k-rem">–</div><div class="l">designs left in this chunk (est.)</div></div>
+    <div class="kpi"><div class="v" id="k-rate">–</div><div class="l">designs / min</div></div>
+    <div class="kpi"><div class="v" id="k-el">–</div><div class="l">elapsed in this chunk</div></div>
+    <div class="kpi"><div class="v" id="k-orig">–</div><div class="l">original estimate, this chunk</div></div>
+    <div class="kpi"><div class="v" id="k-eta">–</div><div class="l">time left in this chunk (est.)</div></div>
+    <div class="kpi"><div class="v" id="k-all">–</div><div class="l">all remaining chunks (est.)</div></div>
+    <div class="kpi"><div class="v" id="k-busy">–</div><div class="l">solving now / queued</div></div>
+  </div>
+  <div class="card"><h2 id="chunkProgTitle">Chunk progress</h2><div class="bar"><i id="totalbar" style="width:0"></i></div>
+    <div class="small muted" id="totaltxt" style="margin-top:6px"></div></div>
+  <div class="two">
+    <div class="card"><h2 id="phasesTitle">Phases in this chunk (run in this order)</h2><div id="phases"></div></div>
+    <div class="card"><h2>Result quality</h2><div id="quality"></div>
+      <p class="small muted">Verified: two stabilization settings agree within 3%. Uncertain: they disagree; value is the midpoint with a range. Only verified (elastic) or settled (rigid) designs can become search parents.</p></div>
+  </div>
+  <div class="two">
+    <div class="card"><h2>Latest results</h2><table id="recent"></table></div>
+    <div class="card"><h2>Activity</h2><div class="log" id="log"></div></div>
+  </div>
+</section>
+
+<section class="tab" id="tab-plan"><div id="plan"></div></section>
+
+<section class="tab" id="tab-explore">
+  <div class="split">
+    <div class="card">
+      <h2>Mean thrust vs peak root torque</h2>
+      <div class="controls" id="exControls"></div>
+      <svg id="scatter" width="100%" viewBox="0 0 820 500" role="img" aria-label="Thrust versus torque scatter"></svg>
+      <div class="small muted" id="exNote"></div>
+    </div>
+    <div class="card" id="detail"><h2>Design details</h2><p class="muted small">Hover a point to preview; click to see its silhouette, final-cycle loads and twist, and to render a Ptera animation.</p></div>
+  </div>
+</section>
+
+<section class="tab" id="tab-best">
+  <div class="card"><h2>Highest thrust at ≤ <span id="tq"></span> N·m peak root torque (verified / settled only)</h2>
+    <p class="small muted">Rows: plate stiffness. Columns: flapping frequency. Silhouettes share one physical scale (root chord 200 mm on the left, span to the right). Click a cell for details.</p>
+    <div class="cellgrid" id="bestgrid"></div></div>
+  <div class="card"><h2>Search winners</h2><div style="overflow:auto"><table id="winners"></table></div></div>
+</section>
+
+<section class="tab" id="tab-effect">
+  <div class="two">
+    <div class="card"><h2>Best thrust at ≤ 1 N·m vs plate stiffness</h2><svg id="effect1" width="100%" viewBox="0 0 600 360"></svg>
+      <p class="small muted">One line per flapping frequency. Uses every evaluated design (searches and map), verified or settled only.</p></div>
+    <div class="card"><h2>Same shapes, softer plate: thrust relative to rigid</h2><svg id="effect2" width="100%" viewBox="0 0 600 360"></svg>
+      <p class="small muted">Shape-map designs evaluated at every stiffness. Line = median ratio (elastic ÷ rigid thrust, same shape and frequency); band = 25–75%.</p></div>
+  </div>
+</section>
+</main>
+<div id="tip"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+let PLAN=null, EST=null, STATE='ready', POINTS={}, FREQ=null, SEL=null;
+const LV_VAR={'rigid':'--s0','t1.00':'--s1','t0.50':'--s2','t0.40':'--s3','t0.30':'--s4','t0.25':'--s5','t0.20':'--s6'};
+const F_VARS=['--f1','--f2','--f3'];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const lvColor=id=>css(LV_VAR[id]||'--accent');
+const lvLabel=id=>(PLAN.levels.find(l=>l.id===id)||{label:id}).label;
+const fColor=f=>css(F_VARS[Math.max(0,PLAN.frequencies_hz.indexOf(f))%3]);
+const fmt=(v,d=2)=>v==null||isNaN(v)?'–':(+v).toFixed(d);
+async function api(p){const r=await fetch(p);return r.json()}
+async function post(p,b){const r=await fetch(p,{method:'POST',body:JSON.stringify(b)});return r.json()}
+async function control(a){await post('/api/control',{action:a});refresh()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+b.dataset.tab));
+  if(b.dataset.tab==='explore')loadPoints();
+  if(b.dataset.tab==='best')loadBest();
+  if(b.dataset.tab==='effect')loadEffect();
+});
+function hours(h){if(h==null)return'–';const m=Math.round(h*60);if(m<60)return m+' min';return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')+' min'}
+
+/* ---------------- plan ---------------- */
+function renderPlan(){
+  const p=PLAN, e=EST;
+  $('#title').textContent=p.name;
+  const g=p.geometry;
+  const rows=[
+    ['Wing rules (same as rigid studies)',`${g.nodes} chord stations equally spaced on the half-span; root fixed at ${g.root_chord_m*1000} mm; chords non-increasing toward the tip; positive chords ≥ ${g.min_positive_chord_m*1000} mm; zero chords only as a tip suffix (shortens the wing); max chord ${g.max_chord_m*1000} mm.`],
+    ['Search moves',`Coordinate ascent, identical to the rigid studies (coordinate_search.climb): ±${g.step_m*1000} mm per chord, remembered direction, one half-step retry, then the chord retires. Budget ${p.lineage_budget} evaluations per lineage.`],
+    ['Objectives',`<b>torque_1Nm</b>: maximize mean thrust with peak root torque ≤ ${p.torque_target_nm} N·m (seeds above the limit first walk down in torque). <b>lambda_x</b>: S = T/Tref − x·M/Mref with Tref, Mref fixed from that stiffness × frequency's seeds. Focus thicknesses: ${p.objectives.focus.join(', ')}. Context: ${p.objectives.context.join(', ')}.`],
+    ['Seeds per search',`${p.families.join(', ')} × half-spans ${p.seed_half_spans_m.focus.map(x=>x*1000+' mm').join(', ')} (focus) or ${p.seed_half_spans_m.context.map(x=>x*1000+' mm').join(', ')} (context).`],
+    ['Plate stiffness',p.levels.map(l=>`<span class="pill">${l.label}${l.tier==='focus'?' ★':''}</span>`).join(' ')+`<br><span class="small muted">★ focus (all objectives, 25 lineages). Plain-weave carbon: G = ${p.material.shear_modulus_pa/1e9} GPa, E = ${p.material.youngs_modulus_pa/1e9} GPa, ${p.material.density_kg_m3} kg/m³. Twist about the leading edge with plate torsion + warping stiffness.</span>`],
+    ['Motion',`${p.frequencies_hz.join(', ')} Hz; ${p.stroke}; ${p.speed_mps} m/s; ${p.steps_per_cycle} time steps per cycle; ${p.cycles} cycles (doubled automatically if a soft plate has not settled).`],
+    ['Numerics',`${p.span_panels} × ${p.chord_panels} panels, prescribed wake (rigid-study settings). Each elastic design is solved with ≥ 2 stabilization settings (verified / uncertain); dt halved automatically for soft plates that fail.`],
+    ['Shape map',`The same ${p.map.focus_shapes} Sobol shapes at every focus thickness (first ${p.map.context_shapes} at context levels) and every frequency, so stiffness effects compare identical shapes.`],
+    ['Finalists',`Best design of every search re-run at ${p.finalists.span_panels} spanwise panels and dt/${p.finalists.dt_divisor}; the change is reported next to each winner.`],
+    ['Animations','Not rendered during the run. Every design stores its geometry, solver settings and final-cycle traces; any design can be replayed with Ptera animations from Explore (Render animation) or with <code>elastic_campaign.py replay</code>.'],
+  ];
+  const ph=e.chunks.map(c=>`<tr><td><b>${c.id}</b></td><td><b>${c.title}</b></td><td style="text-align:right"><b>${c.designs.toLocaleString()}</b></td><td style="text-align:right"><b>${hours(c.hours)}</b></td></tr>`+
+    e.phases.filter(x=>x.chunk===c.id).map(x=>`<tr class="small"><td></td><td class="muted">${x.id} · ${x.title}</td><td style="text-align:right" class="muted">${x.designs.toLocaleString()}</td><td style="text-align:right" class="muted">${hours(x.hours)}</td></tr>`).join('')).join('');
+  $('#plan').innerHTML=`<div class="card"><h2>What this campaign will sweep</h2><table>${rows.map(r=>`<tr><th style="width:190px">${r[0]}</th><td>${r[1]}</td></tr>`).join('')}</table></div>
+  <div class="card"><h2>Chunks, phases and estimated cost</h2><table><tr><th></th><th>Chunk / phase</th><th style="text-align:right">Designs (est.)</th><th style="text-align:right">Time (est.)</th></tr>${ph}
+  <tr><th></th><th>Total</th><th style="text-align:right">${e.designs.toLocaleString()}</th><th style="text-align:right">${hours(e.hours)}</th></tr></table>
+  <p class="small muted">Estimates assume ~${p.estimates_s_per_design.elastic} s wall per elastic design on all workers and ~${p.est_evals_per_lineage} evaluations per lineage; the Overview tab replaces them with measured rates once running. Each chunk is one flapping frequency and is complete on its own (searches, context, shape map, finalist re-checks). After each chunk the campaign waits for you and writes a report figure, unless "continue automatically" is ticked. Campaign folder: <code>${window.DIR||''}</code></p></div>`;
+}
+
+/* ---------------- overview ---------------- */
+async function refresh(){
+  const s=await api('/api/status'); STATE=s.state;
+  const st=$('#state'); st.textContent=s.state; st.className='badge '+s.state;
+  const nextC=s.chunks.find(c=>c.status==='next');
+  $('#startBtn').disabled=!['ready','waiting'].includes(s.state);
+  $('#startBtn').textContent=nextC?`Start chunk ${nextC.id} (${nextC.freq} Hz)`:'Start';
+  $('#pauseBtn').disabled=!['running','paused'].includes(s.state); $('#pauseBtn').textContent=s.state==='paused'?'Resume':'Pause';
+  $('#stopBtn').disabled=!['running','paused','waiting','ready'].includes(s.state);
+  $('#auto').checked=!!s.auto_continue;
+  const icon={done:'<span style="color:var(--good)">✓</span>',running:'<span style="color:var(--accent)">▶</span>',paused:'<span style="color:var(--warn)">❚❚</span>',stopping:'<span style="color:var(--warn)">■</span>',next:'<span style="color:var(--accent)">●</span>',pending:'<span class="muted">○</span>'};
+  $('#chunks').innerHTML=s.chunks.map(c=>{const pct=100*c.done/Math.max(c.planned,1);
+    const when=c.status==='done'?`took ${hours(c.took_hours)} (est. ${hours(c.est_hours)}) · finished ${new Date(c.finished*1000).toLocaleString()}`:
+      ['running','paused','stopping'].includes(c.status)?`elapsed ${hours(c.elapsed_hours)} · original est. ${hours(c.est_hours)} · ~${hours(c.remaining_hours)} left`:`est. ~${hours(c.est_hours)}`;
+    const rep=c.report?` · <a href="/files/${c.report}" target="_blank">open report</a>`:'';
+    return `<div class="phase" style="grid-template-columns:28px 1fr 260px"><span style="font-size:16px">${icon[c.status]||''}</span><div><div><b>${c.title}</b> <span class="small muted">${c.status==='next'?'— next up':''}</span></div><div class="bar"><i style="width:${pct.toFixed(1)}%;${c.status==='done'?'background:var(--good)':''}"></i></div></div><span class="n">${c.done.toLocaleString()} / ~${c.planned.toLocaleString()} designs<br>${when}${rep}</span></div>`}).join('')+
+    (s.chunks.filter(c=>c.report).length?'<div class="two" style="margin-top:12px">'+s.chunks.filter(c=>c.report).map(c=>`<a href="/files/${c.report}" target="_blank"><img src="/files/${c.report}" style="width:100%;border-radius:8px;border:1px solid var(--border)"></a>`).join('')+'</div>':'');
+  if(s.chunk){$('#chunkProgTitle').textContent=`${s.chunk.title}: progress`;$('#phasesTitle').textContent=`Phases in chunk ${s.chunk.id} (run in this order)`}
+  const done=s.phases.reduce((a,p)=>a+p.done,0), planned=s.phases.reduce((a,p)=>a+p.planned,0);
+  $('#k-done').textContent=s.fresh.toLocaleString();
+  $('#k-rem').textContent=s.remaining_designs.toLocaleString();
+  $('#k-rate').textContent=s.rate_per_min?s.rate_per_min.toFixed(1):'–';
+  $('#k-eta').textContent=s.state==='done'?'done':['ready','waiting'].includes(s.state)?'not started':hours(s.eta_hours);
+  $('#k-all').textContent=s.state==='done'?'done':hours(s.all_remaining_hours);
+  $('#k-el').textContent=s.chunk&&s.chunk.elapsed_hours!=null?hours(s.chunk.elapsed_hours):'–';
+  $('#k-orig').textContent=s.chunk?hours(s.chunk.est_hours):'–';
+  $('#overall').textContent=`All chunks: ${s.all_done.toLocaleString()} of ~${s.all_planned.toLocaleString()} designs · elapsed ${hours(s.all_elapsed_hours)} of an original estimate of ${hours(s.all_est_hours)} · ~${hours(s.all_remaining_hours)} remaining (remaining time uses the measured rate once available).`;
+  $('#k-busy').textContent=`${s.inflight} / ${s.queued}`;
+  $('#totalbar').style.width=(100*done/Math.max(planned,1)).toFixed(1)+'%';
+  $('#totaltxt').textContent=`${done.toLocaleString()} of ~${planned.toLocaleString()} planned designs in this chunk available (${s.cached.toLocaleString()} requests answered from cache). ${s.workers} worker processes.`+(s.rate_per_min?'':' Time estimates use the plan’s assumed rate until a few minutes of results are in.');
+  $('#phases').innerHTML=s.phases.map((p,i)=>`<div class="phase"><span class="id">${p.id}</span><div><div class="small">${p.title}</div><div class="bar"><i style="width:${(100*p.done/Math.max(p.planned,1)).toFixed(1)}%;${i<s.phase_index?'':'opacity:.5'}"></i></div></div><span class="n">${p.done.toLocaleString()} / ~${p.planned.toLocaleString()}</span></div>`).join('');
+  const sc=s.status_counts, tot=Object.values(sc).reduce((a,b)=>a+b,0)||1;
+  const order=[['verified','Verified (elastic)','--good'],['ok','Settled (rigid)','--good'],['uncertain','Uncertain (range)','--warn'],['unverified','Single setting only','--bad'],['unresolved','No settled solution','--bad'],['unsettled','Rigid, not settled','--bad'],['failed','Failed','--bad']];
+  $('#quality').innerHTML='<table>'+order.filter(o=>sc[o[0]]).map(o=>`<tr><td><span class="sw" style="background:var(${o[2]})"></span> ${o[1]}</td><td style="text-align:right">${sc[o[0]].toLocaleString()}</td><td style="width:45%"><div class="bar"><i style="width:${100*sc[o[0]]/tot}%;background:var(${o[2]})"></i></div></td></tr>`).join('')+'</table>'+(Object.keys(sc).length?'':'<p class="muted small">No results yet.</p>');
+  $('#recent').innerHTML='<tr><th>Stiffness</th><th>Hz</th><th>Status</th><th>Thrust N</th><th>Torque N·m</th><th>Tip twist</th><th>s</th></tr>'+s.recent.map(r=>`<tr style="cursor:pointer" onclick="showDesign('${r.key}')"><td>${lvLabel(r.level)}</td><td>${r.freq}</td><td><span class="pill ${r.status}">${r.status}</span></td><td>${fmt(r.thrust,3)}</td><td>${fmt(r.torque,3)}</td><td>${r.tip_twist==null?'–':'±'+fmt(r.tip_twist,0)+'°'}</td><td>${fmt(r.elapsed,0)}</td></tr>`).join('');
+  $('#log').innerHTML=s.log.slice().reverse().map(l=>`<div>${new Date(l.t*1000).toLocaleTimeString()} — ${l.msg}</div>`).join('')||'<div>Waiting for Start.</div>';
+}
+
+/* ---------------- silhouettes ---------------- */
+function silhouette(chords,hs,w,h,scaleSpan=0.4,color='var(--accent)'){
+  const n=chords.length, s=Math.min((w-6)/scaleSpan,(h-6)/0.2);
+  const pts=[]; chords.forEach((c,i)=>pts.push([3+s*hs*i/(n-1),3]));
+  for(let i=n-1;i>=0;i--)pts.push([3+s*hs*i/(n-1),3+s*chords[i]]);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${color}" fill-opacity=".25" stroke="${color}" stroke-width="1.5"/></svg>`;
+}
+
+/* ---------------- explore ---------------- */
+let exState={levels:null,source:'all',status:{good:true,uncertain:true}};
+async function loadPoints(){
+  if(FREQ==null)FREQ=PLAN.frequencies_hz.includes(1)?1:PLAN.frequencies_hz[0];
+  if(!exState.levels)exState.levels=Object.fromEntries(PLAN.levels.map(l=>[l.id,true]));
+  POINTS[FREQ]=await api('/api/points?freq='+FREQ);
+  renderControls(); drawScatter();
+}
+function renderControls(){
+  const c=$('#exControls');
+  c.innerHTML=`<span class="small muted">Frequency</span>`+PLAN.frequencies_hz.map(f=>`<label><input type="radio" name="fq" ${f===FREQ?'checked':''} value="${f}"> ${f} Hz</label>`).join('')+
+   `<span class="small muted" style="margin-left:8px">Stiffness</span>`+PLAN.levels.map(l=>`<label><input type="checkbox" data-lv="${l.id}" ${exState.levels[l.id]?'checked':''}><span class="sw" style="background:${lvColor(l.id)}"></span>${l.label}</label>`).join('')+
+   `<span class="small muted" style="margin-left:8px">Source</span><select id="src"><option value="all">all</option><option value="search">searches</option><option value="map">shape map</option></select>`+
+   `<label><input type="checkbox" id="stU" ${exState.status.uncertain?'checked':''}> include uncertain (hollow)</label>`;
+  $('#src').value=exState.source;
+  c.querySelectorAll('input[name=fq]').forEach(r=>r.onchange=()=>{FREQ=+r.value;loadPoints()});
+  c.querySelectorAll('input[data-lv]').forEach(r=>r.onchange=()=>{exState.levels[r.dataset.lv]=r.checked;drawScatter()});
+  $('#src').onchange=e=>{exState.source=e.target.value;drawScatter()};
+  $('#stU').onchange=e=>{exState.status.uncertain=e.target.checked;drawScatter()};
+}
+let VIS=[];
+function drawScatter(){
+  const W=820,H=500,m={l:58,r:16,t:14,b:44};
+  const pts=(POINTS[FREQ]||[]).filter(p=>exState.levels[p.level]&&(exState.source==='all'||p[exState.source])&&
+    (['verified','ok'].includes(p.status)||(p.status==='uncertain'&&exState.status.uncertain)));
+  const xmax=Math.max(1.4,...pts.map(p=>p.torque))*1.04, ymax=Math.max(0.5,...pts.map(p=>p.thrust))*1.06, ymin=Math.min(0,...pts.map(p=>p.thrust));
+  const X=v=>m.l+(W-m.l-m.r)*v/xmax, Y=v=>H-m.b-(H-m.t-m.b)*(v-ymin)/(ymax-ymin);
+  let g='';
+  const xt=niceTicks(0,xmax,7), yt=niceTicks(ymin,ymax,6);
+  xt.forEach(t=>g+=`<line class="gridl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${H-m.b}"/><text x="${X(t)}" y="${H-m.b+16}" text-anchor="middle">${t}</text>`);
+  yt.forEach(t=>g+=`<line class="gridl" x1="${m.l}" x2="${W-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${t}</text>`);
+  g+=`<line x1="${X(PLAN.torque_target_nm)}" x2="${X(PLAN.torque_target_nm)}" y1="${m.t}" y2="${H-m.b}" stroke="var(--text-2)" stroke-dasharray="5 4"/><text x="${X(PLAN.torque_target_nm)+5}" y="${m.t+12}">${PLAN.torque_target_nm} N·m target</text>`;
+  g+=`<text x="${(W+m.l)/2}" y="${H-8}" text-anchor="middle">Peak root torque (N·m)</text><text transform="translate(16 ${(H-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">Mean thrust (N)</text>`;
+  // stiff first, soft on top so the focus thicknesses stay visible
+  const order=Object.fromEntries(PLAN.levels.map((l,i)=>[l.id,i]));
+  pts.sort((a,b)=>order[a.level]-order[b.level]);
+  VIS=pts.map(p=>({p,x:X(p.torque),y:Y(p.thrust)}));
+  g+=VIS.map(v=>{const c=lvColor(v.p.level);return v.p.status==='uncertain'?`<circle cx="${v.x.toFixed(1)}" cy="${v.y.toFixed(1)}" r="3.6" fill="none" stroke="${c}" stroke-width="1.3"/>`:`<circle cx="${v.x.toFixed(1)}" cy="${v.y.toFixed(1)}" r="3" fill="${c}" fill-opacity=".8"/>`}).join('');
+  g+=`<g id="hl"></g>`;
+  const svg=$('#scatter'); svg.innerHTML=g;
+  $('#exNote').textContent=`${pts.length.toLocaleString()} designs shown at ${FREQ} Hz. Soft plates drawn on top. Hollow = uncertain (hover for its range).`;
+  svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),sx=(e.clientX-r.left)*W/r.width,sy=(e.clientY-r.top)*H/r.height;
+    let best=null,bd=144;for(const v of VIS){const d=(v.x-sx)**2+(v.y-sy)**2;if(d<bd){bd=d;best=v}}
+    const tip=$('#tip');if(!best){tip.style.display='none';$('#hl').innerHTML='';svg.style.cursor='';return}
+    svg.style.cursor='pointer';const p=best.p,c=lvColor(p.level);
+    let hl=`<circle cx="${best.x}" cy="${best.y}" r="6" fill="none" stroke="var(--text)" stroke-width="1.5"/>`;
+    if(p.status==='uncertain'&&p.thrust_lo!=null)hl+=`<line x1="${best.x}" x2="${best.x}" y1="${Y(p.thrust_lo)}" y2="${Y(p.thrust_hi)}" stroke="${c}" stroke-width="2"/><line y1="${best.y}" y2="${best.y}" x1="${X(p.torque_lo)}" x2="${X(p.torque_hi)}" stroke="${c}" stroke-width="2"/>`;
+    $('#hl').innerHTML=hl;
+    tip.innerHTML=`<b>${lvLabel(p.level)}</b> · ${p.freq} Hz <span class="pill ${p.status}">${p.status}</span><br>${silhouette(p.chords,p.half_span,220,70,0.4,c)}<br>Thrust ${fmt(p.thrust,3)} N${p.thrust_lo!=null?` (${fmt(p.thrust_lo,3)}–${fmt(p.thrust_hi,3)})`:''}<br>Torque ${fmt(p.torque,3)} N·m${p.torque_lo!=null?` (${fmt(p.torque_lo,3)}–${fmt(p.torque_hi,3)})`:''}<br>Half-span ${Math.round(p.half_span*1000)} mm${p.tip_twist!=null?` · tip twist ±${fmt(p.tip_twist,0)}°`:''}<br><span class="muted">${[p.search?'search '+p.objectives.join(', '):'',p.map?'shape map':''].filter(Boolean).join(' · ')}</span>`;
+    tip.style.display='block';tip.style.left=Math.min(e.clientX+14,innerWidth-280)+'px';tip.style.top=(e.clientY+14)+'px';
+    svg.onclick=()=>showDesign(p.key);};
+  svg.onmouseleave=()=>{$('#tip').style.display='none';$('#hl').innerHTML=''};
+}
+function niceTicks(lo,hi,n){const span=hi-lo,step0=span/n,mag=10**Math.floor(Math.log10(step0)),step=[1,2,2.5,5,10].map(k=>k*mag).find(s=>s>=step0);const out=[];for(let v=Math.ceil(lo/step)*step;v<=hi+1e-9;v+=step)out.push(+v.toFixed(6));return out}
+
+async function showDesign(key){
+  if(!$('#tab-explore').classList.contains('active')&&!$('#tab-best').classList.contains('active')){document.querySelector('nav button[data-tab=explore]').click()}
+  SEL=key;const d=await api('/api/design?key='+key);const panel=$('#tab-explore').classList.contains('active')?$('#detail'):null;
+  const html=detailHTML(d);
+  if(panel)panel.innerHTML=html;else{$('#bestdetail')?.remove();$('#tab-best').insertAdjacentHTML('afterbegin',`<div class="card" id="bestdetail">${html}</div>`)}
+  if(d.animation.state==='running')setTimeout(()=>SEL===key&&showDesign(key),4000);
+}
+function trace(vals,phase,label,unit,color){
+  if(!vals)return'';const W=320,H=80,m=4;const lo=Math.min(...vals,0),hi=Math.max(...vals,0)||1;
+  const X=i=>m+(W-2*m)*phase[i],Y=v=>H-m-(H-2*m)*(v-lo)/(hi-lo||1);
+  return `<div class="small muted">${label} (${unit}) · final cycle · range ${fmt(Math.min(...vals),2)} to ${fmt(Math.max(...vals),2)}</div><svg width="100%" viewBox="0 0 ${W} ${H}"><line class="gridl" x1="${m}" x2="${W-m}" y1="${Y(0)}" y2="${Y(0)}"/><polyline fill="none" stroke="${color}" stroke-width="2" points="${vals.map((v,i)=>X(i).toFixed(1)+','+Y(v).toFixed(1)).join(' ')}"/></svg>`;
+}
+function detailHTML(d){
+  if(d.error)return `<p>${d.error}</p>`;
+  const c=lvColor(d.level), fc=d.final_cycle;
+  const anim=d.animation.state==='done'&&d.animation.files.length?`<div class="anim">${d.animation.files.map(f=>`<div class="small muted">${f}</div><img src="/files/animations/${d.key}/${f}">`).join('')}</div>`:
+    d.animation.state==='running'?'<p class="small muted">Rendering Ptera animation… (about a minute)</p>':(d.animation.state||'').startsWith('failed')?`<p class="small" style="color:var(--bad)">${d.animation.state}</p>`:'';
+  return `<h2>${lvLabel(d.level)} · ${d.freq} Hz <span class="pill ${d.status}">${d.status}</span></h2>
+  ${silhouette(d.chords,d.half_span,330,120,0.4,c)}
+  <table>
+   <tr><th>Mean thrust</th><td>${fmt(d.thrust,3)} N ${d.thrust_lo!=null?`<span class="muted">(${fmt(d.thrust_lo,3)}–${fmt(d.thrust_hi,3)})</span>`:''}</td></tr>
+   <tr><th>Peak root torque</th><td>${fmt(d.torque,3)} N·m ${d.torque_lo!=null?`<span class="muted">(${fmt(d.torque_lo,3)}–${fmt(d.torque_hi,3)})</span>`:''}</td></tr>
+   <tr><th>Tip twist</th><td>${d.tip_twist==null?'– (rigid)':'±'+fmt(d.tip_twist,1)+'°'}</td></tr>
+   <tr><th>Half-span / chords</th><td>${Math.round(d.half_span*1000)} mm · ${d.chords.map(x=>Math.round(x*1000)).join(', ')} mm</td></tr>
+   <tr><th>Numerics</th><td>dt ${fmt(d.dt,4)} s · ${d.cycles} cycles · stabilization ${d.factor??'–'} · spread ${fmt(d.spread_pct,1)}%</td></tr>
+   ${d.rechecks.length?`<tr><th>Finalist re-check</th><td>${d.rechecks.map(r=>`${r.numerics}: ${fmt(r.thrust,3)} N / ${fmt(r.torque,3)} N·m (${fmt(100*(r.thrust-d.thrust)/d.thrust,1)}% thrust)`).join('<br>')}</td></tr>`:''}
+   <tr><th>Used by</th><td class="small">${d.uses.map(u=>`${u.source} ${u.search_id||''} ${u.role}`).slice(0,6).join('<br>')}</td></tr>
+  </table>
+  ${fc?trace(fc.thrust,fc.phase,'Thrust','N',c)+trace(fc.torque,fc.phase,'Root torque','N·m',c)+(fc.tip_twist?trace(fc.tip_twist,fc.phase,'Tip twist','deg',c):''):''}
+  <p><button class="btn primary" ${d.animation.state==='running'?'disabled':''} onclick="post('/api/replay',{key:'${d.key}'}).then(()=>showDesign('${d.key}'))">${d.animation.state==='done'?'Re-render':'Render'} Ptera animation</button></p>
+  <p class="small muted">Or from a terminal: <code>${d.replay_command}</code></p>${anim}`;
+}
+
+/* ---------------- best shapes ---------------- */
+async function loadBest(){
+  const b=await api('/api/best'); $('#tq').textContent=b.torque_target;
+  const g=$('#bestgrid'); g.style.gridTemplateColumns=`110px repeat(${b.freqs.length},minmax(0,1fr))`;
+  let h='<div></div>'+b.freqs.map(f=>`<div class="small" style="font-weight:650;align-self:end">${f} Hz</div>`).join('');
+  for(const lv of b.levels){h+=`<div style="align-self:center"><span class="sw" style="background:${lvColor(lv.id)}"></span> <b>${lv.label}</b></div>`;
+    for(const f of b.freqs){const c=b.grid.find(x=>x.level===lv.id&&x.freq===f);
+      h+=c&&c.key?`<div class="cell" onclick="showDesign('${c.key}')">${silhouette(c.chords,c.half_span,260,92,0.4,lvColor(lv.id))}<div class="t"><b>${fmt(c.thrust,2)} N</b> at ${fmt(c.torque,2)} N·m · ${Math.round(c.half_span*1000)} mm${c.tip_twist!=null?` · ±${fmt(c.tip_twist,0)}°`:''}<br>${c.evaluated.toLocaleString()} designs evaluated${c.rechecks&&c.rechecks.length?' · re-check '+c.rechecks.map(r=>fmt(100*(r.thrust-c.thrust)/c.thrust,1)+'%').join(' / '):''}</div></div>`:`<div class="cell"><div class="t">${c?c.evaluated.toLocaleString():0} evaluated; none verified ≤ ${b.torque_target} N·m yet</div></div>`}}
+  g.innerHTML=h;
+  $('#winners').innerHTML='<tr><th>Stiffness</th><th>Hz</th><th>Objective</th><th>Status</th><th>Thrust N</th><th>Torque N·m</th></tr>'+b.winners.sort((a,c)=>a.freq-c.freq||PLAN.levels.findIndex(l=>l.id===a.level)-PLAN.levels.findIndex(l=>l.id===c.level)).map(w=>`<tr style="cursor:${w.key?'pointer':'default'}" ${w.key?`onclick="showDesign('${w.key}')"`:''}><td>${lvLabel(w.level)}</td><td>${w.freq}</td><td>${w.objective}</td><td>${w.status}</td><td>${fmt(w.thrust,3)}</td><td>${fmt(w.torque,3)}</td></tr>`).join('');
+}
+
+/* ---------------- stiffness effect ---------------- */
+async function loadEffect(){
+  const b=await api('/api/best');
+  const lv=PLAN.levels.map(l=>l.id), W=600,H=360,m={l:52,r:110,t:14,b:44};
+  const X=i=>m.l+(W-m.l-m.r)*i/(lv.length-1);
+  // chart 1
+  const vals=b.grid.filter(c=>c.thrust!=null).map(c=>c.thrust); const ymax=Math.max(0.5,...vals)*1.1;
+  const Y=v=>H-m.b-(H-m.t-m.b)*v/ymax;
+  let g=axes(lv,X,Y,ymax,W,H,m,'Mean thrust (N)');
+  for(const f of b.freqs){const pts=lv.map((l,i)=>{const c=b.grid.find(x=>x.level===l&&x.freq===f);return c&&c.thrust!=null?[X(i),Y(c.thrust)]:null});
+    const col=fColor(f);g+=`<polyline fill="none" stroke="${col}" stroke-width="2" points="${pts.filter(Boolean).map(p=>p.join(',')).join(' ')}"/>`+pts.filter(Boolean).map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${col}"/>`).join('');
+    const last=pts.filter(Boolean).pop();if(last)g+=`<text x="${last[0]+8}" y="${last[1]+4}" style="fill:${col}">${f} Hz</text>`}
+  $('#effect1').innerHTML=g;
+  // chart 2: same shape ratios from map points
+  const all={};for(const f of b.freqs){all[f]=POINTS[f]||await api('/api/points?freq='+f);POINTS[f]=all[f]}
+  const H2=H; let g2=''; let any=false; const Y2=v=>H2-m.b-(H2-m.t-m.b)*v/1.1;
+  g2+=axes(lv,X,Y2,1.1,W,H2,m,'Thrust ÷ rigid thrust (same shape)');
+  for(const f of b.freqs){
+    const by={};for(const p of all[f]){if(!p.map||!['verified','ok','uncertain'].includes(p.status))continue;const k=p.chords.join(',')+'|'+p.half_span;(by[k]=by[k]||{})[p.level]=p.thrust}
+    const col=fColor(f),band=[],med=[];
+    lv.forEach((l,i)=>{const r=Object.values(by).filter(s=>s.rigid>0.02&&s[l]!=null).map(s=>s[l]/s.rigid).sort((a,c)=>a-c);
+      if(r.length>=5){any=true;const q=t=>r[Math.floor(t*(r.length-1))];med.push([X(i),Y2(q(.5))]);band.push([X(i),Y2(q(.25)),Y2(q(.75))])}});
+    if(band.length)g2+=`<polygon fill="${col}" fill-opacity=".14" points="${band.map(b=>b[0]+','+b[1]).join(' ')} ${band.slice().reverse().map(b=>b[0]+','+b[2]).join(' ')}"/>`;
+    if(med.length){g2+=`<polyline fill="none" stroke="${col}" stroke-width="2" points="${med.map(p=>p.join(',')).join(' ')}"/>`+med.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${col}"/>`).join('');const l=med[med.length-1];g2+=`<text x="${l[0]+8}" y="${l[1]+4}" style="fill:${col}">${f} Hz</text>`}}
+  if(!any)g2+=`<text x="${W/2}" y="${H2/2}" text-anchor="middle">Shape-map results appear here once phase E runs.</text>`;
+  $('#effect2').innerHTML=g2;
+}
+function axes(lv,X,Y,ymax,W,H,m,ylabel){let g='';niceTicks(0,ymax,5).forEach(t=>g+=`<line class="gridl" x1="${m.l}" x2="${W-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${t}</text>`);
+  lv.forEach((l,i)=>g+=`<text x="${X(i)}" y="${H-m.b+16}" text-anchor="middle">${lvLabel(l)}</text>`);
+  g+=`<text x="${(W-m.r+m.l)/2}" y="${H-8}" text-anchor="middle">Plate (stiffer → softer)</text><text transform="translate(14 ${(H-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;return g}
+
+/* ---------------- boot ---------------- */
+(async()=>{const p=await api('/api/plan');PLAN=p.plan;EST=p.estimate;window.DIR=p.dir;renderPlan();await refresh();if(location.hash)document.querySelector(`nav button[data-tab=${location.hash.slice(1)}]`)?.click();setInterval(refresh,4000);
+  setInterval(()=>{if(STATE==='running'){if($('#tab-explore').classList.contains('active'))loadPoints();if($('#tab-best').classList.contains('active'))loadBest()}},30000);})();
+</script>
+</body>
+</html>
