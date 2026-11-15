@@ -90,11 +90,11 @@ canvas#map{display:block;width:100%;height:560px;cursor:crosshair;touch-action:n
 .poster{position:relative;display:block;width:100%;border-radius:8px;overflow:hidden;background:#000;cursor:pointer;border:0;padding:0}
 .poster img{display:block;width:100%}
 .poster span{position:absolute;inset:auto 8px 8px auto;background:rgba(0,0,0,.6);color:#fff;border-radius:99px;padding:2px 10px;font-size:12px}
-dialog{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:0;max-width:min(980px,96vw);width:100%}
+dialog{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:0;max-width:min(1360px,97vw);width:100%}
 dialog::backdrop{background:rgba(0,0,0,.55)}
 .dlg-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
-.dlg-b{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px}
-@media (max-width:800px){.dlg-b{grid-template-columns:1fr}}
+.dlg-b{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1024px) minmax(240px,1fr);gap:16px}
+@media (max-width:1100px){.dlg-b{grid-template-columns:1fr}}
 .dlg-b img.anim{width:100%;border-radius:8px;background:#000;display:block}
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
 .seg button{border:0;background:var(--surface);color:var(--text-2);font:inherit;font-size:12.5px;padding:4px 10px;cursor:pointer}
@@ -230,15 +230,17 @@ function posterButton(media,title,info){
   if(!media||!media.poster)return '<p class="tiny muted">No animation rendered for this design.</p>';
   const id='m'+Math.random().toString(36).slice(2);
   MEDIA_REG[id]={media,title,info};
-  return `<button class="poster" onclick="openViewer('${id}')" aria-label="Play Ptera animation"><img loading="lazy" src="media/${media.poster}" alt="Ptera render"><span>▶ Play animation</span></button>`;
+  return `<button class="poster" onclick="openViewer('${id}')" aria-label="Play Ptera animation"><img loading="lazy" src="${MU(media.poster)}" alt="Ptera render"><span>▶ Play animation</span></button>`;
 }
 const MEDIA_REG={};
+// media URLs carry the build stamp so a browser never shows a cached file from an earlier build
+const MU=p=>'media/'+p+'?v='+encodeURIComponent(D.build_id);
 function openViewer(id){
   const {media,title,info}=MEDIA_REG[id];
   const views=[['main','Side'],['front','Front (into LE)'],['top','Top']].filter(v=>media[v[0]]);
   $('#v-title').textContent=title;
-  $('#v-body').innerHTML=`<div><div class="seg" id="v-seg">${views.map((v,k)=>`<button data-v="${v[0]}" class="${k?'':'on'}">${v[1]}</button>`).join('')}</div><img class="anim" id="v-img" src="media/${media[views[0][0]]}" alt="Ptera animation"><p class="tiny muted">Ptera's own render of the verified solve. Front view looks upstream into the leading edge: a rigid wing is edge-on, so any visible surface is twist.</p></div><div>${info||''}</div>`;
-  $$('#v-seg button').forEach(b=>b.onclick=()=>{$$('#v-seg button').forEach(x=>x.classList.toggle('on',x===b));$('#v-img').src='media/'+media[b.dataset.v]});
+  $('#v-body').innerHTML=`<div><div class="seg" id="v-seg">${views.map((v,k)=>`<button data-v="${v[0]}" class="${k?'':'on'}">${v[1]}</button>`).join('')}</div><img class="anim" id="v-img" src="${MU(media[views[0][0]])}" alt="Ptera animation"><p class="tiny muted">Ptera's own render of the verified solve. Front view looks upstream into the leading edge: a rigid wing is edge-on, so any visible surface is twist.</p></div><div>${info||''}</div>`;
+  $$('#v-seg button').forEach(b=>b.onclick=()=>{$$('#v-seg button').forEach(x=>x.classList.toggle('on',x===b));$('#v-img').src=MU(media[b.dataset.v])});
   viewer.showModal();
 }
 viewer.addEventListener('close',()=>{const im=$('#v-img');if(im)im.src=''});
@@ -268,7 +270,7 @@ function lineChart({series,cats=null,xlabel='',ylabel='',w=460,h=250,ymin=0,ymax
   g+=`<text x="${(w+m.l)/2}" y="${h-4}" text-anchor="middle">${xlabel}</text><text transform="translate(12 ${(h-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;
   for(const s of series){const pts=s.points.filter(p=>p.y!=null);
     g+=`<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${pts.map(p=>X(cats?p.x:p.x).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ')}"/>`;
-    for(const p of pts){g+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    for(const p of pts){g+=p.hollow?`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="var(--surface)" stroke="${s.color}" stroke-width="2"/>`:`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
       if(p.range)g+=`<line x1="${X(p.x)}" x2="${X(p.x)}" y1="${Y(p.range[0])}" y2="${Y(p.range[1])}" stroke="${s.color}" stroke-width="2"/>`;
       g+=`<circle class="hit" cx="${X(p.x)}" cy="${Y(p.y)}" r="11" fill="transparent" data-tip="${esc(p.tip||`${s.name}: ${fmt(p.y)}`)}"/>`}}
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img">${g}</svg>`;
@@ -642,7 +644,7 @@ function renderOpt(){
   let ov='';for(const r of R){const c=modelColor(r.model),P=[...r.outline.map(p=>[pad+s*p[0],pad]),...r.outline.slice().reverse().map(p=>[pad+s*p[0],pad+s*p[1]])];
     ov+=`<polygon points="${P.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${c}" fill-opacity=".08" stroke="${c}" stroke-width="2" data-tip="${esc(`<b>${MODEL[r.model].label}</b>: ${fmt(r.final.thrust,2)} N at ${fmt(r.final.torque,2)} N·m, ${Math.round(r.final.half_span)} mm`)}"/>`}
   [0,100,200,300,400].forEach(t=>ov+=`<text x="${pad+s*t}" y="${h-2}" text-anchor="${t?'middle':'start'}">${t}${t===400?' mm':''}</text>`);
-  let hh=`<h2>Optimized shapes (1 Hz, fine mesh)</h2><p class="lede">The best 1 Hz design of each model was refit as a smooth trailing edge: a monotone curve through the fixed 200 mm root chord and six control chords, sampled at 25 stations. A pattern search then moved each control chord and the half-span by ±10 mm, then ±5 mm, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns), with the ${LIM} N·m budget applied on the fine mesh. The final design was re-solved at half its time step.</p>
+  let hh=`<h2>Optimized shapes (1 Hz, fine mesh)</h2><p class="lede">All optimizations are at the 1 Hz target frequency. The best 1 Hz design of each model was refit as a smooth trailing edge: a monotone curve through the fixed 200 mm root chord and six control chords, sampled at 25 stations. A pattern search then moved each control chord and the half-span by ±10 mm, then ±5 mm, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns), with the ${LIM} N·m budget applied on the fine mesh. The final design was re-solved at half its time step.</p>
    <div class="card"><h3>All optimized outlines, to scale</h3>${legend(R.map(r=>[modelColor(r.model),MODEL[r.model].label]))}<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;max-width:${w}px">${ov}</svg><p class="small muted">Leading edge along the top, straight and perpendicular to the flow; root at the left. The trailing edge carries all of the taper.</p></div>
    <div class="card"><h3>Did the optimization help? Same fine mesh, same 1 N·m budget</h3>
    <p class="small muted" style="max-width:900px">The fair baseline is the campaign winner's own outline solved on the same fine mesh and time step, with its span stretched or shrunk until it also uses exactly the 1 N·m budget. Only then does a difference reflect shape rather than mesh or size.</p>
@@ -653,13 +655,24 @@ function renderOpt(){
    <div class="grid2">`;
   for(const r of R){const c=modelColor(r.model);const id='opt_'+r.model;
     const info=`<div class="kv"><div>Thrust</div><div><b>${fmt(r.final.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(r.final.torque,3)} N·m</b></div><div>Tip twist</div><div>${r.final.twist==null?'–':'±'+fmt(r.final.twist,1)+'°'}</div><div>Half-span</div><div>${Math.round(r.final.half_span)} mm</div><div>Mesh</div><div>${r.numerics.span_panels} × ${r.numerics.chord_panels} panels, ${r.numerics.steps_per_cycle} steps per cycle</div></div>`;
-    const hist=r.history.filter(x=>x.thrust!=null);
-    const series=[{name:'Thrust',color:c,points:hist.map((x,k)=>({x:k,y:x.thrust,tip:`${x.tag||('round '+x.round)}: ${fmt(x.thrust,3)} N at ${fmt(x.torque,3)} N·m, ${x.span} mm`}))}];
-    hh+=`<div class="card"><h3><span class="sw" style="background:${c}"></span>${MODEL[r.model].label}</h3>
+    const hist=r.history.filter(x=>x.thrust!=null), over=x=>x.torque>LIM+1e-9;
+    const tipOf=x=>`<b>${x.tag==='start'?'Start: campaign winner as a smooth curve':(x.tag||'round '+x.round)}</b><br>${fmt(x.thrust,3)} N at ${fmt(x.torque,3)} N·m, ${x.span} mm${over(x)?'<br>over the torque budget':''}`;
+    const cats=hist.map((x,k)=>k===0?'start':String(k));
+    const tS=[{name:'Thrust',color:c,points:hist.map((x,k)=>({x:k,y:x.thrust,hollow:over(x),tip:tipOf(x)}))}];
+    const qS=[{name:'Torque',color:c,points:hist.map((x,k)=>({x:k,y:x.torque,hollow:over(x),tip:tipOf(x)}))}];
+    const src=STUDY[r.source]?.label||r.source, srcRow=(()=>{for(let k=0;k<CAT0;k++)if(C.k[k]===r.coarse_key&&D.studies[C.s[k]].id===r.source)return k;return -1})();
+    const nOver=hist.filter(over).length;
+    hh+=`<div class="card"><h3><span class="sw" style="background:${c}"></span>${MODEL[r.model].label} · 1 Hz</h3>
+     <p class="small" style="margin:0 0 8px">Started from the <b>1 Hz winner of the ${esc(src)}</b>: ${fmt(r.coarse.thrust)} N at ${fmt(r.coarse.torque)} N·m on the campaign mesh${srcRow>=0?` <button class="playbtn" onclick="showOnMap(${srcRow})">◎ on map</button>`:''}.
+      Redrawn as a smooth curve on the fine mesh it gives <b>${fmt(r.start.thrust)} N at ${fmt(r.start.torque)} N·m</b>${r.start.torque>LIM?' — <b>over the budget</b>, so the first rounds trade thrust for torque until it fits':''}.
+      Finished at <b>${fmt(r.final.thrust)} N at ${fmt(r.final.torque)} N·m</b>${r.baseline_at_budget?`; the campaign outline simply resized to the budget gives ${fmt(r.baseline_at_budget.thrust)} N (${(r.final.thrust>=r.baseline_at_budget.thrust?'+':'')+fmt(100*(r.final.thrust-r.baseline_at_budget.thrust)/r.baseline_at_budget.thrust,1)}%)`:''}.</p>
      ${outlineSVG(r.outline,{w:440,h:150,color:c,labels:true})}
      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start"><div>${posterButton(r.media,MODEL[r.model].label+' · optimized · 1 Hz',info)}</div>
-     <div>${r.media.evolution?`<img src="media/${r.media.evolution}" style="width:100%;border-radius:8px;background:#fff" alt="Outline at each round" loading="lazy"><div class="tiny muted">Outline at each optimization round</div>`:''}</div></div>
-     <div style="margin-top:8px">${lineChart({series,cats:hist.map((x,k)=>k===0?'fit':String(k)),xlabel:'Optimization round',ylabel:'Thrust (N)',w:440,h:180,ymin:Math.min(...hist.map(x=>x.thrust))*0.97})}</div>
+     <div>${r.media.evolution?`<img src="${MU(r.media.evolution)}" style="width:100%;border-radius:8px;background:#fff" alt="Outline at each round" loading="lazy"><div class="tiny muted">Outline at each optimization round</div>`:''}</div></div>
+     <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>${lineChart({series:tS,cats,xlabel:'Round',ylabel:'Thrust (N)',w:300,h:190,ymin:Math.min(...hist.map(x=>x.thrust))*0.97})}</div>
+      <div>${lineChart({series:qS,cats,xlabel:'Round',ylabel:'Peak torque (N·m)',w:300,h:190,ymin:Math.min(...hist.map(x=>x.torque),LIM)*0.97,ymax:Math.max(...hist.map(x=>x.torque),LIM)*1.02,hline:LIM})}</div></div>
+     <p class="tiny muted" style="margin-top:2px">Each round keeps the best move found. ${nOver?`Hollow points are over the ${LIM} N·m budget (dashed line); while over budget the search lowers torque first, which costs thrust.`:`Every round stayed within the ${LIM} N·m budget (dashed line).`}</p>
      <p class="small muted">${r.note}. Downloads: <a href="${r.files.csv}" download>outline CSV</a> (chord at 25 stations) · <a href="${r.files.svg}" download>outline SVG</a> (to scale).</p></div>`}
   hh+='</div>';
   $('#t-opt').innerHTML=hh;

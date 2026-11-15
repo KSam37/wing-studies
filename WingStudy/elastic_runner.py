@@ -240,6 +240,11 @@ def camera_view(vector):
         OR.screenshot_image = original_shot
 
 
+# Ptera's animate defaults are 1024 x 768 at lossy WebP quality 75, which smears the thin mesh lines.
+# Callers can raise these (e.g. for the shareable atlas); Ptera's own code is unchanged.
+ANIMATION_OPTIONS = {"window_size": (1024, 768), "quality": 75.0}
+
+
 def save_native_outputs(solver, directory: Path):
     """Ptera's own plots and animation, exactly as model.run_case writes them, plus a
     wing-only front view in which leading-edge twist is seen face-on (a rigid wing at
@@ -250,13 +255,13 @@ def save_native_outputs(solver, directory: Path):
     with matplotlib.rc_context(matplotlib.rcParamsDefault):
         ps.plot_results_versus_time(solver, show=False, save=True, directory=directory, file_format="png")
     ps.animate(solver, scalar_type="lift", show_wake_vortices=True,
-               save=True, path=directory / "animation.webp", testing=True)
+               save=True, path=directory / "animation.webp", testing=True, **ANIMATION_OPTIONS)
     with camera_view(FRONT_VIEW):
         ps.animate(solver, scalar_type="lift", show_wake_vortices=False,
-                   save=True, path=directory / "animation_front.webp", testing=True)
+                   save=True, path=directory / "animation_front.webp", testing=True, **ANIMATION_OPTIONS)
     with camera_view(TOP_VIEW):
         ps.animate(solver, scalar_type="lift", show_wake_vortices=False,
-                   save=True, path=directory / "animation_top.webp", testing=True)
+                   save=True, path=directory / "animation_top.webp", testing=True, **ANIMATION_OPTIONS)
 
 
 def run(case, settings, config: elastic.ElasticConfig | None, overrides: dict | None = None,

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import shutil
 import sqlite3
 import sys
@@ -82,8 +83,14 @@ def category_winners():
     return out
 
 
+HQ = ELASTIC / "animations_hq"          # high-quality re-renders for the atlas (render --hq)
+HQ_OPTIONS = {"window_size": (1600, 1200), "quality": 90.0, "speed": 1.0}   # speed 1: true speed, Ptera drops frames above 50 fps
+
+
 def animation_dir(key: str):
-    """Existing animation folder for a design key in any campaign, else None."""
+    """Animation folder for a design key: the high-quality re-render if present, else any campaign's."""
+    if (HQ / "designs" / key / "animation.webp").exists():
+        return HQ / "designs" / key
     for st in STUDIES:
         d = CAMPAIGNS / st["dir"] / "animations" / key
         if (d / "animation.webp").exists():
@@ -96,6 +103,105 @@ def _replay(study_dir, key):
     t = time.time()
     EC.replay(CAMPAIGNS / study_dir, key)
     return key, time.time() - t
+
+
+def _hq_design(study_dir, key):
+    import elastic_campaign as EC
+    import elastic_runner as R
+    R.ANIMATION_OPTIONS.update(HQ_OPTIONS)
+    t = time.time()
+    EC.replay(CAMPAIGNS / study_dir, key, HQ / "designs" / key)
+    return f"design {key[:10]}", time.time() - t
+
+
+def _hq_refined(model_id):
+    import contextlib
+    import io
+    import elastic
+    import elastic_refine as F
+    import elastic_runner as R
+    R.ANIMATION_OPTIONS.update(HQ_OPTIONS)
+    t = time.time()
+    h = json.loads((ELASTIC / "refine" / model_id / "history.json").read_text())
+    num, fin = h["numerics"], h["history"][-1]
+    template, settings = R.load_catalog_case(7657)
+    case = R.sections_case(template, settings, F.chords_from_ctrl(fin["ctrl"], num["stations"]), fin["span"], "refined")
+    case["frequency_hz"] = F.FREQ
+    ov = {"dt_s": fin.get("dt") or 1.0 / (num["steps_per_cycle"] * F.FREQ), "cycles": num["cycles"],
+          "span_panels": num["span_panels"], "chord_panels": num["chord_panels"]}
+    _, thick, rod = F.MODELS[model_id]
+    cfg = None if thick is None else elastic.ElasticConfig.from_dict(
+        {"stiffness_model": "plate", "thickness_m": thick * 1e-3, "material": F.MATERIAL, "rod": rod or {},
+         "added_mass_factor": fin.get("factor") or 0.5})
+    with contextlib.redirect_stdout(io.StringIO()):
+        R.run(case, settings, cfg, ov, output_dir=HQ / "refined" / model_id)
+    return f"optimized {model_id}", time.time() - t
+
+
+def _hq_candidate(label, wing, cfg, level_dir):
+    import elastic_runner as R
+    import elastic_study as S
+    R.ANIMATION_OPTIONS.update(HQ_OPTIONS)
+    t = time.time()
+    S._animate_job(label, wing, cfg, level_dir)
+    return f"candidate {label} {level_dir.name}", time.time() - t
+
+
+def _hq_catalog(number, key):
+    import contextlib
+    import io
+    import elastic_runner as R
+    R.ANIMATION_OPTIONS.update(HQ_OPTIONS)
+    t = time.time()
+    case, settings = R.load_catalog_case(int(number))
+    with contextlib.redirect_stdout(io.StringIO()):
+        R.run(case, settings, None, {}, output_dir=HQ / "catalog" / key)
+    return f"rigid catalog #{number}", time.time() - t
+
+
+def _hq_frames(job):
+    """Frame count of a job's existing high-quality side view (0 if not rendered yet)."""
+    from PIL import Image
+    f, a = job
+    path = {"_hq_design": lambda: HQ / "designs" / a[1], "_hq_refined": lambda: HQ / "refined" / a[0],
+            "_hq_candidate": lambda: a[3], "_hq_catalog": lambda: HQ / "catalog" / a[1]}[f.__name__]() / "animation.webp"
+    return Image.open(path).n_frames if path.exists() else 10 ** 6
+
+
+def render_hq(workers: int):
+    """Re-render every animation the atlas uses at 1600 x 1200, WebP quality 90 (Ptera's defaults are
+    1024 x 768 at 75). Written to outputs/elastic/animations_hq/; existing renders are left alone."""
+    import elastic_study as S
+    jobs, seen = [], set()
+    for w in category_winners():
+        if w["key"] and w["key"] not in seen:
+            seen.add(w["key"]); jobs.append((_hq_design, (w["dir"], w["key"])))
+    for d in sorted((ELASTIC / "refine").glob("*/history.json")):
+        jobs.append((_hq_refined, (d.parent.name,)))
+    data = campaign_rows(); cat = catalog_rows(data)
+    for w in catalog_winners(data, cat, OUT, []):
+        if w["key"] not in seen:
+            seen.add(w["key"]); jobs.append((_hq_catalog, (w["number"], w["key"])))
+    for label, wing in S.CANDIDATES:
+        for level, t in S.STIFFNESS_LEVELS:
+            cfg = None if t is None else {"stiffness_model": "plate", "thickness_m": t * 1e-3, "material": S.PLAIN_WEAVE}
+            jobs.append((_hq_candidate, (label, wing, cfg, HQ / "cand" / S._slug(label) / level.replace(" ", ""))))
+    only = os.environ.get("ATLAS_HQ_ONLY")          # a group ("catalog", "design", ...) or "long"
+    if only == "long":                               # renders written before speed=1.0: more than 200 frames
+        jobs = [j for j in jobs if _hq_frames(j) > MAX_FRAMES]
+    elif only:
+        jobs = [j for j in jobs if j[0].__name__ == f"_hq_{only}"]
+    print(f"{len(jobs)} high-quality renders with {workers} workers", flush=True)
+    with ProcessPoolExecutor(workers) as ex:
+        futs = {ex.submit(f, *a): a for f, a in jobs}
+        for i, fu in enumerate(as_completed(futs), 1):
+            try:
+                what, sec = fu.result(); print(f"[{i}/{len(jobs)}] {what} in {sec:.0f} s", flush=True)
+            except Exception as exc:  # noqa: BLE001
+                print(f"[{i}/{len(jobs)}] {futs[fu]} FAILED: {exc!r}", flush=True)
+    for label, _ in S.CANDIDATES:
+        S.montage(HQ / "cand" / S._slug(label), label)
+    print("montages written", flush=True)
 
 
 def render(workers: int):
@@ -114,44 +220,46 @@ def render(workers: int):
 
 
 # ----------------------------------------------------------------------------------------
-# Media: Ptera's 1024 px animations re-encoded for sharing (full resolution, every 2nd frame at true speed)
+# Media: Ptera's animations, shipped as the original files
 # ----------------------------------------------------------------------------------------
-def _shrink(src: str, dst: str, width: int = 1024, step: int = 2, poster: str | None = None):
+MAX_FRAMES = 200   # solves with a refined time step write one frame per step (up to 800); 200 = 50 per cycle
+
+
+def _shrink(src: str, dst: str, poster: str | None = None):
+    """Ship Ptera's animation file exactly as written, and cut a full-resolution poster still."""
+    import math as _m
     from PIL import Image, ImageSequence
     src, dst = Path(src), Path(dst)
-    if dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime and (poster is None or Path(poster).exists()):
-        return dst.name
-    dst.parent.mkdir(parents=True, exist_ok=True)
     im = Image.open(src)
-    frames, durs = [], []
-    for i, fr in enumerate(ImageSequence.Iterator(im)):
-        if i % step:
-            continue
-        g = fr.convert("RGB")
-        if g.width != width:
-            g = g.resize((width, round(g.height * width / g.width)), Image.LANCZOS)
-        frames.append(g); durs.append((fr.info.get("duration") or im.info.get("duration") or 20) * step)
-    if src.suffix == ".gif" or len(frames) == 1:
-        frames[0].save(dst, save_all=len(frames) > 1, append_images=frames[1:], duration=durs, loop=0)
-    else:
-        frames[0].save(dst, "WEBP", save_all=True, append_images=frames[1:], duration=durs, loop=0, quality=88, method=4)
-    if poster:
-        frames[len(frames) // 3].save(poster, "WEBP", quality=88)
+    n = getattr(im, "n_frames", 1)
+    fresh = dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime
+    if not fresh:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)   # never re-encode: browsers mis-blend re-encoded frames (blocky text, ghost lines)
+    if poster and not (Path(poster).exists() and fresh):
+        im.seek(n // 3)
+        im.convert("RGB").save(poster, "WEBP", quality=95, method=4)
     return dst.name
 
 
 VIEWS = {"main": "animation.webp", "front": "animation_front.webp", "top": "animation_top.webp"}
 
 
+LITE = False   # light build: front and top views only (the side view with the wake is the large file)
+
+
 def _media_jobs(src_dir: Path, rel: str, out: Path, jobs: list):
-    """Queue shrink jobs for one Ptera output folder; return the relative media map."""
+    """Queue copy jobs for one Ptera output folder; return the relative media map."""
     media = {}
-    for view, name in VIEWS.items():
+    views = [v for v in VIEWS if not (LITE and v == "main")]
+    poster_view = next((v for v in views if (src_dir / VIEWS[v]).exists()), None)
+    for view in views:
+        name = VIEWS[view]
         if (src_dir / name).exists():
             jobs.append((str(src_dir / name), str(out / rel / f"{view}.webp"),
-                         str(out / rel / "poster.webp") if view == "main" else None))
+                         str(out / rel / "poster.webp") if view == poster_view else None))
             media[view] = f"{rel}/{view}.webp"
-    if "main" in media:
+    if poster_view:
         media["poster"] = f"{rel}/poster.webp"
     return media
 
@@ -281,7 +389,9 @@ def catalog_winners(data, cat, out: Path, jobs: list):
     for i, label, n in picks:
         k = cols["k"][i]
         media = {}
-        for loc in cat["locations"].get(k, []):
+        if (HQ / "catalog" / k / "animation.webp").exists():
+            media = _media_jobs(HQ / "catalog" / k, f"catalog/{k[:16]}", out / "media", jobs)
+        for loc in ([] if media else cat["locations"].get(k, [])):
             d = ROOT / "outputs" / "studies" / loc["study"] / loc["case"]
             if (d / "animation.webp").exists():
                 media = _media_jobs(d, f"catalog/{k[:16]}", out / "media", jobs); break
@@ -302,6 +412,8 @@ def candidates(out: Path, jobs: list):
         case, _ = S.resolve_wing(ref)
         outline = [[round(s["y_m"] * 1000, 1), round(s["chord_m"] * 1000, 1)] for s in case["sections"]]
         d = ELASTIC / "stiffness" / folder[label]
+        if (HQ / "cand" / folder[label] / "stiffness_montage.webp").exists():
+            d = HQ / "cand" / folder[label]
         levels = []
         for r in (r for r in rows if r["wing"] == label):
             f = lambda k: float(r[k]) if r.get(k) not in (None, "") else None  # noqa: E731
@@ -362,7 +474,8 @@ def refined(out: Path, jobs: list):
             "note": r["note"], "outline": outline, "numerics": hist["numerics"],
             "history": [{"round": x.get("round"), "tag": x.get("tag"), "thrust": x.get("thrust"), "torque": x.get("torque"),
                          "span": round((x.get("span") or 0) * 1000), "status": x.get("status")} for x in h],
-            "media": {**_media_jobs(d / "ptera", f"refined/{m}", out / "media", jobs),
+            "media": {**_media_jobs(HQ / "refined" / m if (HQ / "refined" / m / "animation.webp").exists() else d / "ptera",
+                                    f"refined/{m}", out / "media", jobs),
                       **({"evolution": f"refined/{m}/evolution.gif"} if (d / "evolution.gif").exists() else {})},
             "files": {"csv": f"files/optimized/{m}_outline.csv", "svg": f"files/optimized/{m}_outline.svg",
                       **({"resized_csv": resized_csv} if resized_csv else {})},
@@ -393,10 +506,11 @@ def build(out: Path = OUT, zip_it: bool = True, workers: int = 8):
     refs = refined(out, jobs)
     # extra animations already rendered for any other design (e.g. earlier leaders) are linked from the map
     extra = {}
-    for st in STUDIES:
+    for st in []:  # earlier leader snapshots are not shipped; only winners, candidates and optimized shapes
         for d in sorted((CAMPAIGNS / st["dir"] / "animations").glob("*")) if (CAMPAIGNS / st["dir"] / "animations").exists() else []:
             if (d / "animation.webp").exists() and d.name not in extra:
-                extra[d.name] = _media_jobs(d, f"designs/{d.name[:16]}", out / "media", jobs)
+                # same design may have a high-quality re-render: always use the best source
+                extra[d.name] = _media_jobs(animation_dir(d.name) or d, f"designs/{d.name[:16]}", out / "media", jobs)
     # reports and outlines to download
     files = out / "files"; files.mkdir(exist_ok=True)
     pdf = ELASTIC / "report" / "elastic_process_report.pdf"
@@ -412,7 +526,7 @@ def build(out: Path = OUT, zip_it: bool = True, workers: int = 8):
     with ProcessPoolExecutor(workers) as ex:
         list(ex.map(_shrink_job, uniq))
     payload = {
-        "built": time.strftime("%Y-%m-%d %H:%M"), "torque_limit": TORQUE_LIMIT,
+        "built": time.strftime("%Y-%m-%d %H:%M"), "build_id": time.strftime("%Y%m%d%H%M%S"), "torque_limit": TORQUE_LIMIT,
         "studies": [{k: v for k, v in s.items() if k != "dir"} for s in STUDIES] + [CATALOG_STUDY],
         "catalog": {k: v for k, v in cat.items() if k != "locations"},
         "models": [{"id": m[0], "label": m[1], "thickness": m[2], "rod": m[3]} for m in MODELS],
@@ -432,7 +546,7 @@ def build(out: Path = OUT, zip_it: bool = True, workers: int = 8):
     result = {"folder": str(out), "designs": len(data["cols"]["s"]), "unique": data["unique"],
               "data_mb": round(len(blob) / 1e6, 1), "seconds": round(time.time() - t0)}
     if zip_it:
-        z = out.parent / "Elastic_Wing_Atlas.zip"
+        z = out.parent / ("Elastic_Wing_Atlas_lite.zip" if LITE else "Elastic_Wing_Atlas.zip")
         with zipfile.ZipFile(z, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             for p in sorted(out.rglob("*")):
                 if p.is_file():
@@ -474,12 +588,16 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("render"); r.add_argument("--workers", type=int, default=6)
-    b = sub.add_parser("build"); b.add_argument("--out", type=Path, default=OUT); b.add_argument("--no-zip", action="store_true")
+    r.add_argument("--hq", action="store_true", help="re-render everything at 1600x1200, quality 90")
+    b = sub.add_parser("build"); b.add_argument("--out", type=Path, default=None); b.add_argument("--no-zip", action="store_true")
+    b.add_argument("--lite", action="store_true", help="front and top views only -> atlas_lite/ and Elastic_Wing_Atlas_lite.zip")
     a = ap.parse_args(argv)
     if a.cmd == "render":
-        render(a.workers)
+        render_hq(a.workers) if a.hq else render(a.workers)
     else:
-        print(build(a.out, zip_it=not a.no_zip))
+        global LITE
+        LITE = a.lite
+        print(build(a.out or (OUT.parent / "atlas_lite" if a.lite else OUT), zip_it=not a.no_zip))
 
 
 if __name__ == "__main__":

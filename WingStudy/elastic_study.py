@@ -257,7 +257,8 @@ def montage(wing_dir: Path, label: str, frames=50):
         seq = None
         if m.get("status") in ("ok", "uncertain") and path.exists():
             im = Image.open(path)
-            n, per = im.n_frames, int(round(1.0 / m["dt_s"]))
+            # frames per cycle from the file itself (Ptera may keep only every Nth step at true speed)
+            n = im.n_frames; per = int(round(n / m["cycles"])) if m.get("cycles") else int(round(1.0 / m["dt_s"]))
             seq = []
             for k in range(frames):
                 im.seek(min(n - 1, n - per + int(k * per / frames)))
