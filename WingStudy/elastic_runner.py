@@ -204,6 +204,7 @@ def _uncertain(good) -> dict:
 
 
 FRONT_VIEW = (-1.0, 0.15, 0.1)   # from upstream, looking into the leading edge
+TOP_VIEW = (0.0, 0.0, 1.0)       # straight down on the planform: straight LE on top, tapered TE below
 
 
 @contextlib.contextmanager
@@ -215,7 +216,15 @@ def camera_view(vector):
     This swaps only that vector, only inside this context. Ptera is not modified.
     """
     import pyvista as pv
+    from pterasoftware import _output_rendering as OR
     original = pv.Plotter.show
+    original_shot = OR.screenshot_image
+
+    def shot(plotter, *args, **kwargs):
+        # Ptera fits the clipping range to the first frame only (for body-fixed views);
+        # from above, a flapping tip rising toward the camera would then be cut off.
+        plotter.reset_camera_clipping_range()
+        return original_shot(plotter, *args, **kwargs)
 
     def show(self, *args, **kwargs):
         if kwargs.get("cpos") is not None and tuple(kwargs["cpos"]) == (-1, -1, 1):
@@ -223,10 +232,12 @@ def camera_view(vector):
         return original(self, *args, **kwargs)
 
     pv.Plotter.show = show
+    OR.screenshot_image = shot
     try:
         yield
     finally:
         pv.Plotter.show = original
+        OR.screenshot_image = original_shot
 
 
 def save_native_outputs(solver, directory: Path):
@@ -243,6 +254,9 @@ def save_native_outputs(solver, directory: Path):
     with camera_view(FRONT_VIEW):
         ps.animate(solver, scalar_type="lift", show_wake_vortices=False,
                    save=True, path=directory / "animation_front.webp", testing=True)
+    with camera_view(TOP_VIEW):
+        ps.animate(solver, scalar_type="lift", show_wake_vortices=False,
+                   save=True, path=directory / "animation_top.webp", testing=True)
 
 
 def run(case, settings, config: elastic.ElasticConfig | None, overrides: dict | None = None,

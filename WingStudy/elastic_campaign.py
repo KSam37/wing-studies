@@ -56,7 +56,10 @@ TORQUE_TARGET = 1.0
 # ======================================================================================
 # Plan
 # ======================================================================================
-def default_plan(smoke=False) -> dict:
+ROD_5x3 = {"diameter_m": 5e-3, "hollow_inner_diameter_m": 3e-3, "shear_modulus_pa": 4.5e9, "density_kg_m3": 1550.0}
+
+
+def default_plan(smoke=False, variant="plate") -> dict:
     levels = [
         {"id": "rigid", "label": "Rigid", "thickness_mm": None, "tier": "context"},
         {"id": "t1.00", "label": "1.0 mm", "thickness_mm": 1.0, "tier": "context"},
@@ -88,6 +91,29 @@ def default_plan(smoke=False) -> dict:
         "estimates_s_per_design": {"elastic": 2.0, "rigid": 0.6},
         "est_evals_per_lineage": 22,
     }
+    if variant == "rod":
+        # 5 mm OD / 3 mm ID carbon tube along the leading edge, bolted to the plate and held
+        # against rotation at the root: its torsion adds to the plate's at every station.
+        rod_levels = [levels[0],
+                      {"id": "t0.50r", "label": "0.5 mm + rod", "thickness_mm": 0.5, "tier": "focus", "rod": ROD_5x3},
+                      {"id": "t0.25r", "label": "0.25 mm + rod", "thickness_mm": 0.25, "tier": "focus", "rod": ROD_5x3}]
+        plan.update(name="Elastic campaign: 5 mm rod leading edge", levels=rod_levels, rod=ROD_5x3,
+                    objectives={"focus": ["torque_1Nm", "lambda_0.75", "lambda_1.25"], "context": ["torque_1Nm", "lambda_1.25"]})
+        if smoke:
+            levels = rod_levels
+    if variant == "sweep":
+        # Coarse geometric fill-in at the design frequency: new scrambled-Sobol outlines with
+        # a continuous half-span (not the five seed spans), every model, no searches.
+        sweep_levels = [dict(levels[0], tier="focus"),
+                        {"id": "t0.50r", "label": "0.5 mm + rod", "thickness_mm": 0.5, "tier": "focus", "rod": ROD_5x3},
+                        {"id": "t0.25r", "label": "0.25 mm + rod", "thickness_mm": 0.25, "tier": "focus", "rod": ROD_5x3},
+                        {"id": "t0.50", "label": "0.5 mm (no rod)", "thickness_mm": 0.5, "tier": "focus"}]
+        plan.update(name="Geometric sweep: continuous span 280-400 mm, 1 Hz", levels=sweep_levels, rod=ROD_5x3,
+                    frequencies_hz=[1.0], objectives={"focus": [], "context": []},
+                    map={"focus_shapes": 2048, "context_shapes": 2048, "half_span_range_m": [0.28, 0.40], "seed": 11})
+        if smoke:
+            plan["map"].update(focus_shapes=6, context_shapes=6)
+            smoke = False
     if smoke:
         plan.update(name="Smoke test", frequencies_hz=[1.0, 0.75],
                     levels=[levels[0], levels[2]],
@@ -186,13 +212,17 @@ def sobol_shapes(plan, count):
     import adaptive
     from scipy.stats import qmc
     g = plan["geometry"]; n = g["nodes"]; r = rules(plan)
-    spans = plan["map"]["half_spans_m"]
+    spans = plan["map"].get("half_spans_m")
     sob = qmc.Sobol(d=n, scramble=True, seed=plan["map"]["seed"])
     m = max(1, math.ceil(math.log2(max(count, 1))))
     u = sob.random_base2(m)[:count]
     out = []
     for i, row in enumerate(u):
-        span = spans[min(int(row[0] * len(spans)), len(spans) - 1)]
+        if plan["map"].get("half_span_range_m"):
+            lo, hi = plan["map"]["half_span_range_m"]
+            span = round(lo + row[0] * (hi - lo), 3)          # continuous, 1 mm resolution
+        else:
+            span = spans[min(int(row[0] * len(spans)), len(spans) - 1)]
         chords = [g["root_chord_m"]]
         for x in row[1:]:
             # Non-increasing: each station a fraction 0.3..1.0 of the previous one.
@@ -246,7 +276,7 @@ def _evaluate(task: dict) -> dict:
     cfg = None
     if task["thickness_mm"] is not None:
         cfg = elastic.ElasticConfig.from_dict({"stiffness_model": "plate", "thickness_m": task["thickness_mm"] * 1e-3,
-                                               "material": task["material"]})
+                                               "material": task["material"], "rod": task.get("rod") or {}})
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         if cfg is None:
             r = R.run(case, settings, None, ov)
@@ -341,13 +371,13 @@ def parent_row(rec):
 # Coordinator
 # ======================================================================================
 class Campaign:
-    def __init__(self, directory: Path, workers: int, smoke=False):
+    def __init__(self, directory: Path, workers: int, smoke=False, variant="plate"):
         self.dir = Path(directory)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.store = Store(self.dir / "campaign.sqlite")
         plan = self.store.get_meta("plan")
         if plan is None:
-            plan = default_plan(smoke)
+            plan = default_plan(smoke, variant)
             self.store.set_meta("plan", plan)
             (self.dir / "plan.json").write_text(json.dumps(plan, indent=1))
         self.plan = plan
@@ -376,7 +406,7 @@ class Campaign:
         key = design_key(level, freq, chords, half_span, numerics)
         lv = self.levels[level]
         return {"key": key, "level": level, "freq": freq, "chords": chords, "half_span": half_span,
-                "thickness_mm": lv["thickness_mm"], "material": p["material"], "template": p["template_case"],
+                "thickness_mm": lv["thickness_mm"], "rod": lv.get("rod"), "material": p["material"], "template": p["template_case"],
                 "steps_per_cycle": p["steps_per_cycle"], "cycles": p["cycles"],
                 "span_panels": span_panels or p["span_panels"], "chord_panels": p["chord_panels"],
                 "dt_refinements": p["dt_refinements"], "numerics": numerics, "dt_divisor": dt_divisor}
@@ -543,12 +573,17 @@ class Campaign:
         unit = {"kind": "finalists", "id": "finalists", "phase": phase_id, "remaining": 0, "done": False}
         tasks = []
         for sid, level, freq, key in rows:
-            d = self.store.db.execute("select chords, half_span from designs where key=?", (key,)).fetchone()
+            d = self.store.db.execute("select chords, half_span, dt from designs where key=?", (key,)).fetchone()
             if not d:
                 continue
             chords, hs = json.loads(d[0]), d[1]
+            # Halve the step the base design actually verified at (soft plates often needed dt/2
+            # already; dividing the nominal step would just repeat that solve).
+            nominal = 1.0 / (self.plan["steps_per_cycle"] * freq)
+            used = d[2] or nominal
+            divisor = round(self.plan["finalists"]["dt_divisor"] * nominal / used, 6)
             for numerics, kw in (("span16", {"span_panels": self.plan["finalists"]["span_panels"]}),
-                                 ("dt_half", {"dt_divisor": self.plan["finalists"]["dt_divisor"]})):
+                                 ("dt_half_used", {"dt_divisor": divisor})):
                 t = self.task(level, freq, chords, hs, numerics, **kw)
                 self.store.execute("insert or ignore into rechecks values(?,?,?)", (t["key"], key, sid))
                 self.store.execute("insert or ignore into uses values(?,?,?,?,?,?)", (t["key"], "recheck", sid, numerics, numerics, phase_id))
@@ -845,7 +880,8 @@ def replay(directory: Path, key: str, out: Path | None = None) -> Path:
     cfg = None
     if lv["thickness_mm"] is not None:
         cfg = elastic.ElasticConfig.from_dict({"stiffness_model": "plate", "thickness_m": lv["thickness_mm"] * 1e-3,
-                                               "material": plan["material"], "added_mass_factor": factor or 0.5})
+                                               "material": plan["material"], "rod": lv.get("rod") or {},
+                                               "added_mass_factor": factor or 0.5})
     out = Path(out or Path(directory) / "animations" / key)
     r = R.run(case, settings, cfg, {"dt_s": dt or 1 / (plan["steps_per_cycle"] * freq), "cycles": cycles or plan["cycles"],
                                      "span_panels": plan["span_panels"], "chord_panels": plan["chord_panels"]}, output_dir=out)
@@ -865,13 +901,15 @@ def main(argv=None):
     d.add_argument("--smoke", action="store_true", help="tiny plan for testing the pipeline")
     d.add_argument("--autostart", action="store_true")
     d.add_argument("--no-browser", action="store_true")
+    d.add_argument("--variant", choices=["plate", "rod", "sweep"], default="plate",
+                   help="plan for a NEW campaign folder: bare plate, or plate + 5 mm rod leading edge")
     rp = sub.add_parser("replay"); rp.add_argument("campaign", type=Path); rp.add_argument("key"); rp.add_argument("--out", type=Path)
     a = ap.parse_args(argv)
     if a.cmd == "replay":
         print(replay(a.campaign, a.key, a.out))
         return
     import elastic_dashboard
-    camp = Campaign(a.campaign, a.workers, a.smoke)
+    camp = Campaign(a.campaign, a.workers, a.smoke, a.variant)
     elastic_dashboard.serve(camp, a.port, open_browser=not a.no_browser, autostart=a.autostart)
 
 

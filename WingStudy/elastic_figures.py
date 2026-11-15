@@ -11,7 +11,8 @@ from pathlib import Path
 
 # Rigid is a neutral reference; then stiff -> soft runs cool -> warm (matches the dashboard).
 STIFFNESS_COLORS = {"rigid": "#6b6a66", "t1.00": "#4b4bc8", "t0.50": "#2a78d6", "t0.40": "#1a9e8f",
-                    "t0.30": "#6aa121", "t0.25": "#e08a00", "t0.20": "#d9502a"}
+                    "t0.30": "#6aa121", "t0.25": "#e08a00", "t0.20": "#d9502a",
+                    "t0.50r": "#2a78d6", "t0.25r": "#e08a00"}
 LABEL_TO_ID = {"Rigid": "rigid", "1.0mm": "t1.00", "0.5mm": "t0.50", "0.4mm": "t0.40", "0.3mm": "t0.30",
                "0.25mm": "t0.25", "0.2mm": "t0.20"}
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#e8e7e2"
@@ -129,7 +130,10 @@ def chunk_report(db_path, plan, chunk, out_dir) -> str:
         c = STIFFNESS_COLORS.get(lv["id"], "#2a78d6")
         axs.text(-0.02, y - 0.03, lv["label"], ha="right", va="top", fontsize=10, color=INK, weight="bold")
         if r:
-            ch = json.loads(r[5]); hs = r[6]; n = len(ch)
+            # Zero chords form a tip suffix that shortens the wing: draw and label the effective span only.
+            full = json.loads(r[5]); n_all = len(full)
+            ch = [c_ for c_ in full if c_ > 0]; n = len(ch)
+            hs = r[6] * (n - 1) / (n_all - 1)
             xs = [hs * i / (n - 1) for i in range(n)]
             axs.fill(xs + xs[::-1], [y] * n + [y - c_ for c_ in ch][::-1], color=c, alpha=0.3, lw=0)
             axs.plot(xs + xs[::-1] + [xs[0]], [y] * n + [y - c_ for c_ in ch][::-1] + [y], color=c, lw=1.6)

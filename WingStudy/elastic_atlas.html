@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elastic Wing Atlas</title>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f3f2ee; --text:#0b0b0b; --text-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --accent:#2a78d6; --hover:rgba(11,11,11,.05);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --neutral:#77766f; --f1:#86b6ef; --f2:#2a78d6; --f3:#104281;
+  --good:#0ca30c; --warn:#fab219; --bad:#d03b3b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232321; --text:#f0efec; --text-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --accent:#3987e5; --hover:rgba(255,255,255,.06);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --neutral:#a09f99; --f1:#86b6ef; --f2:#3987e5; --f3:#256abf;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232321; --text:#f0efec; --text-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --accent:#3987e5; --hover:rgba(255,255,255,.06);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --neutral:#a09f99; --f1:#86b6ef; --f2:#3987e5; --f3:#256abf;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--accent)}
+header{position:sticky;top:0;z-index:20;background:var(--page);border-bottom:1px solid var(--border)}
+.bar{max-width:1320px;margin:0 auto;padding:10px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.bar h1{font-size:17px;margin:0;font-weight:650;white-space:nowrap}
+nav{display:flex;gap:2px;flex-wrap:wrap;flex:1}
+nav button{border:0;background:none;color:var(--text-2);font:inherit;padding:7px 11px;border-radius:7px;cursor:pointer}
+nav button:hover{background:var(--hover)}
+nav button.on{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 0 0 1px var(--border)}
+.iconbtn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:7px;padding:5px 9px;font:inherit;cursor:pointer}
+main{max-width:1320px;margin:0 auto;padding:18px 16px 60px}
+section.tab{display:none}section.tab.on{display:block}
+h2{font-size:18px;margin:6px 0 4px;font-weight:650}
+h3{font-size:15px;margin:0 0 6px;font-weight:650}
+p{margin:4px 0 10px}
+.lede{color:var(--text-2);max-width:900px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.tile .k{color:var(--text-2);font-size:12.5px}
+.tile .v{font-size:26px;font-weight:650;margin:2px 0}
+.tile .s{color:var(--text-2);font-size:12.5px}
+.muted{color:var(--text-2)}.small{font-size:12.5px}.tiny{font-size:11.5px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
+th{font-weight:600;color:var(--text-2);font-size:12.5px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;border-radius:99px;padding:0 7px;font-size:11.5px;border:1px solid var(--border);color:var(--text-2);white-space:nowrap}
+.pill.good::before{content:"✓ ";color:var(--good)}.pill.warn::before{content:"◐ ";color:var(--warn)}.pill.bad::before{content:"✕ ";color:var(--bad)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:99px;padding:3px 10px;font:inherit;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center}
+.chip.off{opacity:.42}
+.chip .c{font-variant-numeric:tabular-nums;color:var(--muted);margin-left:6px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:10px}
+.ctl label{font-size:12.5px;color:var(--text-2)}
+select{font:inherit;font-size:13px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:3px 6px}
+.mapwrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px}
+@media (max-width:980px){.mapwrap{grid-template-columns:1fr}}
+.plotbox{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px}
+canvas#map{display:block;width:100%;height:560px;cursor:crosshair;touch-action:none;border-radius:8px}
+@media (max-width:640px){canvas#map{height:420px}}
+.zoom{position:absolute;right:14px;top:14px;display:flex;gap:4px}
+.zoom button{width:30px;height:30px;padding:0}
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12.5px;max-width:300px;display:none}
+.tip b{font-weight:650}
+.wgrid{display:grid;gap:10px}
+.wcell{background:var(--surface-2);border-radius:10px;padding:8px 10px;cursor:pointer;border:1px solid transparent;min-width:0}
+.wcell:hover{border-color:var(--axis)}
+.wcell.best{border-color:var(--accent)}
+.wcell .t{font-size:12.5px;color:var(--text-2)}
+.wcell .t b{color:var(--text);font-size:14px}
+.rowlab{align-self:center;font-weight:600;font-size:13px}
+.colhead{font-weight:600;font-size:13px;color:var(--text-2);align-self:end}
+.playbtn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;font:inherit;font-size:12px}
+.poster{position:relative;display:block;width:100%;border-radius:8px;overflow:hidden;background:#000;cursor:pointer;border:0;padding:0}
+.poster img{display:block;width:100%}
+.poster span{position:absolute;inset:auto 8px 8px auto;background:rgba(0,0,0,.6);color:#fff;border-radius:99px;padding:2px 10px;font-size:12px}
+dialog{border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);padding:0;max-width:min(980px,96vw);width:100%}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+.dlg-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.dlg-b{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px}
+@media (max-width:800px){.dlg-b{grid-template-columns:1fr}}
+.dlg-b img.anim{width:100%;border-radius:8px;background:#000;display:block}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.seg button{border:0;background:var(--surface);color:var(--text-2);font:inherit;font-size:12.5px;padding:4px 10px;cursor:pointer}
+.seg button.on{background:var(--surface-2);color:var(--text);font-weight:600}
+svg text{fill:var(--text-2);font:11.5px system-ui,-apple-system,"Segoe UI",sans-serif}
+svg .gl{stroke:var(--grid);stroke-width:1}
+svg .ax{stroke:var(--axis);stroke-width:1}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--text-2);margin:4px 0 6px}
+code{font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:5px;word-break:break-all}
+.note{border-left:3px solid var(--axis);padding:4px 10px;color:var(--text-2);margin:8px 0}
+ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
+.kv div:nth-child(odd){color:var(--text-2)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <h1>Elastic wing atlas</h1>
+  <nav id="nav">
+    <button data-t="overview" class="on">Overview</button>
+    <button data-t="map">Wing map</button>
+    <button data-t="winners">Winners</button>
+    <button data-t="stiff">Stiffness effects</button>
+    <button data-t="opt">Optimized shapes</button>
+  </nav>
+  <button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button>
+</div></header>
+<main>
+<section class="tab on" id="t-overview"></section>
+<section class="tab" id="t-map">
+  <h2>Every simulated wing</h2>
+  <p class="lede">Each dot is one design from one study. Scroll to zoom at the cursor, drag to pan, double-click to reset. Hover to see the outline; click for details and, where one was rendered, the Ptera animation. Stars mark the winners of each category.</p>
+  <div class="card">
+    <div class="ctl">
+      <label>X <select id="ax-x"></select></label>
+      <label>Y <select id="ax-y"></select></label>
+      <label>Colour by <select id="colorby"><option value="model">plate model</option><option value="study">study</option><option value="freq">frequency</option></select></label>
+      <label><input type="checkbox" id="only-lim"> only ≤ 1 N·m</label>
+      <label>Source <select id="source"><option value="all">all</option><option value="1">searches</option><option value="2">shape map / sweep</option></select></label>
+      <label>Quality <select id="quality"><option value="good">verified / settled</option><option value="unc">+ uncertain (hollow)</option><option value="all">everything</option></select></label>
+      <button class="iconbtn" id="csv">Download visible as CSV</button>
+    </div>
+    <div class="ctl"><span class="small muted" style="min-width:64px">Study</span><div class="chips" id="f-study"></div></div>
+    <div class="ctl"><span class="small muted" style="min-width:64px">Frequency</span><div class="chips" id="f-freq"></div></div>
+    <div class="ctl"><span class="small muted" style="min-width:64px">Plate</span><div class="chips" id="f-model"></div></div>
+    <div class="ctl"><span class="small muted" style="min-width:64px">Objective</span><div class="chips" id="f-obj"></div></div>
+    <div class="ctl" id="cat-ctl" style="margin-bottom:0"><span class="small muted" style="min-width:64px">Rigid catalog</span>
+      <label>Conditions <select id="cat-cohort"></select></label>
+      <label>Study <select id="cat-study" style="max-width:340px"></select></label>
+      <label><input type="checkbox" id="cat-root"> 200 mm root only</label></div>
+  </div>
+  <div class="mapwrap">
+    <div>
+      <div class="plotbox"><canvas id="map" tabindex="0" aria-label="Scatter plot of all designs"></canvas>
+        <div class="zoom"><button class="iconbtn" id="zin" title="Zoom in">+</button><button class="iconbtn" id="zout" title="Zoom out">−</button><button class="iconbtn" id="zbudget" title="Zoom to the torque budget" style="width:auto;padding:0 8px">≤ 1 N·m</button><button class="iconbtn" id="zreset" title="Reset view" style="width:auto;padding:0 8px">Reset</button></div>
+      </div>
+      <div class="legend" id="map-legend"></div>
+      <div class="small muted" id="map-note"></div>
+    </div>
+    <div class="card" id="detail"><h3>Design details</h3><p class="muted small">Click a dot to see its outline, loads, numerics and animation here.</p></div>
+  </div>
+</section>
+<section class="tab" id="t-winners"></section>
+<section class="tab" id="t-stiff"></section>
+<section class="tab" id="t-opt"></section>
+</main>
+<div class="tip" id="tip"></div>
+<dialog id="viewer"><div class="dlg-h"><h3 id="v-title" style="margin:0"></h3><button class="iconbtn" onclick="viewer.close()">Close</button></div><div class="dlg-b" id="v-body"></div></dialog>
+<script type="application/json" id="atlas-data">/*__ATLAS_DATA__*/</script>
+<script>
+"use strict";
+const D=JSON.parse(document.getElementById('atlas-data').textContent);
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt=(v,d=2)=>v==null||!isFinite(v)?'–':(+v).toFixed(d);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LIM=D.torque_limit;
+const C=D.cols, N=C.s.length;
+const MODEL=Object.fromEntries(D.models.map((m,i)=>[m.id,{...m,i}]));
+const STUDY=Object.fromEntries(D.studies.map((s,i)=>[s.id,{...s,i}]));
+// Fixed colour per entity (never by rank). Rod models take the first slots: they are the hardware.
+const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','t0.20':'--s5','t1.00':'--s7','rigid':'--neutral'};
+const STUDY_VAR=['--s1','--s2','--s3','--neutral'], FREQ_VAR=['--f1','--f2','--f3'];
+const modelColor=id=>css(MODEL_VAR[id]); const studyColor=i=>css(STUDY_VAR[i]); const freqColor=i=>css(FREQ_VAR[i]);
+const STATUS=D.statuses, GOOD=new Set(['verified','ok']);
+const statusPill=s=>`<span class="pill ${GOOD.has(s)?'good':s==='uncertain'?'warn':'bad'}">${s==='ok'?'settled (rigid)':s}</span>`;
+
+/* ---------- derived geometry ---------- */
+const chordsOf=i=>C.C.slice(8*i,8*i+8);
+function activeOutline(chords,hs){const n=chords.length,pts=[];chords.forEach((c,j)=>{if(c>0)pts.push([hs*j/(n-1),c])});return pts}
+const CAT=D.catalog, CAT0=CAT?CAT.first:N, isCat=i=>i>=CAT0;
+const AREA=new Float32Array(N), SPAN=new Float32Array(N), ROOT=new Float32Array(N);
+for(let i=0;i<N;i++){
+  if(isCat(i)){AREA[i]=CAT.area[i-CAT0]??NaN;SPAN[i]=C.H[i];ROOT[i]=CAT.root[i-CAT0]??NaN;continue}
+  const o=activeOutline(chordsOf(i),C.H[i]);let a=0;for(let j=1;j<o.length;j++)a+=(o[j][0]-o[j-1][0])*(o[j][1]+o[j-1][1])/2;AREA[i]=a/100;SPAN[i]=o.length?o[o.length-1][0]:0;ROOT[i]=C.C[8*i]}
+// polygon [[spanwise mm, chordwise mm]...] for any row
+function polyOf(i){if(isCat(i)){const f=CAT.poly[i-CAT0],p=[];for(let k=0;k<f.length;k+=2)p.push([f[k],f[k+1]]);return p}
+  const o=designOutline(i);return [...o.map(p=>[p[0],0]),...o.slice().reverse().map(p=>[p[0],p[1]])]}
+function polySVG(poly,{w=260,h=96,color='var(--accent)',spanMax=420,chordMax=210,labels=false}={}){
+  const pad=4,xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),x0=Math.min(...xs),y0=Math.min(...ys);
+  const sm=Math.max(spanMax,Math.max(...xs)-x0),cm=Math.max(chordMax,Math.max(...ys)-y0),s=Math.min((w-2*pad)/sm,(h-2*pad-(labels?12:0))/cm);
+  let g=`<polygon points="${poly.map(p=>(pad+s*(p[0]-x0)).toFixed(1)+','+(pad+s*(p[1]-y0)).toFixed(1)).join(' ')}" fill="${color}" fill-opacity=".22" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>`;
+  if(labels)g+=`<text x="${pad}" y="${h-2}">0</text><text x="${(pad+s*(Math.max(...xs)-x0)).toFixed(1)}" y="${h-2}" text-anchor="end">${Math.round(Math.max(...xs)-x0)} mm</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block" role="img" aria-label="Wing outline, to scale"><title>Outline to scale: leading edge at the top, root at the left</title>${g}</svg>`;
+}
+const rowSVG=(i,o)=>isCat(i)?polySVG(polyOf(i),o):outlineSVG(designOutline(i),o);
+const AXES={
+  torque:{label:'Peak root torque per wing (N·m)',get:i=>C.Q[i]},
+  thrust:{label:'Mean thrust per wing (N)',get:i=>C.T[i]},
+  span:{label:'Effective half-span (mm)',get:i=>SPAN[i]},
+  area:{label:'Planform area, one wing (cm²)',get:i=>AREA[i]},
+  root:{label:'Root chord (mm)',get:i=>ROOT[i]},
+  twist:{label:'Tip twist amplitude (±°)',get:i=>C.W[i]},
+  ratio:{label:'Thrust ÷ torque (1/m)',get:i=>C.Q[i]>0?C.T[i]/C.Q[i]:null},
+};
+
+/* ---------- outlines (to scale) ---------- */
+// pts: [[spanwise mm, chord mm], ...]; leading edge straight along the top.
+function outlineSVG(pts,{w=260,h=96,color='var(--accent)',spanMax=420,chordMax=210,labels=false}={}){
+  const pad=4,s=Math.min((w-2*pad)/spanMax,(h-2*pad-(labels?12:0))/chordMax);
+  const P=[...pts.map(p=>[pad+s*p[0],pad]),...pts.slice().reverse().map(p=>[pad+s*p[0],pad+s*p[1]])];
+  let g=`<polygon points="${P.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${color}" fill-opacity=".22" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>`;
+  g+=`<line x1="${pad}" x2="${(pad+s*pts[pts.length-1][0]).toFixed(1)}" y1="${pad}" y2="${pad}" stroke="${color}" stroke-width="2.5"/>`;
+  if(labels){const L=pts[pts.length-1][0];g+=`<text x="${pad}" y="${h-2}">0</text><text x="${(pad+s*L).toFixed(1)}" y="${h-2}" text-anchor="end">${Math.round(L)} mm</text>`}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block" role="img" aria-label="Wing outline, to scale"><title>Outline to scale: leading edge (thick line) at the top, root at the left</title>${g}</svg>`;
+}
+const designOutline=i=>activeOutline(chordsOf(i),C.H[i]);
+
+/* ---------- media viewer ---------- */
+const viewer=$('#viewer');
+function posterButton(media,title,info){
+  if(!media||!media.poster)return '<p class="tiny muted">No animation rendered for this design.</p>';
+  const id='m'+Math.random().toString(36).slice(2);
+  MEDIA_REG[id]={media,title,info};
+  return `<button class="poster" onclick="openViewer('${id}')" aria-label="Play Ptera animation"><img loading="lazy" src="media/${media.poster}" alt="Ptera render"><span>▶ Play animation</span></button>`;
+}
+const MEDIA_REG={};
+function openViewer(id){
+  const {media,title,info}=MEDIA_REG[id];
+  const views=[['main','Side'],['front','Front (into LE)'],['top','Top']].filter(v=>media[v[0]]);
+  $('#v-title').textContent=title;
+  $('#v-body').innerHTML=`<div><div class="seg" id="v-seg">${views.map((v,k)=>`<button data-v="${v[0]}" class="${k?'':'on'}">${v[1]}</button>`).join('')}</div><img class="anim" id="v-img" src="media/${media[views[0][0]]}" alt="Ptera animation"><p class="tiny muted">Ptera's own render of the verified solve. Front view looks upstream into the leading edge: a rigid wing is edge-on, so any visible surface is twist.</p></div><div>${info||''}</div>`;
+  $$('#v-seg button').forEach(b=>b.onclick=()=>{$$('#v-seg button').forEach(x=>x.classList.toggle('on',x===b));$('#v-img').src='media/'+media[b.dataset.v]});
+  viewer.showModal();
+}
+viewer.addEventListener('close',()=>{const im=$('#v-img');if(im)im.src=''});
+viewer.addEventListener('click',e=>{if(e.target===viewer)viewer.close()});
+
+/* ---------- tooltip ---------- */
+const tip=$('#tip');
+function showTip(html,x,y){tip.innerHTML=html;tip.style.display='block';const r=tip.getBoundingClientRect();
+  tip.style.left=Math.min(x+14,innerWidth-r.width-8)+'px';tip.style.top=(y+14+r.height>innerHeight?y-r.height-10:y+14)+'px'}
+const hideTip=()=>tip.style.display='none';
+
+/* ---------- small chart helpers (SVG) ---------- */
+function niceTicks(lo,hi,n){if(!(hi>lo)){hi=lo+1}const span=hi-lo,step0=span/n,mag=10**Math.floor(Math.log10(step0)),step=[1,2,2.5,5,10].map(k=>k*mag).find(s=>s>=step0);const out=[];for(let v=Math.ceil(lo/step-1e-9)*step;v<=hi+1e-9;v+=step)out.push(+v.toFixed(6));return out}
+// series: [{name,color,points:[{x,y,label,tip}]}], cats: optional category labels for x
+function lineChart({series,cats=null,xlabel='',ylabel='',w=460,h=250,ymin=0,ymax=null,hline=null,xfmt=v=>v}){
+  const m={l:46,r:12,t:10,b:38};
+  const ys=series.flatMap(s=>s.points.map(p=>p.y)).filter(v=>v!=null);
+  const hi=ymax??Math.max(...ys,ymin+0.01)*1.08;
+  const xs=cats?cats.map((_,i)=>i):series.flatMap(s=>s.points.map(p=>p.x));
+  const xlo=Math.min(...xs),xhi=Math.max(...xs);
+  const X=v=>m.l+(w-m.l-m.r)*(xhi===xlo?.5:(v-xlo)/(xhi-xlo)), Y=v=>h-m.b-(h-m.t-m.b)*(v-ymin)/(hi-ymin);
+  let g='';
+  niceTicks(ymin,hi,5).forEach(t=>g+=`<line class="gl" x1="${m.l}" x2="${w-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${t}</text>`);
+  (cats?cats.map((c,i)=>[i,c]):[...new Set(xs)].sort((a,b)=>a-b).map(v=>[v,xfmt(v)])).forEach(([v,l])=>g+=`<text x="${X(v)}" y="${h-m.b+15}" text-anchor="middle">${l}</text>`);
+  g+=`<line class="ax" x1="${m.l}" x2="${w-m.r}" y1="${h-m.b}" y2="${h-m.b}"/>`;
+  if(hline!=null&&hline<=hi)g+=`<line x1="${m.l}" x2="${w-m.r}" y1="${Y(hline)}" y2="${Y(hline)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+  g+=`<text x="${(w+m.l)/2}" y="${h-4}" text-anchor="middle">${xlabel}</text><text transform="translate(12 ${(h-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;
+  for(const s of series){const pts=s.points.filter(p=>p.y!=null);
+    g+=`<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${pts.map(p=>X(cats?p.x:p.x).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ')}"/>`;
+    for(const p of pts){g+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+      if(p.range)g+=`<line x1="${X(p.x)}" x2="${X(p.x)}" y1="${Y(p.range[0])}" y2="${Y(p.range[1])}" stroke="${s.color}" stroke-width="2"/>`;
+      g+=`<circle class="hit" cx="${X(p.x)}" cy="${Y(p.y)}" r="11" fill="transparent" data-tip="${esc(p.tip||`${s.name}: ${fmt(p.y)}`)}"/>`}}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img">${g}</svg>`;
+}
+document.addEventListener('mouseover',e=>{const t=e.target.closest&&e.target.closest('[data-tip]');if(t)showTip(t.dataset.tip,e.clientX,e.clientY)});
+document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('[data-tip]'))hideTip()});
+const legend=items=>`<div class="legend">${items.map(([c,l])=>`<span><span class="sw" style="background:${c}"></span>${l}</span>`).join('')}</div>`;
+
+/* ======================================================================================
+   Overview
+   ====================================================================================== */
+function renderOverview(){
+  const R=Object.fromEntries(D.refined.map(r=>[r.model,r]));
+  const W=(st,f,m)=>D.winners.find(w=>w.study===st&&w.freq===f&&w.model===m);
+  const counts=D.studies.map((s,i)=>C.s.filter(x=>x===i).length);
+  const best125=W('rod',1.25,'t0.50r');
+  const tile=(k,v,s)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  let h=`<h2>Carbon-fibre flapping wings in water: what the elastic studies found</h2>
+  <p class="lede">One wing of the swimming robot, simulated with Ptera's unsteady vortex-lattice method plus a stabilized plate-torsion model. Every result is per wing, at 0.5 m/s forward speed and a 30° stroke, under a peak root torque budget of ${LIM} N·m. The root chord is always exactly 200 mm and the leading edge is straight and perpendicular to the flow.</p>
+  <div class="tiles">
+   ${(()=>{const r=R['t0.50r'];if(!r)return '';const b=r.baseline_at_budget;return b&&b.thrust>r.final.thrust?tile('Best for the hardware · 0.5 mm + rod · 1 Hz',fmt(b.thrust)+' N',`at ${fmt(b.torque)} N·m · ${Math.round(b.span)} mm half-span · campaign outline, fine mesh`):tile('Best for the hardware · 0.5 mm + rod · 1 Hz',fmt(r.final.thrust)+' N',`at ${fmt(r.final.torque)} N·m · ${Math.round(r.final.half_span)} mm · fine mesh, optimized`)})()}
+   ${(()=>{const r=R.rigid;if(!r)return '';const b=r.baseline_at_budget,u=b&&b.thrust>r.final.thrust;return tile('Rigid wing · 1 Hz',fmt(u?b.thrust:r.final.thrust)+' N',`at ${fmt(u?b.torque:r.final.torque)} N·m · fine mesh · ${u?'campaign outline, resized':'optimized'}`)})()}
+   ${best125?tile('0.5 mm + rod · 1.25 Hz',fmt(best125.thrust)+' N',`at ${fmt(best125.torque)} N·m · campaign mesh · +13% over 1 Hz`):''}
+   ${R['t0.50']?tile('Bare 0.5 mm plate · 1 Hz',fmt(R['t0.50'].final.thrust)+' N',`±${fmt(R['t0.50'].final.twist,0)}° tip twist: outside the model's comfort zone`):''}
+   ${tile('Designs simulated',N.toLocaleString(),`${(N-CAT0).toLocaleString()} rigid catalog runs + ${D.unique.toLocaleString()} unique elastic-study designs`)}
+  </div>
+  <div class="grid2">
+  <div class="card"><h3>Key findings</h3><ul class="f">
+   <li><b>The leading-edge rod makes the wing nearly rigid in twist.</b> With the 5/3 mm carbon tube bolted along the leading edge, tip twist is only ±1–2° for either sheet, and 0.5 mm and 0.25 mm perform within 1% of each other.</li>
+   <li><b>The rod designs beat rigid by finding better outlines</b>, not through elasticity: rod winners solved as rigid plates perform about the same. The geometric sweep later found a rigid outline that closes most of the gap.</li>
+   <li><b>Every winner uses the full 200 mm root and then tapers fast</b>, often to the 10 mm minimum chord over the outer third. The bare-plate winners press against the 400 mm span limit; with the rod, the best wings are 286–400 mm and get shorter at higher frequency.</li>
+   ${(()=>{const c=D.winners.find(w=>w.study==='catalog'&&/200 mm root/.test(w.group)),e=W('rod',1,'t0.50r'),s=W('sweep',1,'rigid');return c&&e?`<li><b>Against the earlier rigid studies:</b> the best rigid catalog wing with a 200 mm root reaches ${fmt(c.thrust)} N at ${fmt(c.torque)} N·m. The elastic campaigns, with the root fixed at 200 mm and sharper tapers, reach ${fmt(e.thrust)} N with the rod${s?` and ${fmt(s.thrust)} N for a rigid plate found by the sweep`:''}. Check conditions groups before comparing: some catalog studies used a different time step or stroke.</li>`:''})()}
+   <li><b>Higher frequency pays:</b> 1.25 Hz gives about 13% more thrust than 1 Hz within the same torque budget, on a shorter wing (286 mm instead of 340 mm with the rod).</li>
+   <li><b>Without the rod, a 0.5 mm plate reaches more thrust</b> through ±50–70° of passive pitch. That is beyond small-deformation torsion and mesh-sensitive by about 10%: read it as a trend, not a prediction.</li>
+   <li><b>Which model is right for the real wing is a hardware question.</b> Hang about 50 g at the trailing-edge tip corner of a clamped wing: about 4° of twist means the rod model holds; tens of degrees means the real wing is closer to the bare plate.</li>
+  </ul></div>
+  <div class="card"><h3>The studies</h3><table><tr><th>Study</th><th>What it is</th><th class="n">Designs</th></tr>
+   ${D.studies.map((s,i)=>`<tr><td><span class="sw" style="background:${studyColor(i)}"></span><b>${s.label}</b></td><td class="small">${s.about}</td><td class="n">${counts[i].toLocaleString()}</td></tr>`).join('')}
+   <tr><td><b>Manufactured candidates</b></td><td class="small">Top #7657, Middle #3894 and Rectangle #7835 at five sheet stiffnesses, 1 Hz (no rod).</td><td class="n">15</td></tr>
+   <tr><td><b>Optimized shapes</b></td><td class="small">Best 1 Hz design per model, refit as a smooth curve and refined on a 3× finer mesh.</td><td class="n">${D.refined.length}</td></tr></table></div>
+  </div>
+  <div class="grid2">
+  <div class="card"><h3>How to read the numbers</h3>
+   <div class="kv"><div>Thrust</div><div>Mean thrust per wing over the last flapping cycle (N).</div>
+   <div>Torque</div><div>Peak absolute root roll moment per wing (N·m). The budget is ${LIM} N·m.</div>
+   <div>Tip twist</div><div>Amplitude of passive pitch at the tip (±°). Rigid wings have none.</div>
+   <div>${statusPill('verified')}</div><div>Elastic result solved at two stabilization settings that agree within 3%: numerically repeatable.</div>
+   <div>${statusPill('ok')}</div><div>Rigid result whose last two cycles agree within 5%.</div>
+   <div>${statusPill('uncertain')}</div><div>Settings disagree; the value is the midpoint and the range is kept.</div>
+   <div>Search / map</div><div>Searches climb from 25 seeds by ±20 mm chord moves; the shape map and sweep solve fixed sets of outlines with no climbing.</div></div>
+   <p class="note small">"Verified" is numerical, not experimental. The UVLM is inviscid, so drag on the rod and flow separation at large twist are not modelled.</p></div>
+  <div class="card"><h3>Files</h3><ul class="f small">
+   ${D.pdf?`<li><a href="${D.pdf}" target="_blank">Process report (PDF)</a>: method, verification, every result and its caveats.</li>`:''}
+   <li>Optimized outlines (CSV / SVG, to cut): see <a href="#" onclick="go('opt');return false">Optimized shapes</a>.</li>
+   ${D.reports.map(r=>`<li><a href="${r.file}" target="_blank">${STUDY[r.study].label}: ${r.name.replace('chunk_','chunk ').replace('_',' · ').replace('Hz',' Hz')}</a></li>`).join('')}
+  </ul><p class="tiny muted">Built ${D.built}. This page is a snapshot; it does not connect to the simulations.</p></div>
+  </div>`;
+  $('#t-overview').innerHTML=h;
+}
+
+/* ======================================================================================
+   Wing map (canvas)
+   ====================================================================================== */
+const M={x:'torque',y:'thrust',color:'study',objs:new Set([1,2,4,8,32,64,128,256]),onlyLim:false,source:'all',quality:'good',catCohort:-1,catStudy:-1,catRoot:false,
+  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([1]),models:new Set(D.models.map((_,i)=>i)),view:null,sel:null};
+const WIN_ROWS=new Map(); D.winners.forEach(w=>{if(w.row!=null)WIN_ROWS.set(w.row,w)});
+let VIS=[], SX=null, SY=null, HOVER=null;
+const cv=$('#map'), ctx=cv.getContext('2d');
+function initMapControls(){
+  for(const id of ['ax-x','ax-y'])$('#'+id).innerHTML=Object.entries(AXES).map(([k,a])=>`<option value="${k}">${a.label}</option>`).join('');
+  $('#ax-x').value=M.x;$('#ax-y').value=M.y;$('#colorby').value=M.color;
+  $('#ax-x').onchange=e=>{M.x=e.target.value;M.view=null;drawMap()};
+  $('#ax-y').onchange=e=>{M.y=e.target.value;M.view=null;drawMap()};
+  $('#colorby').onchange=e=>{M.color=e.target.value;drawMap()};
+  $('#only-lim').onchange=e=>{M.onlyLim=e.target.checked;M.view=null;drawMap()};
+  $('#source').onchange=e=>{M.source=e.target.value;M.view=null;drawMap()};
+  $('#quality').onchange=e=>{M.quality=e.target.value;M.view=null;drawMap()};
+  $('#csv').onclick=downloadCSV;
+  if(CAT){
+    $('#cat-cohort').innerHTML='<option value="-1">all groups</option>'+CAT.cohorts.map((g,k)=>`<option value="${k}">${g.count.toLocaleString()} runs · dt ${g.dt} s · ${g.panels} panels · ${g.waveform} stroke</option>`).join('');
+    $('#cat-study').innerHTML='<option value="-1">all studies</option>'+CAT.studies.map((s,k)=>`<option value="${k}">${esc(s.name)}</option>`).join('');
+    $('#cat-cohort').onchange=e=>{M.catCohort=+e.target.value;M.view=null;drawMap()};
+    $('#cat-study').onchange=e=>{M.catStudy=+e.target.value;M.view=null;drawMap()};
+    $('#cat-root').onchange=e=>{M.catRoot=e.target.checked;M.view=null;drawMap()};
+  }else $('#cat-ctl').style.display='none';
+}
+function chipRow(el,items,set,colorFn){
+  el.innerHTML=items.map(([v,l])=>`<button class="chip ${set.has(v)?'':'off'}" data-v="${v}" aria-pressed="${set.has(v)}">${colorFn?`<span class="sw" style="background:${colorFn(v)}"></span>`:''}${l}<span class="c" data-c="${v}"></span></button>`).join('');
+  el.querySelectorAll('.chip').forEach(b=>b.onclick=e=>{const v=+b.dataset.v;
+    if(e.shiftKey||e.metaKey||e.ctrlKey){set.clear();set.add(v)}else if(set.has(v))set.delete(v);else set.add(v);
+    chipRow(el,items,set,colorFn);M.view=null;drawMap()});
+}
+function renderChips(){
+  chipRow($('#f-study'),D.studies.map((s,i)=>[i,s.label]),M.studies,M.color==='study'?studyColor:null);
+  chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
+  chipRow($('#f-obj'),[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[32,'Shape map (campaigns)'],[64,'Geometric sweep'],[128,'Earlier rigid studies: objective searches'],[256,'Earlier rigid studies: geometry sweeps']],M.objs,null);
+  chipRow($('#f-model'),D.models.map((m,i)=>[i,m.label]),M.models,M.color==='model'?(i=>modelColor(D.models[i].id)):null);
+}
+function filtered(){
+  const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
+  let objMask=0;for(const b of M.objs)objMask|=b;
+  for(let i=0;i<N;i++){
+    if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(C.m[i]))continue;
+    const st=STATUS[C.S[i]];
+    if(M.quality==='good'&&!GOOD.has(st))continue;
+    if(M.quality==='unc'&&!(GOOD.has(st)||st==='uncertain'))continue;
+    if(M.source!=='all'&&!(C.src[i]&+M.source))continue;
+    if(!(C.obj[i]&objMask))continue;
+    if(isCat(i)){const r=i-CAT0;if(M.catCohort>=0&&CAT.cohort[r]!==M.catCohort)continue;if(M.catStudy>=0&&CAT.study[r]!==M.catStudy)continue;if(M.catRoot&&!(Math.abs(ROOT[i]-200)<0.5))continue}
+    if(M.onlyLim&&C.Q[i]>LIM)continue;
+    const x=gx(i),y=gy(i); if(x==null||y==null||!isFinite(x)||!isFinite(y))continue;
+    out.push(i);
+  }
+  // stiff / rigid first so the soft and rod sheets draw on top
+  const order=[0,1,2,3,4,6,5]; out.sort((a,b)=>order[C.m[a]]-order[C.m[b]]);
+  return out;
+}
+function colorOf(i){return M.color==='model'?modelColor(D.models[C.m[i]].id):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
+const PAD={l:62,r:16,t:14,b:46};
+function fitView(){
+  const gx=AXES[M.x].get,gy=AXES[M.y].get;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  for(const i of VIS){const x=gx(i),y=gy(i);if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(!VIS.length){x0=0;x1=1;y0=0;y1=1}
+  if(['torque','thrust','area','span','twist','ratio'].includes(M.x))x0=Math.min(0,x0);
+  if(['torque','thrust','area','span','twist','ratio'].includes(M.y))y0=Math.min(0,y0);
+  const dx=(x1-x0)||1,dy=(y1-y0)||1;M.view={x0:x0-dx*.02,x1:x1+dx*.04,y0:y0-dy*.02,y1:y1+dy*.05};
+}
+let rafPending=false;
+function drawMap(){
+  VIS=filtered(); if(!M.view)fitView();
+  renderChips(); updateCounts();
+  requestDraw();
+}
+function requestDraw(){if(rafPending)return;rafPending=true;requestAnimationFrame(()=>{rafPending=false;paint()})}
+function paint(){
+  const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const v=M.view,X=x=>PAD.l+(W-PAD.l-PAD.r)*(x-v.x0)/(v.x1-v.x0),Y=y=>H-PAD.b-(H-PAD.t-PAD.b)*(y-v.y0)/(v.y1-v.y0);
+  ctx.font='11.5px system-ui,-apple-system,"Segoe UI",sans-serif';
+  // grid + ticks
+  ctx.strokeStyle=css('--grid');ctx.fillStyle=css('--text-2');ctx.lineWidth=1;
+  ctx.textAlign='center';for(const t of niceTicks(v.x0,v.x1,8)){const x=Math.round(X(t))+.5;ctx.beginPath();ctx.moveTo(x,PAD.t);ctx.lineTo(x,H-PAD.b);ctx.stroke();ctx.fillText(t,x,H-PAD.b+15)}
+  ctx.textAlign='right';for(const t of niceTicks(v.y0,v.y1,6)){const y=Math.round(Y(t))+.5;ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(W-PAD.r,y);ctx.stroke();ctx.fillText(t,PAD.l-6,y+4)}
+  ctx.textAlign='center';ctx.fillText(AXES[M.x].label,(W+PAD.l)/2,H-8);
+  ctx.save();ctx.translate(14,(H-PAD.b+PAD.t)/2);ctx.rotate(-Math.PI/2);ctx.fillText(AXES[M.y].label,0,0);ctx.restore();
+  // torque budget line
+  ctx.save();ctx.beginPath();ctx.rect(PAD.l,PAD.t,W-PAD.l-PAD.r,H-PAD.t-PAD.b);ctx.clip();
+  ctx.strokeStyle=css('--muted');ctx.setLineDash([5,4]);
+  if(M.x==='torque'){const x=X(LIM);ctx.beginPath();ctx.moveTo(x,PAD.t);ctx.lineTo(x,H-PAD.b);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=css('--text-2');ctx.textAlign='left';ctx.fillText(LIM+' N·m budget',x+5,H-PAD.b-8)}
+  if(M.y==='torque'){const y=Y(LIM);ctx.beginPath();ctx.moveTo(PAD.l,y);ctx.lineTo(W-PAD.r,y);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=css('--text-2');ctx.textAlign='left';ctx.fillText(LIM+' N·m budget',PAD.l+5,y-5)}
+  ctx.setLineDash([]);
+  // points
+  const gx=AXES[M.x].get,gy=AXES[M.y].get;
+  SX=new Float32Array(VIS.length);SY=new Float32Array(VIS.length);
+  const r=VIS.length>20000?1.8:VIS.length>5000?2.3:3;
+  let last=null;
+  const surf=css('--surface');
+  for(let k=0;k<VIS.length;k++){const i=VIS[k],x=X(gx(i)),y=Y(gy(i));SX[k]=x;SY[k]=y;
+    if(x<PAD.l-4||x>W-PAD.r+4||y<PAD.t-4||y>H-PAD.b+4)continue;
+    const c=colorOf(i);if(c!==last){ctx.fillStyle=c;ctx.strokeStyle=c;last=c}
+    if(STATUS[C.S[i]]==='uncertain'){ctx.globalAlpha=.9;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+1.2,0,7);ctx.stroke()}
+    else{ctx.globalAlpha=.72;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}}
+  ctx.globalAlpha=1;
+  // winners as stars
+  for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!WIN_ROWS.has(i))continue;star(SX[k],SY[k],8,colorOf(i),surf)}
+  // hover + selection rings
+  for(const [i,col,w] of [[HOVER,css('--text'),1.5],[M.sel,css('--text'),2.2]]){if(i==null)continue;const k=VIS.indexOf(i);if(k<0)continue;
+    ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.arc(SX[k],SY[k],7,0,7);ctx.stroke()}
+  ctx.lineWidth=1;
+  ctx.restore();
+}
+function star(x,y,R,fill,ring){ctx.beginPath();for(let j=0;j<10;j++){const a=-Math.PI/2+j*Math.PI/5,rr=j%2?R*.45:R;ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}ctx.closePath();
+  ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=ring;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=css('--text');ctx.stroke()}
+function updateCounts(){
+  const lab=M.color==='model'?D.models.map((m,i)=>[modelColor(m.id),m.label,i,'m']):M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i,'s']):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i,'f']);
+  const cnt={};for(const i of VIS){const k=M.color==='model'?C.m[i]:M.color==='study'?C.s[i]:C.f[i];cnt[k]=(cnt[k]||0)+1}
+  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ category winner (≤ ${LIM} N·m)</span>`;
+  $('#cat-ctl').style.opacity=M.studies.has(D.studies.length-1)?1:.45;
+  const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
+  $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} winners). Shift-click a chip to show only that one. Hollow = uncertain.`;
+}
+function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
+const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75']];
+function objText(i){const o=C.obj[i];const n=OBJ_NAMES.filter(x=>o&x[0]).map(x=>x[1]);
+  const parts=[];if(n.length)parts.push((o&16?'seed of ':'')+n.join(', ')+(isCat(i)?' study':' search'+(n.length>1?'es':'')));
+  if(o&32)parts.push('shape map (no objective)');if(o&64)parts.push('geometric sweep (no objective)');
+  if(o&128&&!n.length)parts.push('earlier rigid objective search');if(o&256)parts.push('earlier rigid geometry sweep (no objective)');return parts.join(' · ')}
+function rowTip(i){
+  const st=STATUS[C.S[i]],w=WIN_ROWS.get(i);
+  if(isCat(i)){const r=i-CAT0;return `<b>Rigid catalog</b> · #${CAT.number[r]} ${esc(CAT.name[r])}${w?' · ★ winner':''}<br>${polySVG(polyOf(i),{w:260,h:90,color:colorOf(i)})}
+    Thrust <b>${fmt(C.T[i],3)} N</b> · torque <b>${fmt(C.Q[i],3)} N·m</b><br>Span ${Math.round(SPAN[i])} mm · root ${Math.round(ROOT[i])} mm<br><span class="muted">${esc(CAT.studies[CAT.study[r]].name)}<br>dt ${CAT.cohorts[CAT.cohort[r]].dt} s · ${CAT.cohorts[CAT.cohort[r]].waveform} stroke · ${st==='ok'?'settled':'not settled'}${C.obj[i]?' · '+objText(i):''}</span>`}
+  return `<b>${MODEL[D.models[C.m[i]].id].label}</b> · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}${w?' · ★ winner':''}<br>${outlineSVG(designOutline(i),{w:260,h:90,color:modelColor(D.models[C.m[i]].id)})}
+  Thrust <b>${fmt(C.T[i],3)} N</b> · torque <b>${fmt(C.Q[i],3)} N·m</b><br>Half-span ${Math.round(SPAN[i])} mm${C.W[i]!=null?` · tip twist ±${fmt(C.W[i],0)}°`:''}<br><span class="muted">${st==='ok'?'settled (rigid)':st} · ${C.src[i]&1?'search':''}${C.src[i]===3?' + ':''}${C.src[i]&2?'map':''}${C.obj[i]?'<br>'+objText(i):''}</span>`;
+}
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  if(DRAG){const v=M.view,W=cv.clientWidth,H=cv.clientHeight,dx=(mx-DRAG.x)/(W-PAD.l-PAD.r)*(v.x1-v.x0),dy=(my-DRAG.y)/(H-PAD.t-PAD.b)*(v.y1-v.y0);
+    if(Math.abs(mx-DRAG.x)+Math.abs(my-DRAG.y)>2)DRAG.moved=true;
+    M.view={x0:v.x0-dx,x1:v.x1-dx,y0:v.y0+dy,y1:v.y1+dy};DRAG.x=mx;DRAG.y=my;hideTip();requestDraw();return}
+  const i=nearest(mx,my);if(i!==HOVER){HOVER=i;requestDraw()}
+  if(i==null){hideTip();cv.style.cursor='crosshair'}else{cv.style.cursor='pointer';showTip(rowTip(i),e.clientX,e.clientY)}
+});
+cv.addEventListener('mouseleave',()=>{HOVER=null;hideTip();requestDraw()});
+let DRAG=null;
+cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();DRAG={x:e.clientX-r.left,y:e.clientY-r.top,moved:false};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointerup',e=>{const d=DRAG;DRAG=null;if(d&&!d.moved){const r=cv.getBoundingClientRect(),i=nearest(e.clientX-r.left,e.clientY-r.top);if(i!=null)selectDesign(i)}});
+cv.addEventListener('pointermove',e=>{if(DRAG&&e.pointerType!=='mouse'){cv.dispatchEvent(new MouseEvent('mousemove',{clientX:e.clientX,clientY:e.clientY}))}});
+function zoomAt(mx,my,f){const v=M.view,W=cv.clientWidth,H=cv.clientHeight;
+  const xv=v.x0+(mx-PAD.l)/(W-PAD.l-PAD.r)*(v.x1-v.x0), yv=v.y0+(H-PAD.b-my)/(H-PAD.t-PAD.b)*(v.y1-v.y0);
+  M.view={x0:xv-(xv-v.x0)*f,x1:xv+(v.x1-xv)*f,y0:yv-(yv-v.y0)*f,y1:yv+(v.y1-yv)*f};requestDraw()}
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY>0?1.18:1/1.18)},{passive:false});
+cv.addEventListener('dblclick',()=>{M.view=null;fitView();requestDraw()});
+cv.addEventListener('keydown',e=>{const W=cv.clientWidth,H=cv.clientHeight,v=M.view,px=(v.x1-v.x0)*.08,py=(v.y1-v.y0)*.08;
+  if(e.key==='+'||e.key==='=')zoomAt(W/2,H/2,1/1.25);else if(e.key==='-')zoomAt(W/2,H/2,1.25);
+  else if(e.key==='0'||e.key==='Home'){M.view=null;fitView();requestDraw()}
+  else if(e.key.startsWith('Arrow')){const d={ArrowLeft:[-px,0],ArrowRight:[px,0],ArrowUp:[0,py],ArrowDown:[0,-py]}[e.key];M.view={x0:v.x0+d[0],x1:v.x1+d[0],y0:v.y0+d[1],y1:v.y1+d[1]};requestDraw()}else return;e.preventDefault()});
+$('#zin').onclick=()=>zoomAt(cv.clientWidth/2,cv.clientHeight/2,1/1.3);
+$('#zout').onclick=()=>zoomAt(cv.clientWidth/2,cv.clientHeight/2,1.3);
+$('#zreset').onclick=()=>{M.view=null;fitView();requestDraw()};
+$('#zbudget').onclick=()=>{if(M.x!=='torque'){M.x='torque';M.y='thrust';$('#ax-x').value='torque';$('#ax-y').value='thrust';VIS=filtered()}let y1=0;for(const i of VIS)if(C.Q[i]<=LIM*1.5&&C.T[i]>y1)y1=C.T[i];M.view={x0:-0.03,x1:LIM*1.5,y0:-0.05,y1:y1*1.08||1};requestDraw()};
+new ResizeObserver(()=>{if($('#t-map').classList.contains('on'))requestDraw()}).observe(cv);
+
+function mediaForRow(i){const w=WIN_ROWS.get(i);if(w&&w.media&&w.media.poster)return w.media;const k=C.k[i].slice(0,16);return D.media[k]||null}
+function selectDesign(i){
+  M.sel=i;requestDraw();
+  if(isCat(i)){const r=i-CAT0,w=WIN_ROWS.get(i),co=CAT.cohorts[CAT.cohort[r]],media=mediaForRow(i);
+    const info=`<div class="kv"><div>Study</div><div class="small">${esc(CAT.studies[CAT.study[r]].name)}</div><div>Case</div><div>#${CAT.number[r]} · ${esc(CAT.name[r])}</div>
+      <div>Model</div><div>Rigid (no elasticity)</div><div>Frequency</div><div>1 Hz</div>
+      <div>Thrust</div><div><b>${fmt(C.T[i],3)} N</b></div><div>Peak torque</div><div><b>${fmt(C.Q[i],3)} N·m</b></div>
+      <div>Span</div><div>${Math.round(SPAN[i])} mm</div><div>Root chord</div><div>${Math.round(ROOT[i])} mm</div><div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
+      <div>Conditions</div><div class="small">dt ${co.dt} s · ${co.panels} panels · ${co.waveform} stroke (${co.count.toLocaleString()} runs share these)</div>
+      <div>Quality</div><div>${statusPill(STATUS[C.S[i]])}</div>${C.obj[i]?`<div>Objective</div><div class="small">${objText(i)}</div>`:''}<div>Key</div><div><code>${C.k[i]}</code></div></div>`;
+    $('#detail').innerHTML=`<h3>${w?'★ ':''}Rigid catalog · #${CAT.number[r]}</h3>${w?`<p class="small" style="margin-top:-2px">Winner: ${esc(w.group)}.</p>`:''}${polySVG(polyOf(i),{w:320,h:118,color:colorOf(i),labels:true})}
+      <div style="margin:10px 0">${media?posterButton(media,`Rigid catalog #${CAT.number[r]}`,info):'<p class="tiny muted">The full-size flapping animation for this case, if one was saved, is in the master catalog app.</p>'}</div>${info}`;return}
+  const st=STATUS[C.S[i]],w=WIN_ROWS.get(i),m=D.models[C.m[i]],col=modelColor(m.id),rg=D.ranges[i];
+  const others=[];for(let j=0;j<N;j++)if(j!==i&&C.k[j]===C.k[i])others.push(D.studies[C.s[j]].short);
+  const info=`<div class="kv"><div>Study</div><div>${D.studies[C.s[i]].label}${others.length?` (also in ${others.join(', ')})`:''}</div>
+    <div>Plate</div><div>${m.label}</div><div>Frequency</div><div>${D.freqs[C.f[i]]} Hz</div>
+    <div>Thrust</div><div><b>${fmt(C.T[i],3)} N</b>${rg?` <span class="muted">(${fmt(rg[0],3)}–${fmt(rg[1],3)})</span>`:''}</div>
+    <div>Peak torque</div><div><b>${fmt(C.Q[i],3)} N·m</b>${rg?` <span class="muted">(${fmt(rg[2],3)}–${fmt(rg[3],3)})</span>`:''}</div>
+    <div>Tip twist</div><div>${C.W[i]==null?'– (rigid)':'±'+fmt(C.W[i],1)+'°'}</div>
+    <div>Half-span</div><div>${Math.round(SPAN[i])} mm effective${Math.abs(SPAN[i]-C.H[i])>1?` (${Math.round(C.H[i])} mm nominal)`:''}</div>
+    <div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
+    <div>Chords</div><div class="small">${chordsOf(i).map(Math.round).join(' · ')} mm (root → tip, 8 equally spaced stations)</div>
+    <div>Quality</div><div>${statusPill(st)}</div>
+    <div>Found by</div><div class="small">${[C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):''].filter(Boolean).join(' and ')||'–'}</div>
+    <div>Objective</div><div class="small">${C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
+    <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
+  const media=mediaForRow(i);
+  $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Winner: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
+    ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
+    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python WingStudy/elastic_campaign.py replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>'}</div>${info}`;
+}
+function downloadCSV(){
+  const head=['study','plate','freq_hz','status','thrust_N','peak_torque_Nm','tip_twist_deg','half_span_mm','area_cm2','c1_mm','c2_mm','c3_mm','c4_mm','c5_mm','c6_mm','c7_mm','c8_mm','source','key'];
+  const rows=VIS.map(i=>[D.studies[C.s[i]].id,D.models[C.m[i]].id,D.freqs[C.f[i]],STATUS[C.S[i]],C.T[i],C.Q[i],C.W[i]??'',Math.round(SPAN[i]),isFinite(AREA[i])?AREA[i].toFixed(1):'',...(isCat(i)?Array(8).fill(''):chordsOf(i)),isCat(i)?'catalog #'+CAT.number[i-CAT0]:(C.src[i]&1?'search':'')+(C.src[i]&2?' map':''),C.k[i]].join(','));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([head.join(',')+'\n'+rows.join('\n')],{type:'text/csv'}));a.download='elastic_wings_visible.csv';a.click();
+}
+
+/* ======================================================================================
+   Winners
+   ====================================================================================== */
+const effSpan=w=>{const o=activeOutline(w.chords,w.half_span);return o[o.length-1][0]};
+function winnerInfo(w){const m=MODEL[w.model];return `<div class="kv"><div>Study</div><div>${STUDY[w.study].label}</div><div>Plate</div><div>${m.label}</div><div>Frequency</div><div>${w.freq} Hz</div>
+  <div>Thrust</div><div><b>${fmt(w.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(w.torque,3)} N·m</b></div>
+  <div>Tip twist</div><div>${w.tip_twist==null?'– (rigid)':'±'+fmt(w.tip_twist,1)+'°'}</div><div>Half-span</div><div>${Math.round(effSpan(w))} mm effective</div>
+  <div>Chords</div><div class="small">${w.chords.map(Math.round).join(' · ')} mm</div><div>Quality</div><div>${statusPill(w.status)}</div>
+  <div>Evaluated</div><div>${w.evaluated.toLocaleString()} designs in this category</div><div>Key</div><div><code>${w.key}</code></div></div>`}
+function renderWinners(){
+  let h=`<h2>Winners of each category</h2><p class="lede">Best verified (elastic) or settled (rigid) design with peak root torque ≤ ${LIM} N·m, for every study, frequency and plate model, whether a search or the shape map found it. Outlines are all drawn at the same scale. Click any card for its Ptera animation (side, front and top views). The highlighted card is the best in its study.</p>`;
+  for(const st of D.studies){
+    if(st.id==='catalog'){
+      const ws=D.winners.filter(w=>w.study==='catalog');if(!ws.length)continue;
+      h+=`<div class="card"><h3>${st.label}</h3><p class="small muted">${st.about} Best settled rigid wing ≤ ${LIM} N·m in each conditions group, and the best with exactly a 200 mm root chord (the mounting requirement). Compare against the other studies only within matched conditions: the elastic studies use dt = 1/(50 f), 8 × 4 panels and the custom stroke.</p><div class="grid3">`;
+      ws.forEach(w=>{const id='w'+D.winners.indexOf(w),has=w.media&&w.media.poster;
+        MEDIA_REG[id]={media:w.media||{},title:`Rigid catalog #${w.number} · ${w.group}`,info:`<div class="kv"><div>Thrust</div><div><b>${fmt(w.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(w.torque,3)} N·m</b></div><div>Span</div><div>${Math.round(w.half_span)} mm</div><div>Root chord</div><div>${Math.round(w.root)} mm</div><div>Group</div><div class="small">${esc(w.group)}</div><div>Key</div><div><code>${w.key}</code></div></div>`};
+        h+=`<div class="wcell" ${has?`onclick="openViewer('${id}')"`:''}><div class="small" style="font-weight:600;margin-bottom:4px">${esc(w.group)}</div>${polySVG(polyOf(w.row),{w:300,h:100,color:css('--neutral')})}
+          <div class="t"><b>${fmt(w.thrust,2)} N</b> at ${fmt(w.torque,2)} N·m<br>${Math.round(w.half_span)} mm span · ${Math.round(w.root)} mm root · #${w.number} of ${w.evaluated.toLocaleString()}</div>
+          ${has?'<span class="playbtn">▶ animation</span>':''} <button class="playbtn" onclick="event.stopPropagation();showOnMap(${w.row})">◎ on map</button></div>`});
+      h+='</div></div>';continue}
+    const ws=D.winners.filter(w=>w.study===st.id), fs=[...new Set(ws.map(w=>w.freq))].sort((a,b)=>a-b), ms=[...new Set(ws.map(w=>w.model))];
+    ms.sort((a,b)=>MODEL[a].i-MODEL[b].i);
+    const top=ws.filter(w=>w.key).reduce((a,b)=>!a||b.thrust>a.thrust?b:a,null);
+    h+=`<div class="card"><h3>${st.label}</h3><p class="small muted">${st.about}</p><div class="wgrid" style="grid-template-columns:136px repeat(${fs.length},minmax(0,1fr))"><div></div>${fs.map(f=>`<div class="colhead">${f} Hz</div>`).join('')}`;
+    for(const m of ms){h+=`<div class="rowlab"><span class="sw" style="background:${modelColor(m)}"></span>${MODEL[m].label}</div>`;
+      for(const f of fs){const w=ws.find(x=>x.model===m&&x.freq===f);
+        if(!w||!w.key){h+=`<div class="wcell" style="cursor:default"><div class="t">No verified design ≤ ${LIM} N·m</div></div>`;continue}
+        const id='w'+D.winners.indexOf(w);MEDIA_REG[id]={media:w.media||{},title:`${MODEL[m].label} · ${f} Hz · ${st.short}`,info:winnerInfo(w)};
+        h+=`<div class="wcell ${w===top?'best':''}" ${w.media&&w.media.poster?`onclick="openViewer('${id}')"`:''} title="${w.media&&w.media.poster?'Play the Ptera animation':''}">
+          ${outlineSVG(activeOutline(w.chords,w.half_span),{w:260,h:86,color:modelColor(m)})}
+          <div class="t"><b>${fmt(w.thrust,2)} N</b> at ${fmt(w.torque,2)} N·m<br>${Math.round(effSpan(w))} mm${w.tip_twist!=null?` · ±${fmt(w.tip_twist,0)}° twist`:''} · ${statusPill(w.status)}</div>
+          ${w.media&&w.media.poster?'<span class="playbtn">▶ animation</span>':''}
+          ${w.row!=null?` <button class="playbtn" onclick="event.stopPropagation();showOnMap(${w.row})">◎ on map</button>`:''}</div>`}}
+    h+='</div></div>';
+  }
+  $('#t-winners').innerHTML=h;
+}
+function showOnMap(i){M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(D.models.map((_,k)=>k));M.view=null;go('map');drawMap();selectDesign(i)}
+
+/* ======================================================================================
+   Stiffness effects
+   ====================================================================================== */
+const SHEETS=['Rigid','1.0mm','0.5mm','0.25mm','0.2mm'];
+const SHEET_LABEL={'Rigid':'Rigid','1.0mm':'1.0','0.5mm':'0.5','0.25mm':'0.25','0.2mm':'0.2'};
+const CAND_VAR=['--s1','--s2','--s3'];
+function renderStiff(){
+  let h=`<h2>Stiffness effects</h2><p class="lede">How the carbon sheet changes thrust, torque and twist: first on the three wings that were manufactured, then across thousands of identical outlines solved at every stiffness, then for the best design of each sheet across frequency.</p>`;
+  // A. candidates
+  const cs=D.candidates, ser=(key,rk)=>cs.map((c,k)=>({name:c.label,color:css(CAND_VAR[k]),points:SHEETS.map((s,i)=>{const l=c.levels.find(x=>x.level===s);return l?{x:i,y:l[key],range:l[rk]&&l[rk][0]!=null?l[rk]:null,tip:`<b>${c.label}</b>, ${s}: ${fmt(l[key],key==='twist'?0:2)}${key==='twist'?'°':key==='torque'?' N·m':' N'} ${statusPill(l.status)}`}:{x:i,y:null}})}));
+  h+=`<div class="card"><h3>A · The three manufactured wings across sheets (1 Hz, no rod)</h3>${legend(cs.map((c,k)=>[css(CAND_VAR[k]),c.label]))}
+   <div class="grid3">
+    <div>${lineChart({series:ser('thrust','thrust_range'),cats:SHEETS.map(s=>SHEET_LABEL[s]),xlabel:'Sheet (mm)',ylabel:'Mean thrust (N)',w:380,h:240})}</div>
+    <div>${lineChart({series:ser('torque','torque_range'),cats:SHEETS.map(s=>SHEET_LABEL[s]),xlabel:'Sheet (mm)',ylabel:'Peak root torque (N·m)',w:380,h:240,hline:LIM})}</div>
+    <div>${lineChart({series:ser('twist',null),cats:SHEETS.map(s=>SHEET_LABEL[s]),xlabel:'Sheet (mm)',ylabel:'Tip twist (±°)',w:380,h:240})}</div>
+   </div>
+   <p class="small muted">Error bars on the softest Rectangle points span every stabilization setting that settled (uncertain results). 1.0 mm is effectively rigid for the tapered wings; 0.5 mm trades about 20% of thrust for about 35% less torque; 0.25 mm and below over-feather.</p>
+   <div class="grid3">${cs.map((c,k)=>{const id='cand'+k;const lv=c.levels;MEDIA_REG[id+'m']={media:{main:c.montage},title:c.label+': every sheet at the same instant, front view',info:'<p class="small muted">Left to right: stiffest to softest sheet. Front view looks into the leading edge, so visible surface is twist.</p>'};
+     return `<div class="wcell" style="cursor:default"><b>${c.label}</b>${outlineSVG(c.outline,{w:300,h:100,color:css(CAND_VAR[k])})}
+      <div class="chips" style="margin-top:6px">${lv.map((l,j)=>{const mid=id+'_'+j;MEDIA_REG[mid]={media:l.media,title:`${c.label} · ${l.level}`,info:`<div class="kv"><div>Thrust</div><div><b>${fmt(l.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(l.torque,3)} N·m</b></div><div>Tip twist</div><div>${l.twist==null?'–':'±'+fmt(l.twist,1)+'°'}</div><div>Quality</div><div>${statusPill(l.status)}</div><div>Time step</div><div>${l.dt} s</div></div>`};
+        return l.media&&l.media.poster?`<button class="chip" onclick="openViewer('${mid}')">▶ ${l.level}</button>`:''}).join('')}
+       ${c.montage?`<button class="chip" onclick="openViewer('${id}m')">▶ all sheets side by side</button>`:''}</div></div>`}).join('')}</div></div>`;
+  // B. same shape, different sheet
+  h+=`<div class="card"><h3>B · Same outline, different sheet</h3><p class="small muted">The shape map (and the sweep) solve identical outlines at every stiffness, so each outline gives a direct ratio against its own rigid result. Dots are medians, bars the middle 50% of outlines. Only outlines that verified at every sheet are used.</p>
+   <div class="ctl"><label>Study <select id="eff-study">${D.studies.filter(s=>s.id!=='catalog').map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select></label><label>Frequency <select id="eff-freq"></select></label></div><div id="eff-out"></div></div>`;
+  // C. frequency
+  h+=`<div class="card"><h3>C · Best design per sheet across frequency (≤ ${LIM} N·m)</h3><div class="grid2" id="freq-out"></div></div>`;
+  $('#t-stiff').innerHTML=h;
+  $('#eff-study').value=D.studies.some(s=>s.id==='sweep')?'sweep':D.studies[0].id;
+  const fsel=()=>{const st=STUDY[$('#eff-study').value];const fs=[...new Set(C.f.filter((f,i)=>C.s[i]===st.i))].sort();$('#eff-freq').innerHTML=fs.map(f=>`<option value="${f}" ${D.freqs[f]===1?'selected':''}>${D.freqs[f]} Hz</option>`).join('');renderEffect()};
+  $('#eff-study').onchange=fsel;$('#eff-freq').onchange=renderEffect;fsel();
+  // C content
+  $('#freq-out').innerHTML=D.studies.filter(s=>new Set(D.winners.filter(w=>w.study===s.id).map(w=>w.freq)).size>1).map(s=>{
+    const ws=D.winners.filter(w=>w.study===s.id&&w.key), ms=[...new Set(ws.map(w=>w.model))].sort((a,b)=>MODEL[a].i-MODEL[b].i);
+    const series=ms.map(m=>({name:MODEL[m].label,color:modelColor(m),points:ws.filter(w=>w.model===m).sort((a,b)=>a.freq-b.freq).map(w=>({x:w.freq,y:w.thrust,tip:`<b>${MODEL[m].label}</b>, ${w.freq} Hz: ${fmt(w.thrust,2)} N at ${fmt(w.torque,2)} N·m${w.tip_twist!=null?`, ±${fmt(w.tip_twist,0)}°`:''}`}))}));
+    return `<div><b>${s.label}</b>${legend(series.map(x=>[x.color,x.name]))}${lineChart({series,xlabel:'Flapping frequency (Hz)',ylabel:'Best thrust ≤ 1 N·m (N)',w:460,h:250,xfmt:v=>v})}</div>`}).join('');
+}
+function renderEffect(){
+  const st=STUDY[$('#eff-study').value], fi=+$('#eff-freq').value;
+  const groups=new Map();
+  for(let i=0;i<N;i++){if(C.s[i]!==st.i||C.f[i]!==fi||!(C.src[i]&2)||!GOOD.has(STATUS[C.S[i]]))continue;
+    const key=C.H[i]+'|'+chordsOf(i).join(',');let g=groups.get(key);if(!g){g={};groups.set(key,g)}g[C.m[i]]=i}
+  const rigid=MODEL.rigid.i, ms=[...new Set(C.m.filter((m,i)=>C.s[i]===st.i))].filter(m=>m!==rigid).sort((a,b)=>a-b);
+  const q=(a,p)=>a[Math.floor(p*(a.length-1))];
+  const rows=ms.map(m=>{const rt=[],rq=[],tw=[];for(const g of groups.values()){if(g[rigid]==null||g[m]==null)continue;const r=g[rigid],e=g[m];if(C.T[r]<0.02||C.Q[r]<0.005)continue;rt.push(C.T[e]/C.T[r]);rq.push(C.Q[e]/C.Q[r]);if(C.W[e]!=null)tw.push(C.W[e])}
+    [rt,rq,tw].forEach(a=>a.sort((x,y)=>x-y));return {m,n:rt.length,rt,rq,tw}}).filter(r=>r.n>=5);
+  if(!rows.length){$('#eff-out').innerHTML='<p class="muted">No same-outline comparisons for this selection.</p>';return}
+  const W=440,rowH=34,m={l:132,r:16,t:18,b:34},H=m.t+m.b+rows.length*rowH;
+  const panel=(key,label,lo,hi)=>{const X=v=>m.l+(W-m.l-m.r)*(v-lo)/(hi-lo);let g='';
+    niceTicks(lo,hi,5).forEach(t=>g+=`<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${H-m.b}"/><text x="${X(t)}" y="${H-m.b+14}" text-anchor="middle">${t}</text>`);
+    if(key!=='tw')g+=`<line x1="${X(1)}" x2="${X(1)}" y1="${m.t-6}" y2="${H-m.b}" stroke="var(--muted)" stroke-dasharray="4 4"/><text x="${X(1)}" y="${m.t-8}" text-anchor="middle">same as rigid</text>`;
+    rows.forEach((r,k)=>{const y=m.t+rowH*k+rowH/2,a=r[key];if(!a.length)return;const col=modelColor(D.models[r.m].id);
+      g+=`<text x="${m.l-8}" y="${y+4}" text-anchor="end">${D.models[r.m].label}</text><line x1="${X(q(a,.25))}" x2="${X(q(a,.75))}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="5" stroke-linecap="round" opacity=".45"/><circle cx="${X(q(a,.5))}" cy="${y}" r="5.5" fill="${col}" stroke="var(--surface)" stroke-width="2"/>
+      <rect x="${m.l}" y="${y-rowH/2}" width="${W-m.l-m.r}" height="${rowH}" fill="transparent" data-tip="${esc(`<b>${D.models[r.m].label}</b> vs rigid, ${r.n.toLocaleString()} outlines<br>median ${fmt(q(a,.5),key==='tw'?0:2)}${key==='tw'?'°':'×'}, middle half ${fmt(q(a,.25),key==='tw'?0:2)}–${fmt(q(a,.75),key==='tw'?0:2)}`)}"/>`});
+    g+=`<text x="${(W+m.l)/2}" y="${H-4}" text-anchor="middle">${label}</text>`;return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${g}</svg>`};
+  const all=k=>rows.flatMap(r=>[q(r[k],.25),q(r[k],.75)]);
+  const lo=Math.min(0.5,...all('rt'),...all('rq'))*0.95, hi=Math.max(1.3,...all('rt'),...all('rq'))*1.03;
+  const twHi=Math.max(5,...rows.filter(r=>r.tw.length).map(r=>q(r.tw,.75)))*1.08;
+  $('#eff-out').innerHTML=`<div class="grid3"><div>${panel('rt','Thrust ÷ rigid thrust, same outline',lo,hi)}</div><div>${panel('rq','Torque ÷ rigid torque, same outline',lo,hi)}</div><div>${panel('tw','Tip twist (±°)',0,twHi)}</div></div>
+   <p class="small muted">${rows[0].n.toLocaleString()} outlines compared. Below 1 = less than the same outline as a rigid plate. With the rod, every ratio sits close to 1: the plate hardly twists. Without it, soft sheets shed torque faster than thrust, which is why the bare-plate winners grow longer within the same budget.</p>`;
+}
+
+/* ======================================================================================
+   Optimized shapes
+   ====================================================================================== */
+function renderOpt(){
+  const R=D.refined;
+  if(!R.length){$('#t-opt').innerHTML='<p>No refinement results in this snapshot.</p>';return}
+  // overlay of all outlines
+  const w=640,h=250,pad=10,s=Math.min((w-2*pad)/420,(h-2*pad-14)/210);
+  let ov='';for(const r of R){const c=modelColor(r.model),P=[...r.outline.map(p=>[pad+s*p[0],pad]),...r.outline.slice().reverse().map(p=>[pad+s*p[0],pad+s*p[1]])];
+    ov+=`<polygon points="${P.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${c}" fill-opacity=".08" stroke="${c}" stroke-width="2" data-tip="${esc(`<b>${MODEL[r.model].label}</b>: ${fmt(r.final.thrust,2)} N at ${fmt(r.final.torque,2)} N·m, ${Math.round(r.final.half_span)} mm`)}"/>`}
+  [0,100,200,300,400].forEach(t=>ov+=`<text x="${pad+s*t}" y="${h-2}" text-anchor="${t?'middle':'start'}">${t}${t===400?' mm':''}</text>`);
+  let hh=`<h2>Optimized shapes (1 Hz, fine mesh)</h2><p class="lede">The best 1 Hz design of each model was refit as a smooth trailing edge: a monotone curve through the fixed 200 mm root chord and six control chords, sampled at 25 stations. A pattern search then moved each control chord and the half-span by ±10 mm, then ±5 mm, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns), with the ${LIM} N·m budget applied on the fine mesh. The final design was re-solved at half its time step.</p>
+   <div class="card"><h3>All optimized outlines, to scale</h3>${legend(R.map(r=>[modelColor(r.model),MODEL[r.model].label]))}<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;max-width:${w}px">${ov}</svg><p class="small muted">Leading edge along the top, straight and perpendicular to the flow; root at the left. The trailing edge carries all of the taper.</p></div>
+   <div class="card"><h3>Did the optimization help? Same fine mesh, same 1 N·m budget</h3>
+   <p class="small muted" style="max-width:900px">The fair baseline is the campaign winner's own outline solved on the same fine mesh and time step, with its span stretched or shrunk until it also uses exactly the 1 N·m budget. Only then does a difference reflect shape rather than mesh or size.</p>
+   <table><tr><th>Model</th><th>Started from</th><th class="n">Coarse winner<br><span class="tiny">campaign mesh</span></th><th class="n">Same outline<br><span class="tiny">fine mesh</span></th><th class="n">Same outline, resized<br><span class="tiny">fine mesh, at budget</span></th><th class="n">Optimized curve<br><span class="tiny">fine mesh</span></th><th class="n">Change vs resized</th><th class="n">At dt/2</th><th class="n">Tip twist</th><th>Outline</th></tr>
+   ${R.map(r=>{const b=r.baseline_at_budget,f=r.baseline_fine,d=b?100*(r.final.thrust-b.thrust)/b.thrust:null;return `<tr><td><span class="sw" style="background:${modelColor(r.model)}"></span>${MODEL[r.model].label}</td><td class="small">${STUDY[r.source]?.label||r.source}</td><td class="n">${fmt(r.coarse.thrust)} N / ${fmt(r.coarse.torque)}</td><td class="n">${f?`${fmt(f.thrust)} N / ${fmt(f.torque)}`:'–'}</td><td class="n">${b?`<b>${fmt(b.thrust)} N</b> / ${fmt(b.torque)} · ${Math.round(b.span)} mm`:'–'}</td><td class="n"><b>${fmt(r.final.thrust)} N</b> / ${fmt(r.final.torque)} · ${Math.round(r.final.half_span)} mm</td><td class="n"><b>${d==null?'–':(d>0?'+':'')+fmt(d,1)+'%'}</b></td><td class="n">${fmt(r.dt.thrust)} N / ${fmt(r.dt.torque)}</td><td class="n">${r.final.twist==null?'–':'±'+fmt(r.final.twist,0)+'°'}</td><td class="small">optimized: <a href="${r.files.csv}" download>CSV</a> · <a href="${r.files.svg}" download>SVG</a>${r.files.resized_csv?`<br>resized campaign: <a href="${r.files.resized_csv}" download>CSV</a>`:''}</td></tr>`}).join('')}</table>
+   <p class="small" style="max-width:900px;margin-top:10px"><b>Reading this honestly:</b> for the rigid and rod models the optimized curve is 1–2% <i>worse</i> than simply resizing the campaign winner. The six-point smooth curve cannot reproduce the winner's sharp drop just outboard of the root, and the ±5 mm search stalled near its smooth starting point. For those models the best shape to build is the campaign outline, resized to the budget. For the bare 0.5 mm plate the optimized curve is about 10% better, because that winner was over budget on the fine mesh and had to be reshaped, not just shrunk.</p>
+   <p class="tiny muted">Thrust (N) / peak root torque (N·m) per wing at 1 Hz. Fine mesh: 24 × 6 panels, 50 steps per cycle.</p></div>
+   <div class="grid2">`;
+  for(const r of R){const c=modelColor(r.model);const id='opt_'+r.model;
+    const info=`<div class="kv"><div>Thrust</div><div><b>${fmt(r.final.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(r.final.torque,3)} N·m</b></div><div>Tip twist</div><div>${r.final.twist==null?'–':'±'+fmt(r.final.twist,1)+'°'}</div><div>Half-span</div><div>${Math.round(r.final.half_span)} mm</div><div>Mesh</div><div>${r.numerics.span_panels} × ${r.numerics.chord_panels} panels, ${r.numerics.steps_per_cycle} steps per cycle</div></div>`;
+    const hist=r.history.filter(x=>x.thrust!=null);
+    const series=[{name:'Thrust',color:c,points:hist.map((x,k)=>({x:k,y:x.thrust,tip:`${x.tag||('round '+x.round)}: ${fmt(x.thrust,3)} N at ${fmt(x.torque,3)} N·m, ${x.span} mm`}))}];
+    hh+=`<div class="card"><h3><span class="sw" style="background:${c}"></span>${MODEL[r.model].label}</h3>
+     ${outlineSVG(r.outline,{w:440,h:150,color:c,labels:true})}
+     <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start"><div>${posterButton(r.media,MODEL[r.model].label+' · optimized · 1 Hz',info)}</div>
+     <div>${r.media.evolution?`<img src="media/${r.media.evolution}" style="width:100%;border-radius:8px;background:#fff" alt="Outline at each round" loading="lazy"><div class="tiny muted">Outline at each optimization round</div>`:''}</div></div>
+     <div style="margin-top:8px">${lineChart({series,cats:hist.map((x,k)=>k===0?'fit':String(k)),xlabel:'Optimization round',ylabel:'Thrust (N)',w:440,h:180,ymin:Math.min(...hist.map(x=>x.thrust))*0.97})}</div>
+     <p class="small muted">${r.note}. Downloads: <a href="${r.files.csv}" download>outline CSV</a> (chord at 25 stations) · <a href="${r.files.svg}" download>outline SVG</a> (to scale).</p></div>`}
+  hh+='</div>';
+  $('#t-opt').innerHTML=hh;
+}
+
+/* ======================================================================================
+   Tabs, theme, boot
+   ====================================================================================== */
+const RENDERED={};
+function go(t){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
+  try{history.replaceState(null,'','#'+t)}catch(e){}
+  if(!RENDERED[t]){RENDERED[t]=1;({overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
+  else if(t==='map')requestDraw()}
+$$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt})[t]()}}
+$('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
+try{const t=localStorage.getItem('atlas-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',rerenderAll);
+go((location.hash||'#overview').slice(1).replace(/[^a-z]/g,'')in{overview:1,map:1,winners:1,stiff:1,opt:1}?location.hash.slice(1):'overview');
+</script>
+</body>
+</html>

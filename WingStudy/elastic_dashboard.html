@@ -161,13 +161,14 @@ code{background:var(--surface-2);padding:1px 5px;border-radius:5px;font-size:12p
 <script>
 const $=s=>document.querySelector(s);
 let PLAN=null, EST=null, STATE='ready', POINTS={}, FREQ=null, SEL=null;
-const LV_VAR={'rigid':'--s0','t1.00':'--s1','t0.50':'--s2','t0.40':'--s3','t0.30':'--s4','t0.25':'--s5','t0.20':'--s6'};
+const LV_VAR={'rigid':'--s0','t1.00':'--s1','t0.50':'--s2','t0.40':'--s3','t0.30':'--s4','t0.25':'--s5','t0.20':'--s6','t0.50r':'--s2','t0.25r':'--s5'};
 const F_VARS=['--f1','--f2','--f3'];
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const lvColor=id=>css(LV_VAR[id]||'--accent');
 const lvLabel=id=>(PLAN.levels.find(l=>l.id===id)||{label:id}).label;
 const fColor=f=>css(F_VARS[Math.max(0,PLAN.frequencies_hz.indexOf(f))%3]);
 const fmt=(v,d=2)=>v==null||isNaN(v)?'–':(+v).toFixed(d);
+function setHTML(sel,html){const e=typeof sel==='string'?$(sel):sel;if(!e||e.__h===html)return;e.__h=html;e.innerHTML=html}
 async function api(p){const r=await fetch(p);return r.json()}
 async function post(p,b){const r=await fetch(p,{method:'POST',body:JSON.stringify(b)});return r.json()}
 async function control(a){await post('/api/control',{action:a});refresh()}
@@ -190,7 +191,7 @@ function renderPlan(){
     ['Search moves',`Coordinate ascent, identical to the rigid studies (coordinate_search.climb): ±${g.step_m*1000} mm per chord, remembered direction, one half-step retry, then the chord retires. Budget ${p.lineage_budget} evaluations per lineage.`],
     ['Objectives',`<b>torque_1Nm</b>: maximize mean thrust with peak root torque ≤ ${p.torque_target_nm} N·m (seeds above the limit first walk down in torque). <b>lambda_x</b>: S = T/Tref − x·M/Mref with Tref, Mref fixed from that stiffness × frequency's seeds. Focus thicknesses: ${p.objectives.focus.join(', ')}. Context: ${p.objectives.context.join(', ')}.`],
     ['Seeds per search',`${p.families.join(', ')} × half-spans ${p.seed_half_spans_m.focus.map(x=>x*1000+' mm').join(', ')} (focus) or ${p.seed_half_spans_m.context.map(x=>x*1000+' mm').join(', ')} (context).`],
-    ['Plate stiffness',p.levels.map(l=>`<span class="pill">${l.label}${l.tier==='focus'?' ★':''}</span>`).join(' ')+`<br><span class="small muted">★ focus (all objectives, 25 lineages). Plain-weave carbon: G = ${p.material.shear_modulus_pa/1e9} GPa, E = ${p.material.youngs_modulus_pa/1e9} GPa, ${p.material.density_kg_m3} kg/m³. Twist about the leading edge with plate torsion + warping stiffness.</span>`],
+    ['Plate stiffness',p.levels.map(l=>`<span class="pill">${l.label}${l.tier==='focus'?' ★':''}</span>`).join(' ')+`<br><span class="small muted">★ focus (all objectives, 25 lineages). Plain-weave carbon: G = ${p.material.shear_modulus_pa/1e9} GPa, E = ${p.material.youngs_modulus_pa/1e9} GPa, ${p.material.density_kg_m3} kg/m³. Twist about the leading edge with plate torsion + warping stiffness.${p.rod?` Leading-edge rod ${p.rod.diameter_m*1000}/${p.rod.hollow_inner_diameter_m*1000} mm (G = ${p.rod.shear_modulus_pa/1e9} GPa), held at the root: its torsion adds to the plate's.`:''}</span>`],
     ['Motion',`${p.frequencies_hz.join(', ')} Hz; ${p.stroke}; ${p.speed_mps} m/s; ${p.steps_per_cycle} time steps per cycle; ${p.cycles} cycles (doubled automatically if a soft plate has not settled).`],
     ['Numerics',`${p.span_panels} × ${p.chord_panels} panels, prescribed wake (rigid-study settings). Each elastic design is solved with ≥ 2 stabilization settings (verified / uncertain); dt halved automatically for soft plates that fail.`],
     ['Shape map',`The same ${p.map.focus_shapes} Sobol shapes at every focus thickness (first ${p.map.context_shapes} at context levels) and every frequency, so stiffness effects compare identical shapes.`],
@@ -216,12 +217,12 @@ async function refresh(){
   $('#stopBtn').disabled=!['running','paused','waiting','ready'].includes(s.state);
   $('#auto').checked=!!s.auto_continue;
   const icon={done:'<span style="color:var(--good)">✓</span>',running:'<span style="color:var(--accent)">▶</span>',paused:'<span style="color:var(--warn)">❚❚</span>',stopping:'<span style="color:var(--warn)">■</span>',next:'<span style="color:var(--accent)">●</span>',pending:'<span class="muted">○</span>'};
-  $('#chunks').innerHTML=s.chunks.map(c=>{const pct=100*c.done/Math.max(c.planned,1);
+  setHTML('#chunks',s.chunks.map(c=>{const pct=100*c.done/Math.max(c.planned,1);
     const when=c.status==='done'?`took ${hours(c.took_hours)} (est. ${hours(c.est_hours)}) · finished ${new Date(c.finished*1000).toLocaleString()}`:
       ['running','paused','stopping'].includes(c.status)?`elapsed ${hours(c.elapsed_hours)} · original est. ${hours(c.est_hours)} · ~${hours(c.remaining_hours)} left`:`est. ~${hours(c.est_hours)}`;
     const rep=c.report?` · <a href="/files/${c.report}" target="_blank">open report</a>`:'';
     return `<div class="phase" style="grid-template-columns:28px 1fr 260px"><span style="font-size:16px">${icon[c.status]||''}</span><div><div><b>${c.title}</b> <span class="small muted">${c.status==='next'?'— next up':''}</span></div><div class="bar"><i style="width:${pct.toFixed(1)}%;${c.status==='done'?'background:var(--good)':''}"></i></div></div><span class="n">${c.done.toLocaleString()} / ~${c.planned.toLocaleString()} designs<br>${when}${rep}</span></div>`}).join('')+
-    (s.chunks.filter(c=>c.report).length?'<div class="two" style="margin-top:12px">'+s.chunks.filter(c=>c.report).map(c=>`<a href="/files/${c.report}" target="_blank"><img src="/files/${c.report}" style="width:100%;border-radius:8px;border:1px solid var(--border)"></a>`).join('')+'</div>':'');
+    (s.chunks.filter(c=>c.report).length?'<div class="two" style="margin-top:12px">'+s.chunks.filter(c=>c.report).map(c=>`<a href="/files/${c.report}" target="_blank"><img src="/files/${c.report}" style="width:100%;border-radius:8px;border:1px solid var(--border)"></a>`).join('')+'</div>':''));
   if(s.chunk){$('#chunkProgTitle').textContent=`${s.chunk.title}: progress`;$('#phasesTitle').textContent=`Phases in chunk ${s.chunk.id} (run in this order)`}
   const done=s.phases.reduce((a,p)=>a+p.done,0), planned=s.phases.reduce((a,p)=>a+p.planned,0);
   $('#k-done').textContent=s.fresh.toLocaleString();
@@ -235,12 +236,12 @@ async function refresh(){
   $('#k-busy').textContent=`${s.inflight} / ${s.queued}`;
   $('#totalbar').style.width=(100*done/Math.max(planned,1)).toFixed(1)+'%';
   $('#totaltxt').textContent=`${done.toLocaleString()} of ~${planned.toLocaleString()} planned designs in this chunk available (${s.cached.toLocaleString()} requests answered from cache). ${s.workers} worker processes.`+(s.rate_per_min?'':' Time estimates use the plan’s assumed rate until a few minutes of results are in.');
-  $('#phases').innerHTML=s.phases.map((p,i)=>`<div class="phase"><span class="id">${p.id}</span><div><div class="small">${p.title}</div><div class="bar"><i style="width:${(100*p.done/Math.max(p.planned,1)).toFixed(1)}%;${i<s.phase_index?'':'opacity:.5'}"></i></div></div><span class="n">${p.done.toLocaleString()} / ~${p.planned.toLocaleString()}</span></div>`).join('');
+  setHTML('#phases',s.phases.map((p,i)=>`<div class="phase"><span class="id">${p.id}</span><div><div class="small">${p.title}</div><div class="bar"><i style="width:${(100*p.done/Math.max(p.planned,1)).toFixed(1)}%;${i<s.phase_index?'':'opacity:.5'}"></i></div></div><span class="n">${p.done.toLocaleString()} / ~${p.planned.toLocaleString()}</span></div>`).join(''));
   const sc=s.status_counts, tot=Object.values(sc).reduce((a,b)=>a+b,0)||1;
   const order=[['verified','Verified (elastic)','--good'],['ok','Settled (rigid)','--good'],['uncertain','Uncertain (range)','--warn'],['unverified','Single setting only','--bad'],['unresolved','No settled solution','--bad'],['unsettled','Rigid, not settled','--bad'],['failed','Failed','--bad']];
-  $('#quality').innerHTML='<table>'+order.filter(o=>sc[o[0]]).map(o=>`<tr><td><span class="sw" style="background:var(${o[2]})"></span> ${o[1]}</td><td style="text-align:right">${sc[o[0]].toLocaleString()}</td><td style="width:45%"><div class="bar"><i style="width:${100*sc[o[0]]/tot}%;background:var(${o[2]})"></i></div></td></tr>`).join('')+'</table>'+(Object.keys(sc).length?'':'<p class="muted small">No results yet.</p>');
-  $('#recent').innerHTML='<tr><th>Stiffness</th><th>Hz</th><th>Status</th><th>Thrust N</th><th>Torque N·m</th><th>Tip twist</th><th>s</th></tr>'+s.recent.map(r=>`<tr style="cursor:pointer" onclick="showDesign('${r.key}')"><td>${lvLabel(r.level)}</td><td>${r.freq}</td><td><span class="pill ${r.status}">${r.status}</span></td><td>${fmt(r.thrust,3)}</td><td>${fmt(r.torque,3)}</td><td>${r.tip_twist==null?'–':'±'+fmt(r.tip_twist,0)+'°'}</td><td>${fmt(r.elapsed,0)}</td></tr>`).join('');
-  $('#log').innerHTML=s.log.slice().reverse().map(l=>`<div>${new Date(l.t*1000).toLocaleTimeString()} — ${l.msg}</div>`).join('')||'<div>Waiting for Start.</div>';
+  setHTML('#quality','<table>'+order.filter(o=>sc[o[0]]).map(o=>`<tr><td><span class="sw" style="background:var(${o[2]})"></span> ${o[1]}</td><td style="text-align:right">${sc[o[0]].toLocaleString()}</td><td style="width:45%"><div class="bar"><i style="width:${100*sc[o[0]]/tot}%;background:var(${o[2]})"></i></div></td></tr>`).join('')+'</table>'+(Object.keys(sc).length?'':'<p class="muted small">No results yet.</p>'));
+  setHTML('#recent','<tr><th>Stiffness</th><th>Hz</th><th>Status</th><th>Thrust N</th><th>Torque N·m</th><th>Tip twist</th><th>s</th></tr>'+s.recent.map(r=>`<tr style="cursor:pointer" onclick="showDesign('${r.key}')"><td>${lvLabel(r.level)}</td><td>${r.freq}</td><td><span class="pill ${r.status}">${r.status}</span></td><td>${fmt(r.thrust,3)}</td><td>${fmt(r.torque,3)}</td><td>${r.tip_twist==null?'–':'±'+fmt(r.tip_twist,0)+'°'}</td><td>${fmt(r.elapsed,0)}</td></tr>`).join(''));
+  setHTML('#log',s.log.slice().reverse().map(l=>`<div>${new Date(l.t*1000).toLocaleTimeString()} — ${l.msg}</div>`).join('')||'<div>Waiting for Start.</div>');
 }
 
 /* ---------------- silhouettes ---------------- */
@@ -261,10 +262,11 @@ async function loadPoints(){
 }
 function renderControls(){
   const c=$('#exControls');
-  c.innerHTML=`<span class="small muted">Frequency</span>`+PLAN.frequencies_hz.map(f=>`<label><input type="radio" name="fq" ${f===FREQ?'checked':''} value="${f}"> ${f} Hz</label>`).join('')+
+  const ctl=`<span class="small muted">Frequency</span>`+PLAN.frequencies_hz.map(f=>`<label><input type="radio" name="fq" ${f===FREQ?'checked':''} value="${f}"> ${f} Hz</label>`).join('')+
    `<span class="small muted" style="margin-left:8px">Stiffness</span>`+PLAN.levels.map(l=>`<label><input type="checkbox" data-lv="${l.id}" ${exState.levels[l.id]?'checked':''}><span class="sw" style="background:${lvColor(l.id)}"></span>${l.label}</label>`).join('')+
    `<span class="small muted" style="margin-left:8px">Source</span><select id="src"><option value="all">all</option><option value="search">searches</option><option value="map">shape map</option></select>`+
    `<label><input type="checkbox" id="stU" ${exState.status.uncertain?'checked':''}> include uncertain (hollow)</label>`;
+  if(c.__h===ctl)return; setHTML(c,ctl);
   $('#src').value=exState.source;
   c.querySelectorAll('input[name=fq]').forEach(r=>r.onchange=()=>{FREQ=+r.value;loadPoints()});
   c.querySelectorAll('input[data-lv]').forEach(r=>r.onchange=()=>{exState.levels[r.dataset.lv]=r.checked;drawScatter()});
@@ -290,7 +292,7 @@ function drawScatter(){
   VIS=pts.map(p=>({p,x:X(p.torque),y:Y(p.thrust)}));
   g+=VIS.map(v=>{const c=lvColor(v.p.level);return v.p.status==='uncertain'?`<circle cx="${v.x.toFixed(1)}" cy="${v.y.toFixed(1)}" r="3.6" fill="none" stroke="${c}" stroke-width="1.3"/>`:`<circle cx="${v.x.toFixed(1)}" cy="${v.y.toFixed(1)}" r="3" fill="${c}" fill-opacity=".8"/>`}).join('');
   g+=`<g id="hl"></g>`;
-  const svg=$('#scatter'); svg.innerHTML=g;
+  const svg=$('#scatter'); setHTML(svg,g);
   $('#exNote').textContent=`${pts.length.toLocaleString()} designs shown at ${FREQ} Hz. Soft plates drawn on top. Hollow = uncertain (hover for its range).`;
   svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),sx=(e.clientX-r.left)*W/r.width,sy=(e.clientY-r.top)*H/r.height;
     let best=null,bd=144;for(const v of VIS){const d=(v.x-sx)**2+(v.y-sy)**2;if(d<bd){bd=d;best=v}}
