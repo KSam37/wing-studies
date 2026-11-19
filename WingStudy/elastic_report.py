@@ -286,7 +286,9 @@ def build(camp: Path, out_pdf: Path):
         "with the plate and held at the root, it makes the wing nearly rigid in twist (±1–2° at the tip) for either sheet (§8). "
         "Under a 1 N·m budget at 1 Hz, on the fine mesh, the best is <b>2.34 N (0.5 mm + tube, campaign outline at 344 mm "
         "half-span)</b>, against 2.28 N for the best rigid outline; at 1.25 Hz the campaign-mesh best is 2.63 N. The smooth-curve "
-        "optimization did not beat the campaign outlines for these models (§10).",
+        "optimization did not beat the campaign outlines for these models. A second, budget-matched search from the geometry-sweep "
+        "winner reached <b>2.42 N</b> (about +6%) by slimming the outer wing to the 10 mm minimum chord and lengthening it to 369 mm. "
+        "That strip outline is at the model's edge; a less extreme intermediate gives 2.38 N (§10.1).",
         "<b>Without the tube, 0.5 mm reaches more thrust</b> (2.82 N refined at 1 Hz; up to about 3.6 N at 1.25 Hz), but only through "
         "±50–70° of passive tip twist. That is outside the model's small-deformation range and is mesh-sensitive by about 10%. "
         "Which model describes the hardware depends on how well the tube holds the plate; a bench twist test decides it (§13).",
@@ -688,6 +690,76 @@ def build(camp: Path, out_pdf: Path):
             "Outlines for manufacture (optimized CSV/SVG, and the resized campaign outline as CSV) are in the dashboard's files/optimized folder.",
         ])
 
+    sw_dir = ROOT / "outputs" / "elastic" / "refine_sweep"
+    if (sw_dir / "summary.csv").exists():
+        import csv
+        H1("10.1  Budget-matched search from the geometry-sweep winner")
+        P("The geometry-sweep 1 Hz winner (chords 200, 66, 57, 28, 12, 11, 10 mm; 327 mm effective half-span) was optimized again "
+          "for the rigid and both tube models, with two changes. First, the search starts from the exact outline: the six outboard "
+          "station chords are the variables, with straight segments between them, so nothing is lost to smoothing. Second, every "
+          "candidate's half-span is rescaled (secant iterations on torque) until peak torque sits at the 1 N·m budget. Each step "
+          "therefore compares shapes at equal torque. Chords moved ±10, ±5, then ±2 mm. A first attempt without the span "
+          "rescaling stalled at 2.25 N: it spent the outline's spare torque on wider tip chords and could not reach longer spans.")
+        names = {"rigid": "Rigid", "t0.50r": "0.5 mm + tube", "t0.25r": "0.25 mm + tube"}
+        rows = [["Model", "Exact outline, fine mesh", "Resized to 1 N·m (start)", "Round 5", "Optimized", "At dt/2", "Tip twist"]]
+        for r in csv.DictReader(open(sw_dir / "summary.csv")):
+            m = r["model"]; d = sw_dir / m
+            h = json.loads((d / "history.json").read_text())["history"]
+            f = json.loads((d / "baseline_fine.json").read_text()); dtc = json.loads((d / "dt_check.json").read_text())
+            r5 = h[min(5, len(h) - 1)]
+            tw = f"±{float(r['tip_twist_deg']):.1f}°" if r["tip_twist_deg"] else "—"
+            rows.append([names.get(m, m), f"{f['thrust']:.2f} N / {f['torque']:.2f}",
+                         f"{h[0]['thrust']:.2f} N · {h[0]['span'] * 1000:.0f} mm",
+                         f"{r5['thrust']:.2f} N · {r5['span'] * 1000:.0f} mm",
+                         f"<b>{float(r['refined_thrust_N']):.2f} N</b> · {float(r['refined_half_span_mm']):.0f} mm",
+                         f"{dtc['thrust']:.2f} N / {dtc['torque']:.2f}", tw])
+        table(rows, [1.1 * inch, 1.15 * inch, 1.2 * inch, 0.95 * inch, 1.0 * inch, 0.95 * inch, 0.6 * inch])
+        P("Thrust (N) / peak root torque (N·m) per wing at 1 Hz on the 24 × 6 mesh; every resized, round-5 and optimized design is "
+          "at 0.997–1.000 N·m.", small)
+        figure(sw_dir / "t0.50r" / "outline.png", "Figure. 0.5 mm + tube: geometry-sweep winner (dashed) and the budget-matched "
+               "optimum, to scale. The outer wing has collapsed onto the 10 mm minimum chord.", width=5.6 * inch)
+        bullets([
+            "<b>This search does beat the resizing baseline</b>: about +6% for all three models (2.42 N against 2.27–2.29 N), and "
+            "about +3% over the best campaign outline resized to the budget (2.34 N). The tube models end about 0.006 N above rigid; "
+            "at this shape, plate stiffness hardly matters.",
+            "<b>The optimum sits on a constraint.</b> All outboard chords end at 10–12 mm: the 200 mm root tapers within about 60 mm "
+            "into a strip roughly 10 mm wide, out to 369 mm. The model rewards trading area for span, and would go narrower if allowed.",
+            "<b>Most of the gain comes early.</b> Five rounds of thinning the mid-span give 2.38 N at 349 mm "
+            "(chords 66, 18, 18, 12, 11, 10 mm); the remaining twelve rounds add about 0.04 N.",
+            "<b>Model validity.</b> A 10 mm chord is only twice the 5 mm tube, whose round section and drag are not modelled, and at "
+            "about 1.2 m/s tip speed in water the chord Reynolds number is near 10<super>4</super>, where viscous losses this method "
+            "omits become significant. The strip outline is best read as a direction; the round-5 shape is the more credible build.",
+            "<b>Time step</b>: at dt/2 the optimized designs change by +0.2% in thrust and −0.2% in torque.",
+        ])
+
+    sf_dir = ROOT / "outputs" / "elastic" / "campaigns" / "spanfree"
+    if (sf_dir / "fine_check.json").exists():
+        H1("10.2  Span-free search")
+        P("Earlier campaigns searched at five fixed half-spans, so their best designs sat on 280, 340 or 400 mm. This search drops "
+          "span as a variable: every candidate is rescaled to exactly the 1 N·m budget (280–400 mm), and a pattern search moves "
+          "the outboard chords (±20, 10, 5 mm) on the campaign mesh. 29 starts per model, 87 in all (the best campaign outlines, the five seed "
+          "families and Sobol outlines); 32 of the 87 were over budget even at 280 mm. The run took 4.9 h.")
+        fc = json.loads((sf_dir / "fine_check.json").read_text())
+        names = {"rigid": "Rigid", "t0.50r": "0.5 mm + tube", "t0.25r": "0.25 mm + tube"}
+        rows = [["Model", "Outboard chords (mm)", "Campaign mesh", "Fine mesh (24 × 6), at budget"]]
+        seen = set()
+        for r in fc:
+            if r["model"] in seen:
+                continue
+            seen.add(r["model"])
+            rows.append([names[r["model"]], ", ".join(f"{c:.0f}" for c in r["chords_mm"][1:]),
+                         f"{r['coarse_thrust']:.3f} N · {r['coarse_span']:.0f} mm",
+                         f"<b>{r['thrust']:.2f} N</b> · {r['span'] * 1000:.0f} mm"])
+        table(rows, [1.2 * inch, 2.0 * inch, 1.6 * inch, 1.9 * inch])
+        bullets([
+            "<b>Every start converged to the same shape</b>: 2.42–2.48 N on the campaign mesh, half-span 355–369 mm, the 200 mm "
+            "root tapering within one station into a strip on the 10 mm minimum chord.",
+            "<b>On the fine mesh the winners give 2.41–2.42 N</b>, the same as the budget-matched sweep optimum (§10.1). Two "
+            "independent searches from very different starts reach the same answer, so 2.42 N is the optimum this model allows "
+            "with a 10 mm minimum chord. The campaign mesh reads about 2% high here.",
+            "The same caveats as §10.1 apply: the optimum sits on the minimum chord, where tube drag and viscous losses matter.",
+        ])
+
     # ---------------- lessons ----------------
     H1("11  Limitations")
     bullets([
@@ -737,6 +809,8 @@ def build(camp: Path, out_pdf: Path):
         "Tank-test the 0.5 mm + tube refined wing against its prediction (thrust, peak root torque, tip twist), after "
         "subtracting the estimated tube drag.",
         "Refine at 1.25 Hz if the actuator can run there: it gave 13% more thrust within the same torque budget.",
+        "Before building the budget-matched optimum (§10.1), check the narrow outer wing: model tube drag and a viscous "
+        "correction, or tank-test the round-5 shape against the sweep winner.",
         "Revisit the 10 mm minimum chord with tube drag included. Only the bare-plate winners press against the 400 mm span limit.",
     ])
     H1("Appendix: reproducing this work")
@@ -756,6 +830,8 @@ def build(camp: Path, out_pdf: Path):
         "python WingStudy/elastic_campaign.py dashboard --campaign outputs/elastic/campaigns/sweep --variant sweep<br/>"
         "python WingStudy/elastic_campaign.py replay outputs/elastic/campaigns/weekend KEY<br/>"
         "python WingStudy/elastic_refine.py --workers 14<br/>"
+        "python WingStudy/elastic_refine.py --models rigid,t0.50r,t0.25r --campaigns sweep --out outputs/elastic/refine_sweep "
+        "--numerics '{\"param\":\"exact\",\"project\":true,\"steps\":[0.01,0.005,0.002]}'<br/>"
         "python WingStudy/elastic_report.py", code))
 
     def on_page(cv, doc):

@@ -58,20 +58,26 @@ DEFAULT_NUMERICS = {"stations": 25, "span_panels": 24, "chord_panels": 6, "steps
 # Geometry
 # ----------------------------------------------------------------------------------------
 
-def chords_from_ctrl(ctrl, stations):
+def chords_from_ctrl(ctrl, stations, param=None):
+    """param 'exact': the control chords ARE the outline stations (straight segments between them)."""
+    if param == "exact":
+        return [ROOT_CHORD] + [round(float(c), 6) for c in ctrl]
     import numpy as np
     from scipy.interpolate import PchipInterpolator
-    eta = np.linspace(0, 1, N_CTRL + 1)
+    eta = np.linspace(0, 1, len(ctrl) + 1)
     f = PchipInterpolator(eta, [ROOT_CHORD] + list(ctrl))   # monotone data -> monotone curve
     c = f(np.linspace(0, 1, stations))
     c[0] = ROOT_CHORD
     return [round(float(max(MIN_CHORD, min(MAX_CHORD, x))), 6) for x in c]
 
 
-def fit_ctrl(chords, half_span):
+def fit_ctrl(chords, half_span, param=None):
     """Control chords and effective span from a coarse campaign outline (zero tip suffix trimmed)."""
     import numpy as np
     active = [c for c in chords if c > 0]
+    if param == "exact":
+        span = half_span * (len(active) - 1) / (len(chords) - 1)
+        return [round(c, 4) for c in active[1:]], round(span, 4), span
     n = len(chords)
     span = half_span * (len(active) - 1) / (n - 1)
     ys = np.linspace(0, span, len(active))
@@ -101,13 +107,15 @@ def key_of(model, ctrl, span, numerics):
 
 
 def _solve(task):
+    if task["numerics"].get("project") and not task.get("fixed_span"):
+        return _solve_projected(task)
     warnings.filterwarnings("ignore")
     import elastic
     import elastic_runner as R
     t0 = time.time()
     num = task["numerics"]
     template, settings = R.load_catalog_case(7657)
-    chords = chords_from_ctrl(task["ctrl"], num["stations"])
+    chords = chords_from_ctrl(task["ctrl"], num["stations"], num.get("param"))
     case = R.sections_case(template, settings, chords, task["span"], task["key"])
     case["frequency_hz"] = FREQ
     ov = {"dt_s": 1.0 / (num["steps_per_cycle"] * FREQ), "cycles": num["cycles"],
@@ -127,6 +135,34 @@ def _solve(task):
             "tip_twist": r.get("tip_twist_amplitude_deg"), "dt": r.get("dt_s"),
             "factor": r.get("added_mass_factor") or (r.get("elastic") or {}).get("added_mass_factor"),
             "elapsed": round(time.time() - t0, 1), "error": r.get("error")}
+
+
+def _solve_projected(task):
+    """Solve the outline, then rescale its span (secant on torque ~ span^2.5) until peak torque sits just
+    under the budget, so every candidate shape is compared at the same 1 N·m."""
+    target, tol = TORQUE_LIMIT - 0.002, 0.002
+    span = task["span"]
+    pts, rec, best = [], None, None
+    for _ in range(6):
+        span = round(min(SPAN_RANGE[1], max(SPAN_RANGE[0], span)), 4)
+        rec = _solve(dict(task, span=span, fixed_span=True))
+        if rec["status"] not in ("ok", "verified") or rec["torque"] is None:
+            break
+        if rec["torque"] <= TORQUE_LIMIT and (best is None or rec["thrust"] > best["thrust"]):
+            best = rec
+        if abs(rec["torque"] - target) < tol:
+            break
+        pts.append((span, rec["torque"]))
+        if len(pts) == 1:
+            new = span * (target / rec["torque"]) ** (1 / 2.5)
+        else:
+            (s0, q0), (s1, q1) = pts[-2], pts[-1]
+            new = s1 + (target - q1) * (s1 - s0) / (q1 - q0) if q1 != q0 else s1
+        if abs(new - span) < 2e-4 or (span in SPAN_RANGE and (new - span) * (1 if span == SPAN_RANGE[1] else -1) > 0):
+            break
+        span = new
+    out = best or rec
+    return dict(out, key=task["key"], solves=len(pts) + 1)
 
 
 def _solve_exact(task):
@@ -214,9 +250,9 @@ def score(rec):
 # Winners
 # ----------------------------------------------------------------------------------------
 
-def pick_winners(models):
+def pick_winners(models, campaigns=None):
     best = {}
-    for camp in CAMPAIGNS:
+    for camp in campaigns or CAMPAIGNS:
         db_path = camp / "campaign.sqlite"
         if not db_path.exists():
             continue
@@ -248,7 +284,8 @@ class Refiner:
         self.w = winner
         self.model = winner["model"]
         self.numerics = numerics
-        self.ctrl, self.span, _ = fit_ctrl(winner["chords"], winner["half_span"])
+        self.ctrl, self.span, _ = fit_ctrl(winner["chords"], winner["half_span"], numerics.get("param"))
+        self.steps = tuple(numerics.get("steps") or STEPS)
         self.step_i = 0
         self.rounds = 0
         self.max_rounds = max_rounds
@@ -258,28 +295,29 @@ class Refiner:
         self.note = ""
 
     def task(self, ctrl, span, tag):
-        ctrl = [round(c, 4) for c in ctrl]; span = round(span, 3)
-        return {"key": key_of(self.model, ctrl, span, self.numerics), "model": self.model, "ctrl": ctrl, "span": span,
+        ctrl = [round(c, 4) for c in ctrl]; span = round(span, 4)
+        return {"key": key_of(self.model, ctrl, 0.0 if self.numerics.get("project") else span, self.numerics), "model": self.model, "ctrl": ctrl, "span": span,
                 "numerics": self.numerics, "tag": tag}
 
     def start_tasks(self):
         return [self.task(self.ctrl, self.span, "start")]
 
     def candidates(self):
-        step = STEPS[self.step_i]
+        step = self.steps[self.step_i]
         out = []
-        for i in range(N_CTRL):
+        n = len(self.ctrl)
+        for i in range(n):
             for sgn in (1, -1):
                 c = list(self.ctrl)
                 hi = ROOT_CHORD if i == 0 else c[i - 1]
-                lo = MIN_CHORD if i == N_CTRL - 1 else max(MIN_CHORD, c[i + 1])
+                lo = MIN_CHORD if i == n - 1 else max(MIN_CHORD, c[i + 1])
                 v = min(hi, max(lo, c[i] + sgn * step))
                 if abs(v - c[i]) < 1e-9:
                     continue
                 c[i] = v
                 if valid(c, self.span):
                     out.append(self.task(c, self.span, f"c{i + 1}{'+' if sgn > 0 else '-'}{step * 1000:g}mm"))
-        for sgn in (1, -1):
+        for sgn in (() if self.numerics.get("project") else (1, -1)):
             s = min(SPAN_RANGE[1], max(SPAN_RANGE[0], self.span + sgn * step))
             if abs(s - self.span) > 1e-9:
                 out.append(self.task(self.ctrl, s, f"span{'+' if sgn > 0 else '-'}{step * 1000:g}mm"))
@@ -287,7 +325,7 @@ class Refiner:
 
     def accept_start(self, rec):
         self.current = rec
-        self.history.append({"round": 0, "tag": "start (smooth fit of coarse winner)", **rec, "score": score(rec)})
+        self.history.append({"round": 0, "tag": "start (exact coarse outline)" if self.numerics.get("param") == "exact" else "start (smooth fit of coarse winner)", **rec, "score": score(rec)})
         if score(rec) is None:
             self.done = True; self.note = "start design did not verify on the fine mesh"
 
@@ -303,10 +341,10 @@ class Refiner:
         if best:
             self.current = best[1]; self.ctrl, self.span = list(best[1]["ctrl"]), best[1]["span"]
             self.history.append({"round": self.rounds, "tag": best[1].get("tag"), **best[1], "score": best[0]})
-        elif self.step_i + 1 < len(STEPS):
+        elif self.step_i + 1 < len(self.steps):
             self.step_i += 1
         else:
-            self.done = True; self.note = "no +/- 5 mm move improves the score"
+            self.done = True; self.note = f"no +/- {self.steps[-1] * 1000:g} mm move improves the score"
         if self.rounds >= self.max_rounds and not self.done:
             self.done = True; self.note = f"round limit ({self.max_rounds}) reached"
         return not self.done
@@ -341,7 +379,7 @@ def write_outputs(ref: Refiner, out: Path, numerics, color):
     (out / "history.json").write_text(json.dumps({"winner": w, "numerics": numerics, "note": ref.note,
                                                   "history": ref.history}, indent=1, default=str))
     fin = ref.current
-    fch = chords_from_ctrl(fin["ctrl"], numerics["stations"])
+    fch = chords_from_ctrl(fin["ctrl"], numerics["stations"], numerics.get("param"))
     # outline before/after, to scale
     fig, ax = plt.subplots(figsize=(8, 3.4))
     act = [c for c in w["chords"] if c > 0]
@@ -350,7 +388,8 @@ def write_outputs(ref: Refiner, out: Path, numerics, color):
     x1, y1 = outline_xy(fch, fin["span"])
     ax.fill(x1, y1, color=color, alpha=0.25, lw=0)
     ax.plot(x1, y1, color=color, lw=1.8, label=f"refined: {fin['thrust']:.2f} N @ {fin['torque']:.2f} N·m ({numerics['span_panels']}×{numerics['chord_panels']} mesh)")
-    ax.plot([fin["span"] * k / N_CTRL for k in range(1, N_CTRL + 1)], [-c for c in fin["ctrl"]], "o", ms=4, color=color)
+    nc = len(fin["ctrl"])
+    ax.plot([fin["span"] * k / nc for k in range(1, nc + 1)], [-c for c in fin["ctrl"]], "o", ms=4, color=color)
     ax.set_aspect("equal"); ax.set_xlabel("Half-span position (m)"); ax.set_ylabel("Chord (m, LE at 0)")
     ax.set_xlim(-0.01, 0.41); ax.set_ylim(-0.21, 0.01); ax.grid(True, color=GRID, lw=0.6)
     ax.legend(frameon=False, fontsize=8, loc="lower right")
@@ -371,7 +410,7 @@ def write_outputs(ref: Refiner, out: Path, numerics, color):
         for i, st in enumerate(h + [h[-1]] * 6):
             fig, ax = plt.subplots(figsize=(7, 3))
             ax.plot(x0, y0, color="#c8c7c1", lw=1, ls="--")
-            xs, ys_ = outline_xy(chords_from_ctrl(st["ctrl"], numerics["stations"]), st["span"])
+            xs, ys_ = outline_xy(chords_from_ctrl(st["ctrl"], numerics["stations"], numerics.get("param")), st["span"])
             ax.fill(xs, ys_, color=color, alpha=0.25, lw=0); ax.plot(xs, ys_, color=color, lw=1.6)
             ax.set_aspect("equal"); ax.set_xlim(-0.01, 0.41); ax.set_ylim(-0.21, 0.01); ax.axis("off")
             ax.set_title(f"{label}  step {min(i, len(h) - 1)}/{len(h) - 1}: {st['thrust']:.2f} N @ {st['torque']:.2f} N·m, "
@@ -403,7 +442,7 @@ def animate_final(ref: Refiner, out: Path, numerics):
     import elastic_runner as R
     fin = ref.current
     template, settings = R.load_catalog_case(7657)
-    case = R.sections_case(template, settings, chords_from_ctrl(fin["ctrl"], numerics["stations"]), fin["span"], "refined")
+    case = R.sections_case(template, settings, chords_from_ctrl(fin["ctrl"], numerics["stations"], numerics.get("param")), fin["span"], "refined")
     case["frequency_hz"] = FREQ
     ov = {"dt_s": fin.get("dt") or 1.0 / (numerics["steps_per_cycle"] * FREQ), "cycles": numerics["cycles"],
           "span_panels": numerics["span_panels"], "chord_panels": numerics["chord_panels"]}
@@ -427,7 +466,7 @@ def summary(refs, out: Path, numerics):
         f, w = r.current, r.w
         rows.append(f"{r.model},{w['source']},{w['key']},{w['thrust']:.4f},{w['torque']:.4f},{f['thrust']:.4f},{f['torque']:.4f},"
                     f"{f['span'] * 1000:.0f},{f.get('tip_twist') or ''},{len(r.history) - 1},{r.note}")
-        xs, ys = outline_xy(chords_from_ctrl(f["ctrl"], numerics["stations"]), f["span"])
+        xs, ys = outline_xy(chords_from_ctrl(f["ctrl"], numerics["stations"], numerics.get("param")), f["span"])
         c = colors.get(r.model, "#2a78d6")
         ax.fill(xs, [v + y for v in ys], color=c, alpha=0.25, lw=0); ax.plot(xs, [v + y for v in ys], color=c, lw=1.6)
         ax.text(-0.02, y - 0.05, f"{MODELS[r.model][0]}\n{f['thrust']:.2f} N @ {f['torque']:.2f} N·m\n"
@@ -450,6 +489,7 @@ def main(argv=None):
     ap.add_argument("--models", default=",".join(MODELS))
     ap.add_argument("--numerics", default=None, help="JSON overriding mesh/time-step settings")
     ap.add_argument("--max-rounds", type=int, default=40)
+    ap.add_argument("--campaigns", default=None, help="comma list of campaign folders to take winners from (default: all)")
     ap.add_argument("--no-animations", action="store_true")
     ap.add_argument("--baseline", action="store_true",
                     help="only solve each coarse winner's exact outline on the fine mesh (like-for-like baseline)")
@@ -467,7 +507,8 @@ def main(argv=None):
         print(line, flush=True); log.write(line + "\n"); log.flush()
 
     models = [m for m in a.models.split(",") if m]
-    winners = pick_winners(models)
+    camps = [ROOT / "outputs" / "elastic" / "campaigns" / c for c in a.campaigns.split(",")] if a.campaigns else None
+    winners = pick_winners(models, camps)
     say(f"numerics {numerics}; workers {a.workers}")
     for m in models:
         w = winners.get(m)
@@ -495,14 +536,14 @@ def main(argv=None):
             cache[k] = rec
             with open(cache_path, "a") as f:
                 f.write(json.dumps(rec) + "\n")
-        return [dict(cache[t["key"]], tag=t["tag"], ctrl=t["ctrl"], span=t["span"]) for t in tasks]
+        return [dict(cache[t["key"]], tag=t["tag"], ctrl=t["ctrl"], span=cache[t["key"]].get("span") or t["span"]) for t in tasks]
 
     t0 = time.time()
     starts = [t for r in refs for t in r.start_tasks()]
     res = solve_all(starts)
     for r, rec in zip(refs, res):
         r.accept_start(rec)
-        say(f"{r.model} start (smooth fit, fine mesh): {rec['status']} {rec.get('thrust')} N @ {rec.get('torque')} N·m, "
+        say(f"{r.model} start ({'exact outline' if numerics.get('param') == 'exact' else 'smooth fit'}, fine mesh): {rec['status']} {rec.get('thrust')} N @ {rec.get('torque')} N·m, "
             f"half-span {rec['span'] * 1000:.0f} mm")
     while any(not r.done for r in refs):
         active = [r for r in refs if not r.done]
@@ -516,7 +557,7 @@ def main(argv=None):
             r.step(res[i:i + n]); i += n
             c = r.current
             say(f"  {r.model} round {r.rounds}: {c['thrust']:.3f} N @ {c['torque']:.3f} N·m, half-span {c['span'] * 1000:.0f} mm, "
-                f"step {STEPS[r.step_i] * 1000:g} mm{' DONE: ' + r.note if r.done else ''}")
+                f"step {r.steps[r.step_i] * 1000:g} mm{' DONE: ' + r.note if r.done else ''}")
         for r in refs:
             if score(r.current) is None:
                 continue
@@ -525,7 +566,7 @@ def main(argv=None):
     good = [r for r in refs if score(r.current) is not None]
     # Time-step check of every final design at twice the steps per cycle.
     fine_num = dict(numerics, steps_per_cycle=2 * numerics["steps_per_cycle"])
-    checks = solve_all([dict(r.task(r.current["ctrl"], r.current["span"], "dt/2 check"), numerics=fine_num,
+    checks = solve_all([dict(r.task(r.current["ctrl"], r.current["span"], "dt/2 check"), numerics=fine_num, fixed_span=True,
                              key=key_of(r.model, r.current["ctrl"], r.current["span"], fine_num)) for r in good])
     for r, rec in zip(good, checks):
         r.dt_check = rec

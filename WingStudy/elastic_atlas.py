@@ -36,7 +36,15 @@ STUDIES = [
      "about": "Searches + shape map for the bare carbon plate, five stiffness levels. 0.75, 1 and 1.25 Hz."},
     {"id": "sweep", "dir": "sweep", "label": "Geometric sweep", "short": "Sweep",
      "about": "2,048 scrambled-Sobol outlines at 1 Hz, continuous 280–400 mm half-span, solved for each model. No climbing."},
+    {"id": "spanfree", "dir": "spanfree", "label": "Span-free search", "short": "Span-free",
+     "about": "Pattern searches at 1 Hz where every candidate's half-span is rescaled until it uses exactly the 1 N·m budget "
+              "(continuous 280–400 mm). Starts: best campaign outlines, seed families and Sobol outlines. "
+              "Result: every start that fits the budget ends at 2.43–2.48 N with a 360–369 mm half-span and its outer "
+              "chords on the 10 mm floor (a root plate plus a thin strip). 32 of 87 starts were over budget even at 280 mm."},
 ]
+STUDIES = [st for st in STUDIES if (Path(__file__).resolve().parent.parent / "outputs" / "elastic" / "campaigns" / st["dir"]
+                                     / "campaign.sqlite").exists()
+           and st["id"] not in os.environ.get("ATLAS_SKIP_STUDIES", "").split(",")]
 CATALOG_STUDY = {"id": "catalog", "label": "Rigid catalog (before elasticity)", "short": "Rigid catalog",
                  "about": "Every successful rigid single-wing simulation from the earlier coordinate and λ studies (master "
                           "catalog), exact repeats merged. Root chord was free in some of these studies; conditions groups "
@@ -114,7 +122,10 @@ def _hq_design(study_dir, key):
     return f"design {key[:10]}", time.time() - t
 
 
-def _hq_refined(model_id):
+REFINE_SETS = [("refine", "campaign", ""), ("refine_sweep", "sweep", "_sweep")]   # folder, set id, media suffix
+
+
+def _hq_refined(model_id, folder="refine", suffix=""):
     import contextlib
     import io
     import elastic
@@ -122,10 +133,10 @@ def _hq_refined(model_id):
     import elastic_runner as R
     R.ANIMATION_OPTIONS.update(HQ_OPTIONS)
     t = time.time()
-    h = json.loads((ELASTIC / "refine" / model_id / "history.json").read_text())
+    h = json.loads((ELASTIC / folder / model_id / "history.json").read_text())
     num, fin = h["numerics"], h["history"][-1]
     template, settings = R.load_catalog_case(7657)
-    case = R.sections_case(template, settings, F.chords_from_ctrl(fin["ctrl"], num["stations"]), fin["span"], "refined")
+    case = R.sections_case(template, settings, F.chords_from_ctrl(fin["ctrl"], num["stations"], num.get("param")), fin["span"], "refined")
     case["frequency_hz"] = F.FREQ
     ov = {"dt_s": fin.get("dt") or 1.0 / (num["steps_per_cycle"] * F.FREQ), "cycles": num["cycles"],
           "span_panels": num["span_panels"], "chord_panels": num["chord_panels"]}
@@ -134,8 +145,8 @@ def _hq_refined(model_id):
         {"stiffness_model": "plate", "thickness_m": thick * 1e-3, "material": F.MATERIAL, "rod": rod or {},
          "added_mass_factor": fin.get("factor") or 0.5})
     with contextlib.redirect_stdout(io.StringIO()):
-        R.run(case, settings, cfg, ov, output_dir=HQ / "refined" / model_id)
-    return f"optimized {model_id}", time.time() - t
+        R.run(case, settings, cfg, ov, output_dir=HQ / "refined" / (model_id + suffix))
+    return f"optimized {model_id}{suffix}", time.time() - t
 
 
 def _hq_candidate(label, wing, cfg, level_dir):
@@ -163,7 +174,7 @@ def _hq_frames(job):
     """Frame count of a job's existing high-quality side view (0 if not rendered yet)."""
     from PIL import Image
     f, a = job
-    path = {"_hq_design": lambda: HQ / "designs" / a[1], "_hq_refined": lambda: HQ / "refined" / a[0],
+    path = {"_hq_design": lambda: HQ / "designs" / a[1], "_hq_refined": lambda: HQ / "refined" / (a[0] + (a[2] if len(a) > 2 else "")),
             "_hq_candidate": lambda: a[3], "_hq_catalog": lambda: HQ / "catalog" / a[1]}[f.__name__]() / "animation.webp"
     return Image.open(path).n_frames if path.exists() else 10 ** 6
 
@@ -176,8 +187,9 @@ def render_hq(workers: int):
     for w in category_winners():
         if w["key"] and w["key"] not in seen:
             seen.add(w["key"]); jobs.append((_hq_design, (w["dir"], w["key"])))
-    for d in sorted((ELASTIC / "refine").glob("*/history.json")):
-        jobs.append((_hq_refined, (d.parent.name,)))
+    for folder, _, suffix in REFINE_SETS:
+        for d in sorted((ELASTIC / folder).glob("*/history.json")):
+            jobs.append((_hq_refined, (d.parent.name, folder, suffix)))
     data = campaign_rows(); cat = catalog_rows(data)
     for w in catalog_winners(data, cat, OUT, []):
         if w["key"] not in seen:
@@ -432,32 +444,38 @@ def candidates(out: Path, jobs: list):
 
 
 def refined(out: Path, jobs: list):
-    ref = ELASTIC / "refine"
+    res = []
+    for folder, set_id, suffix in REFINE_SETS:
+        res += _refined_set(out, jobs, ELASTIC / folder, set_id, suffix)
+    return res
+
+
+def _refined_set(out: Path, jobs: list, ref: Path, set_id: str, suffix: str):
     if not (ref / "summary.csv").exists():
         return []
     res = []
     files = out / "files" / "optimized"; files.mkdir(parents=True, exist_ok=True)
     for r in csv.DictReader(open(ref / "summary.csv")):
-        m = r["model"]; d = ref / m
+        m = r["model"]; d = ref / m; mid = m + suffix
         hist = json.loads((d / "history.json").read_text())
         dtc = json.loads((d / "dt_check.json").read_text())
         outline = [[float(x["spanwise_mm"]), float(x["chord_mm"])] for x in csv.DictReader(open(d / "final_outline.csv"))]
         for ext in ("csv", "svg"):
-            shutil.copy2(d / f"final_outline.{ext}", files / f"{m}_outline.{ext}")
+            shutil.copy2(d / f"final_outline.{ext}", files / f"{mid}_outline.{ext}")
         resized_csv = None
         if (d / "baseline_at_budget.json").exists():
             bb = json.loads((d / "baseline_at_budget.json").read_text())
             act = [c for c in bb["chords"] if c > 0]
-            resized_csv = f"files/optimized/{m}_campaign_outline_resized.csv"
+            resized_csv = f"files/optimized/{mid}_campaign_outline_resized.csv"
             with open(out / resized_csv, "w") as fh:
                 fh.write("station,spanwise_mm,chord_mm\n")
                 for k, c in enumerate(act):
                     fh.write(f"{k},{bb['effective_span'] * 1000 * k / (len(act) - 1):.2f},{c * 1000:.2f}\n")
         if (d / "evolution.gif").exists():
-            jobs.append((str(d / "evolution.gif"), str(out / "media" / "refined" / m / "evolution.gif"), None))
+            jobs.append((str(d / "evolution.gif"), str(out / "media" / "refined" / mid / "evolution.gif"), None))
         h = hist["history"]
         res.append({
-            "model": m, "source": r["source"], "coarse_key": r["coarse_key"],
+            "model": m, "id": mid, "set": set_id, "source": r["source"], "coarse_key": r["coarse_key"],
             "coarse": {"thrust": float(r["coarse_thrust_N"]), "torque": float(r["coarse_torque_Nm"]),
                        "chords": [round(c * 1000, 1) for c in hist["winner"]["chords"]],
                        "half_span": round(hist["winner"]["half_span"] * 1000, 1)},
@@ -474,10 +492,10 @@ def refined(out: Path, jobs: list):
             "note": r["note"], "outline": outline, "numerics": hist["numerics"],
             "history": [{"round": x.get("round"), "tag": x.get("tag"), "thrust": x.get("thrust"), "torque": x.get("torque"),
                          "span": round((x.get("span") or 0) * 1000), "status": x.get("status")} for x in h],
-            "media": {**_media_jobs(HQ / "refined" / m if (HQ / "refined" / m / "animation.webp").exists() else d / "ptera",
-                                    f"refined/{m}", out / "media", jobs),
-                      **({"evolution": f"refined/{m}/evolution.gif"} if (d / "evolution.gif").exists() else {})},
-            "files": {"csv": f"files/optimized/{m}_outline.csv", "svg": f"files/optimized/{m}_outline.svg",
+            "media": {**_media_jobs(HQ / "refined" / mid if (HQ / "refined" / mid / "animation.webp").exists() else d / "ptera",
+                                    f"refined/{mid}", out / "media", jobs),
+                      **({"evolution": f"refined/{mid}/evolution.gif"} if (d / "evolution.gif").exists() else {})},
+            "files": {"csv": f"files/optimized/{mid}_outline.csv", "svg": f"files/optimized/{mid}_outline.svg",
                       **({"resized_csv": resized_csv} if resized_csv else {})},
         })
     return res

@@ -142,6 +142,13 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
     <div class="ctl"><span class="small muted" style="min-width:64px">Frequency</span><div class="chips" id="f-freq"></div></div>
     <div class="ctl"><span class="small muted" style="min-width:64px">Plate</span><div class="chips" id="f-model"></div></div>
     <div class="ctl"><span class="small muted" style="min-width:64px">Objective</span><div class="chips" id="f-obj"></div></div>
+    <div class="ctl"><span class="small muted" style="min-width:64px">Half-span</span>
+      <label>from <input type="number" id="sp-lo" step="5" style="width:76px"> mm</label>
+      <input type="range" id="sp-lo-r" step="1" style="width:150px" aria-label="Minimum half-span">
+      <input type="range" id="sp-hi-r" step="1" style="width:150px" aria-label="Maximum half-span">
+      <label>to <input type="number" id="sp-hi" step="5" style="width:76px"> mm</label>
+      <button class="iconbtn" id="sp-all" style="width:auto;padding:0 8px">All spans</button>
+      <span class="tiny muted">effective half-span: root to the last non-zero chord</span></div>
     <div class="ctl" id="cat-ctl" style="margin-bottom:0"><span class="small muted" style="min-width:64px">Rigid catalog</span>
       <label>Conditions <select id="cat-cohort"></select></label>
       <label>Study <select id="cat-study" style="max-width:340px"></select></label>
@@ -178,8 +185,8 @@ const MODEL=Object.fromEntries(D.models.map((m,i)=>[m.id,{...m,i}]));
 const STUDY=Object.fromEntries(D.studies.map((s,i)=>[s.id,{...s,i}]));
 // Fixed colour per entity (never by rank). Rod models take the first slots: they are the hardware.
 const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','t0.20':'--s5','t1.00':'--s7','rigid':'--neutral'};
-const STUDY_VAR=['--s1','--s2','--s3','--neutral'], FREQ_VAR=['--f1','--f2','--f3'];
-const modelColor=id=>css(MODEL_VAR[id]); const studyColor=i=>css(STUDY_VAR[i]); const freqColor=i=>css(FREQ_VAR[i]);
+const STUDY_VAR_ID={rod:'--s1',weekend:'--s2',sweep:'--s3',spanfree:'--s7',catalog:'--neutral'}, FREQ_VAR=['--f1','--f2','--f3'];
+const modelColor=id=>css(MODEL_VAR[id]); const studyColor=i=>css(STUDY_VAR_ID[D.studies[i].id]||'--s5'); const freqColor=i=>css(FREQ_VAR[i]);
 const STATUS=D.statuses, GOOD=new Set(['verified','ok']);
 const statusPill=s=>`<span class="pill ${GOOD.has(s)?'good':s==='uncertain'?'warn':'bad'}">${s==='ok'?'settled (rigid)':s}</span>`;
 
@@ -283,7 +290,8 @@ const legend=items=>`<div class="legend">${items.map(([c,l])=>`<span><span class
    Overview
    ====================================================================================== */
 function renderOverview(){
-  const R=Object.fromEntries(D.refined.map(r=>[r.model,r]));
+  const R=Object.fromEntries(D.refined.filter(r=>(r.set||'campaign')==='campaign').map(r=>[r.model,r]));
+  const RS=Object.fromEntries(D.refined.filter(r=>r.set==='sweep').map(r=>[r.model,r]));
   const W=(st,f,m)=>D.winners.find(w=>w.study===st&&w.freq===f&&w.model===m);
   const counts=D.studies.map((s,i)=>C.s.filter(x=>x===i).length);
   const best125=W('rod',1.25,'t0.50r');
@@ -291,6 +299,7 @@ function renderOverview(){
   let h=`<h2>Carbon-fibre flapping wings in water: what the elastic studies found</h2>
   <p class="lede">One wing of the swimming robot, simulated with Ptera's unsteady vortex-lattice method plus a stabilized plate-torsion model. Every result is per wing, at 0.5 m/s forward speed and a 30° stroke, under a peak root torque budget of ${LIM} N·m. The root chord is always exactly 200 mm and the leading edge is straight and perpendicular to the flow.</p>
   <div class="tiles">
+   ${RS['t0.50r']?tile('Optimized from sweep winner · 0.5 mm + rod · 1 Hz',fmt(RS['t0.50r'].final.thrust)+' N',`at ${fmt(RS['t0.50r'].final.torque)} N·m · ${Math.round(RS['t0.50r'].final.half_span)} mm · fine mesh; outer chords at the 10 mm floor`):''}
    ${(()=>{const r=R['t0.50r'];if(!r)return '';const b=r.baseline_at_budget;return b&&b.thrust>r.final.thrust?tile('Best for the hardware · 0.5 mm + rod · 1 Hz',fmt(b.thrust)+' N',`at ${fmt(b.torque)} N·m · ${Math.round(b.span)} mm half-span · campaign outline, fine mesh`):tile('Best for the hardware · 0.5 mm + rod · 1 Hz',fmt(r.final.thrust)+' N',`at ${fmt(r.final.torque)} N·m · ${Math.round(r.final.half_span)} mm · fine mesh, optimized`)})()}
    ${(()=>{const r=R.rigid;if(!r)return '';const b=r.baseline_at_budget,u=b&&b.thrust>r.final.thrust;return tile('Rigid wing · 1 Hz',fmt(u?b.thrust:r.final.thrust)+' N',`at ${fmt(u?b.torque:r.final.torque)} N·m · fine mesh · ${u?'campaign outline, resized':'optimized'}`)})()}
    ${best125?tile('0.5 mm + rod · 1.25 Hz',fmt(best125.thrust)+' N',`at ${fmt(best125.torque)} N·m · campaign mesh · +13% over 1 Hz`):''}
@@ -310,7 +319,7 @@ function renderOverview(){
   <div class="card"><h3>The studies</h3><table><tr><th>Study</th><th>What it is</th><th class="n">Designs</th></tr>
    ${D.studies.map((s,i)=>`<tr><td><span class="sw" style="background:${studyColor(i)}"></span><b>${s.label}</b></td><td class="small">${s.about}</td><td class="n">${counts[i].toLocaleString()}</td></tr>`).join('')}
    <tr><td><b>Manufactured candidates</b></td><td class="small">Top #7657, Middle #3894 and Rectangle #7835 at five sheet stiffnesses, 1 Hz (no rod).</td><td class="n">15</td></tr>
-   <tr><td><b>Optimized shapes</b></td><td class="small">Best 1 Hz design per model, refit as a smooth curve and refined on a 3× finer mesh.</td><td class="n">${D.refined.length}</td></tr></table></div>
+   <tr><td><b>Optimized shapes</b></td><td class="small">1 Hz shapes refined on a 3× finer mesh: from the geometry-sweep winner (budget-matched) and from each model's campaign winner.</td><td class="n">${D.refined.length}</td></tr></table></div>
   </div>
   <div class="grid2">
   <div class="card"><h3>How to read the numbers</h3>
@@ -336,6 +345,8 @@ function renderOverview(){
    ====================================================================================== */
 const M={x:'torque',y:'thrust',color:'study',objs:new Set([1,2,4,8,32,64,128,256]),onlyLim:false,source:'all',quality:'good',catCohort:-1,catStudy:-1,catRoot:false,
   studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([1]),models:new Set(D.models.map((_,i)=>i)),view:null,sel:null};
+const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
+M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];
 const WIN_ROWS=new Map(); D.winners.forEach(w=>{if(w.row!=null)WIN_ROWS.set(w.row,w)});
 let VIS=[], SX=null, SY=null, HOVER=null;
 const cv=$('#map'), ctx=cv.getContext('2d');
@@ -349,6 +360,13 @@ function initMapControls(){
   $('#source').onchange=e=>{M.source=e.target.value;M.view=null;drawMap()};
   $('#quality').onchange=e=>{M.quality=e.target.value;M.view=null;drawMap()};
   $('#csv').onclick=downloadCSV;
+  const spSync=()=>{$('#sp-lo').value=M.spLo;$('#sp-hi').value=M.spHi;$('#sp-lo-r').value=M.spLo;$('#sp-hi-r').value=M.spHi};
+  for(const id of ['sp-lo','sp-hi','sp-lo-r','sp-hi-r']){const el=$('#'+id);el.min=SPAN_LIM[0];el.max=SPAN_LIM[1];
+    el.oninput=()=>{let v=+el.value;if(!isFinite(v))return;v=Math.max(SPAN_LIM[0],Math.min(SPAN_LIM[1],v));
+      if(id.startsWith('sp-lo')){M.spLo=Math.min(v,M.spHi)}else{M.spHi=Math.max(v,M.spLo)}
+      spSync();M.view=null;drawMap()}}
+  $('#sp-all').onclick=()=>{M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];spSync();M.view=null;drawMap()};
+  spSync();
   if(CAT){
     $('#cat-cohort').innerHTML='<option value="-1">all groups</option>'+CAT.cohorts.map((g,k)=>`<option value="${k}">${g.count.toLocaleString()} runs · dt ${g.dt} s · ${g.panels} panels · ${g.waveform} stroke</option>`).join('');
     $('#cat-study').innerHTML='<option value="-1">all studies</option>'+CAT.studies.map((s,k)=>`<option value="${k}">${esc(s.name)}</option>`).join('');
@@ -381,6 +399,7 @@ function filtered(){
     if(!(C.obj[i]&objMask))continue;
     if(isCat(i)){const r=i-CAT0;if(M.catCohort>=0&&CAT.cohort[r]!==M.catCohort)continue;if(M.catStudy>=0&&CAT.study[r]!==M.catStudy)continue;if(M.catRoot&&!(Math.abs(ROOT[i]-200)<0.5))continue}
     if(M.onlyLim&&C.Q[i]>LIM)continue;
+    if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
     const x=gx(i),y=gy(i); if(x==null||y==null||!isFinite(x)||!isFinite(y))continue;
     out.push(i);
   }
@@ -637,45 +656,52 @@ function renderEffect(){
    Optimized shapes
    ====================================================================================== */
 function renderOpt(){
-  const R=D.refined;
-  if(!R.length){$('#t-opt').innerHTML='<p>No refinement results in this snapshot.</p>';return}
+  if(!D.refined.length){$('#t-opt').innerHTML='<p>No refinement results in this snapshot.</p>';return}
+  const SW=D.refined.filter(r=>r.set==='sweep'),CA=D.refined.filter(r=>(r.set||'campaign')==='campaign');
+  let hh=`<h2>Optimized shapes (1 Hz, fine mesh)</h2><p class="lede">All optimizations are at the 1 Hz target frequency, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns) with the ${LIM} N·m budget applied on that mesh. Two searches were run: the newer one starts from the geometry-sweep winner and compares every candidate at exactly the budget; the earlier one starts from each model's overall campaign winner.</p>`;
+  if(SW.length)hh+=optSet(SW,'sweep');
+  if(CA.length)hh+=optSet(CA,'campaign');
+  $('#t-opt').innerHTML=hh;
+}
+function optSet(R,set){
+  const SWP=set==='sweep',pre='opt_'+set+'_';
   // overlay of all outlines
   const w=640,h=250,pad=10,s=Math.min((w-2*pad)/420,(h-2*pad-14)/210);
   let ov='';for(const r of R){const c=modelColor(r.model),P=[...r.outline.map(p=>[pad+s*p[0],pad]),...r.outline.slice().reverse().map(p=>[pad+s*p[0],pad+s*p[1]])];
     ov+=`<polygon points="${P.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${c}" fill-opacity=".08" stroke="${c}" stroke-width="2" data-tip="${esc(`<b>${MODEL[r.model].label}</b>: ${fmt(r.final.thrust,2)} N at ${fmt(r.final.torque,2)} N·m, ${Math.round(r.final.half_span)} mm`)}"/>`}
   [0,100,200,300,400].forEach(t=>ov+=`<text x="${pad+s*t}" y="${h-2}" text-anchor="${t?'middle':'start'}">${t}${t===400?' mm':''}</text>`);
-  let hh=`<h2>Optimized shapes (1 Hz, fine mesh)</h2><p class="lede">All optimizations are at the 1 Hz target frequency. The best 1 Hz design of each model was refit as a smooth trailing edge: a monotone curve through the fixed 200 mm root chord and six control chords, sampled at 25 stations. A pattern search then moved each control chord and the half-span by ±10 mm, then ±5 mm, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns), with the ${LIM} N·m budget applied on the fine mesh. The final design was re-solved at half its time step.</p>
+  let hh=(SWP?`<h2 style="margin-top:18px">From the geometry-sweep winner: budget-matched search</h2><p class="lede">Starts from the exact outline of the geometry-sweep 1 Hz winner (straight segments through its stations, no smoothing): 200, 66, 57, 28, 12, 11, 10 mm. Each of the six outboard chords moved ±10, then ±5, then ±2 mm, and <b>every candidate had its half-span rescaled until peak torque sat at the ${LIM} N·m budget</b>, so each step compares shapes at equal torque. The final design was re-solved at half its time step.</p>
+   <div class="card" style="border-left:3px solid var(--warn,#e08a00)"><h3>Read before building</h3><p class="small" style="max-width:900px;margin:0">The search ran into the 10 mm minimum chord. Every outboard chord ended at 10–12 mm: a 200 mm root that tapers within about 60 mm into a strip roughly 10 mm wide, out to about 369 mm half-span. Taken at face value, the model says to trade wing area for span. Most of the gain came in the first five rounds, from thinning the mid-span: about 2.38 N at 349 mm, with chords 66, 18, 18, 12, 11, 10 mm. Later rounds added only about 0.04 N more. A 10 mm strip is only twice the width of the 5 mm tube. The thin-plate model doesn't capture the tube's round cross-section, and at about 1.2 m/s tip speed in water such narrow chords are in a range (Re ≈ 10⁴) where viscous losses that this method leaves out start to matter. <b>Treat the final strip outline as a trend, and the round-5 shape as the more realistic build candidate.</b> The progress charts below show every round, including round 5.</p></div>`:`<h2 style="margin-top:18px">From each model's campaign winner: smooth-curve search</h2><p class="lede">The best 1 Hz design of each model was refit as a smooth trailing edge: a monotone curve through the fixed 200 mm root chord and six control chords, sampled at 25 stations. A pattern search then moved each control chord and the half-span by ±10 mm, then ±5 mm, on the fine mesh. Candidates had to stay within the budget as solved, without span rescaling. The final design was re-solved at half its time step.</p>`)+`
    <div class="card"><h3>All optimized outlines, to scale</h3>${legend(R.map(r=>[modelColor(r.model),MODEL[r.model].label]))}<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;max-width:${w}px">${ov}</svg><p class="small muted">Leading edge along the top, straight and perpendicular to the flow; root at the left. The trailing edge carries all of the taper.</p></div>
    <div class="card"><h3>Did the optimization help? Same fine mesh, same 1 N·m budget</h3>
-   <p class="small muted" style="max-width:900px">The fair baseline is the campaign winner's own outline solved on the same fine mesh and time step, with its span stretched or shrunk until it also uses exactly the 1 N·m budget. Only then does a difference reflect shape rather than mesh or size.</p>
-   <table><tr><th>Model</th><th>Started from</th><th class="n">Coarse winner<br><span class="tiny">campaign mesh</span></th><th class="n">Same outline<br><span class="tiny">fine mesh</span></th><th class="n">Same outline, resized<br><span class="tiny">fine mesh, at budget</span></th><th class="n">Optimized curve<br><span class="tiny">fine mesh</span></th><th class="n">Change vs resized</th><th class="n">At dt/2</th><th class="n">Tip twist</th><th>Outline</th></tr>
-   ${R.map(r=>{const b=r.baseline_at_budget,f=r.baseline_fine,d=b?100*(r.final.thrust-b.thrust)/b.thrust:null;return `<tr><td><span class="sw" style="background:${modelColor(r.model)}"></span>${MODEL[r.model].label}</td><td class="small">${STUDY[r.source]?.label||r.source}</td><td class="n">${fmt(r.coarse.thrust)} N / ${fmt(r.coarse.torque)}</td><td class="n">${f?`${fmt(f.thrust)} N / ${fmt(f.torque)}`:'–'}</td><td class="n">${b?`<b>${fmt(b.thrust)} N</b> / ${fmt(b.torque)} · ${Math.round(b.span)} mm`:'–'}</td><td class="n"><b>${fmt(r.final.thrust)} N</b> / ${fmt(r.final.torque)} · ${Math.round(r.final.half_span)} mm</td><td class="n"><b>${d==null?'–':(d>0?'+':'')+fmt(d,1)+'%'}</b></td><td class="n">${fmt(r.dt.thrust)} N / ${fmt(r.dt.torque)}</td><td class="n">${r.final.twist==null?'–':'±'+fmt(r.final.twist,0)+'°'}</td><td class="small">optimized: <a href="${r.files.csv}" download>CSV</a> · <a href="${r.files.svg}" download>SVG</a>${r.files.resized_csv?`<br>resized campaign: <a href="${r.files.resized_csv}" download>CSV</a>`:''}</td></tr>`}).join('')}</table>
-   <p class="small" style="max-width:900px;margin-top:10px"><b>Reading this honestly:</b> for the rigid and rod models the optimized curve is 1–2% <i>worse</i> than simply resizing the campaign winner. The six-point smooth curve cannot reproduce the winner's sharp drop just outboard of the root, and the ±5 mm search stalled near its smooth starting point. For those models the best shape to build is the campaign outline, resized to the budget. For the bare 0.5 mm plate the optimized curve is about 10% better, because that winner was over budget on the fine mesh and had to be reshaped, not just shrunk.</p>
+   <p class="small muted" style="max-width:900px">${SWP?'The sweep winner was also chosen on the rigid campaign mesh, so all three models start from the same outline. ':''}The fair baseline is the campaign winner's own outline solved on the same fine mesh and time step, with its span stretched or shrunk until it also uses exactly the 1 N·m budget. Only then does a difference reflect shape rather than mesh or size.</p>
+   <table><tr><th>Model</th><th>Started from</th><th class="n">Coarse winner<br><span class="tiny">campaign mesh</span></th><th class="n">Same outline<br><span class="tiny">fine mesh</span></th><th class="n">Same outline, resized<br><span class="tiny">fine mesh, at budget</span></th><th class="n">${SWP?'Optimized outline':'Optimized curve'}<br><span class="tiny">fine mesh</span></th><th class="n">Change vs resized</th><th class="n">At dt/2</th><th class="n">Tip twist</th><th>Outline</th></tr>
+   ${R.map(r=>{const b=r.baseline_at_budget,f=r.baseline_fine,d=b?100*(r.final.thrust-b.thrust)/b.thrust:null;return `<tr><td><span class="sw" style="background:${modelColor(r.model)}"></span>${MODEL[r.model].label}</td><td class="small">${STUDY[r.source]?.label||r.source}</td><td class="n">${fmt(r.coarse.thrust)} N / ${fmt(r.coarse.torque)}</td><td class="n">${f?`${fmt(f.thrust)} N / ${fmt(f.torque)}`:'–'}</td><td class="n">${b?`<b>${fmt(b.thrust)} N</b> / ${fmt(b.torque)} · ${Math.round(b.span)} mm`:'–'}</td><td class="n"><b>${fmt(r.final.thrust)} N</b> / ${fmt(r.final.torque)} · ${Math.round(r.final.half_span)} mm</td><td class="n"><b>${d==null?'–':(d>0?'+':'')+fmt(d,1)+'%'}</b></td><td class="n">${fmt(r.dt.thrust)} N / ${fmt(r.dt.torque)}</td><td class="n">${r.final.twist==null?'–':'±'+fmt(r.final.twist,0)+'°'}</td><td class="small">optimized: <a href="${r.files.csv}" download>CSV</a> · <a href="${r.files.svg}" download>SVG</a>${r.files.resized_csv?`<br>resized ${SWP?'sweep':'campaign'}: <a href="${r.files.resized_csv}" download>CSV</a>`:''}</td></tr>`}).join('')}</table>
+   ${SWP?`<p class="small" style="max-width:900px;margin-top:10px">Unlike the earlier search below, this one beats the resized outline for all three models: about 2.42 N against 2.27–2.29 N, roughly +6%. It also beats the best campaign outline resized to the budget (2.34 N with 0.5 mm + tube). The tube models end about 0.006 N above rigid, so at this shape stiffness hardly matters. The first search at fixed span stalled at 2.25 N: it spent the spare torque on tip chord and could not reach longer spans.</p>`:`<p class="small" style="max-width:900px;margin-top:10px"><b>Reading this honestly:</b> for the rigid and rod models the optimized curve is 1–2% <i>worse</i> than simply resizing the campaign winner. The six-point smooth curve cannot reproduce the winner's sharp drop just outboard of the root, and the ±5 mm search stalled near its smooth starting point. For those models the best shape to build is the campaign outline, resized to the budget. For the bare 0.5 mm plate the optimized curve is about 10% better, because that winner was over budget on the fine mesh and had to be reshaped, not just shrunk.</p>`}
    <p class="tiny muted">Thrust (N) / peak root torque (N·m) per wing at 1 Hz. Fine mesh: 24 × 6 panels, 50 steps per cycle.</p></div>
    <div class="grid2">`;
-  for(const r of R){const c=modelColor(r.model);const id='opt_'+r.model;
+  for(const r of R){const c=modelColor(r.model);
     const info=`<div class="kv"><div>Thrust</div><div><b>${fmt(r.final.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(r.final.torque,3)} N·m</b></div><div>Tip twist</div><div>${r.final.twist==null?'–':'±'+fmt(r.final.twist,1)+'°'}</div><div>Half-span</div><div>${Math.round(r.final.half_span)} mm</div><div>Mesh</div><div>${r.numerics.span_panels} × ${r.numerics.chord_panels} panels, ${r.numerics.steps_per_cycle} steps per cycle</div></div>`;
     const hist=r.history.filter(x=>x.thrust!=null), over=x=>x.torque>LIM+1e-9;
-    const tipOf=x=>`<b>${x.tag==='start'?'Start: campaign winner as a smooth curve':(x.tag||'round '+x.round)}</b><br>${fmt(x.thrust,3)} N at ${fmt(x.torque,3)} N·m, ${x.span} mm${over(x)?'<br>over the torque budget':''}`;
-    const cats=hist.map((x,k)=>k===0?'start':String(k));
+    const tipOf=x=>`<b>${x.tag==='start'?(SWP?'Start: exact sweep outline, resized to the budget':'Start: campaign winner as a smooth curve'):(x.tag||'round '+x.round)}</b><br>${fmt(x.thrust,3)} N at ${fmt(x.torque,3)} N·m, ${x.span} mm${over(x)?'<br>over the torque budget':''}`;
+    const cats=hist.map((x,k)=>k===0?'start':(hist.length>12&&k%2?'':String(k)));
     const tS=[{name:'Thrust',color:c,points:hist.map((x,k)=>({x:k,y:x.thrust,hollow:over(x),tip:tipOf(x)}))}];
     const qS=[{name:'Torque',color:c,points:hist.map((x,k)=>({x:k,y:x.torque,hollow:over(x),tip:tipOf(x)}))}];
     const src=STUDY[r.source]?.label||r.source, srcRow=(()=>{for(let k=0;k<CAT0;k++)if(C.k[k]===r.coarse_key&&D.studies[C.s[k]].id===r.source)return k;return -1})();
     const nOver=hist.filter(over).length;
-    hh+=`<div class="card"><h3><span class="sw" style="background:${c}"></span>${MODEL[r.model].label} · 1 Hz</h3>
+    hh+=`<div class="card"><h3><span class="sw" style="background:${c}"></span>${MODEL[r.model].label} · 1 Hz${SWP?' · from sweep winner':''}</h3>
      <p class="small" style="margin:0 0 8px">Started from the <b>1 Hz winner of the ${esc(src)}</b>: ${fmt(r.coarse.thrust)} N at ${fmt(r.coarse.torque)} N·m on the campaign mesh${srcRow>=0?` <button class="playbtn" onclick="showOnMap(${srcRow})">◎ on map</button>`:''}.
-      Redrawn as a smooth curve on the fine mesh it gives <b>${fmt(r.start.thrust)} N at ${fmt(r.start.torque)} N·m</b>${r.start.torque>LIM?' — <b>over the budget</b>, so the first rounds trade thrust for torque until it fits':''}.
-      Finished at <b>${fmt(r.final.thrust)} N at ${fmt(r.final.torque)} N·m</b>${r.baseline_at_budget?`; the campaign outline simply resized to the budget gives ${fmt(r.baseline_at_budget.thrust)} N (${(r.final.thrust>=r.baseline_at_budget.thrust?'+':'')+fmt(100*(r.final.thrust-r.baseline_at_budget.thrust)/r.baseline_at_budget.thrust,1)}%)`:''}.</p>
+      ${SWP?'Its exact outline on the fine mesh, resized to the budget, gives':'Redrawn as a smooth curve on the fine mesh it gives'} <b>${fmt(r.start.thrust)} N at ${fmt(r.start.torque)} N·m</b>${r.start.torque>LIM?' — <b>over the budget</b>, so the first rounds trade thrust for torque until it fits':''}.
+      Finished at <b>${fmt(r.final.thrust)} N at ${fmt(r.final.torque)} N·m</b>${r.baseline_at_budget?`; the ${SWP?'sweep':'campaign'} outline simply resized to the budget gives ${fmt(r.baseline_at_budget.thrust)} N (${(r.final.thrust>=r.baseline_at_budget.thrust?'+':'')+fmt(100*(r.final.thrust-r.baseline_at_budget.thrust)/r.baseline_at_budget.thrust,1)}%)`:''}.</p>
      ${outlineSVG(r.outline,{w:440,h:150,color:c,labels:true})}
-     <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start"><div>${posterButton(r.media,MODEL[r.model].label+' · optimized · 1 Hz',info)}</div>
+     <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start"><div>${posterButton(r.media,MODEL[r.model].label+' · optimized'+(SWP?' from sweep winner':'')+' · 1 Hz',info)}</div>
      <div>${r.media.evolution?`<img src="${MU(r.media.evolution)}" style="width:100%;border-radius:8px;background:#fff" alt="Outline at each round" loading="lazy"><div class="tiny muted">Outline at each optimization round</div>`:''}</div></div>
      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div>${lineChart({series:tS,cats,xlabel:'Round',ylabel:'Thrust (N)',w:300,h:190,ymin:Math.min(...hist.map(x=>x.thrust))*0.97})}</div>
       <div>${lineChart({series:qS,cats,xlabel:'Round',ylabel:'Peak torque (N·m)',w:300,h:190,ymin:Math.min(...hist.map(x=>x.torque),LIM)*0.97,ymax:Math.max(...hist.map(x=>x.torque),LIM)*1.02,hline:LIM})}</div></div>
-     <p class="tiny muted" style="margin-top:2px">Each round keeps the best move found. ${nOver?`Hollow points are over the ${LIM} N·m budget (dashed line); while over budget the search lowers torque first, which costs thrust.`:`Every round stayed within the ${LIM} N·m budget (dashed line).`}</p>
-     <p class="small muted">${r.note}. Downloads: <a href="${r.files.csv}" download>outline CSV</a> (chord at 25 stations) · <a href="${r.files.svg}" download>outline SVG</a> (to scale).</p></div>`}
-  hh+='</div>';
-  $('#t-opt').innerHTML=hh;
+     <p class="tiny muted" style="margin-top:2px">Each round keeps the best move found.${SWP?' Every point is at the budget: the span grows as the outline slims.':''} ${nOver?`Hollow points are over the ${LIM} N·m budget (dashed line); while over budget the search lowers torque first, which costs thrust.`:`Every round stayed within the ${LIM} N·m budget (dashed line).`}</p>
+     <p class="small muted">${r.note}. Downloads: <a href="${r.files.csv}" download>outline CSV</a> (chord at ${r.outline.length} stations) · <a href="${r.files.svg}" download>outline SVG</a> (to scale).</p></div>`}
+  return hh+'</div>';
 }
 
 /* ======================================================================================
