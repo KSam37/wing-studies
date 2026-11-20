@@ -89,6 +89,30 @@ select{font:inherit;font-size:13px;background:var(--surface);color:var(--text);b
 .plotbox{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px}
 canvas#map{display:block;width:100%;height:560px;cursor:crosshair;touch-action:none;border-radius:8px}
 @media (max-width:640px){canvas#map{height:420px}}
+.ftoggle{display:none}
+/* Phones and narrow tablets: one compact header row plus a scrolling tab strip; filters
+   collapse behind a button so the plot comes first; wide tables scroll sideways. */
+@media (max-width:760px){
+  .bar{gap:6px 10px;padding:8px 12px}
+  .bar h1{flex:1}
+  nav{order:3;flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px;padding:0 12px 2px}
+  nav::-webkit-scrollbar{display:none}
+  nav button{white-space:nowrap;flex:none;padding:6px 10px}
+  main{padding-left:12px;padding-right:12px}
+  .card{padding:12px}
+  .ftoggle{display:inline-flex}
+  .filters:not(.open) .fgrid{display:none}
+  .filters:not(.open) .viewbar{border-bottom:0;padding-bottom:0;margin-bottom:0}
+  .frow{grid-template-columns:92px 1fr}
+  section.tab table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  section.tab table th,section.tab table td{white-space:nowrap}
+  .wgrid{grid-template-columns:repeat(var(--nf,3),minmax(0,1fr))!important;gap:8px}
+  .wgrid>.wcorner{display:none}
+  .wgrid>.rowlab{grid-column:1/-1;margin-top:6px}
+  .wcell{padding:6px 7px}
+  dialog{max-width:100vw;max-height:100dvh;border-radius:0;margin:0 auto;height:100dvh}
+  .dlg-b{padding:10px 12px}
+}
 .zoom{position:absolute;right:14px;top:14px;display:flex;gap:4px}
 .zoom button{width:30px;height:30px;padding:0}
 .tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12.5px;overflow-wrap:anywhere;max-width:min(380px,calc(100vw - 16px));display:none}
@@ -152,6 +176,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
       <label>Y <select id="ax-y"></select></label>
       <label>Colour by <select id="colorby"><option value="study">study</option><option value="struct">analysis type</option><option value="constr">construction</option><option value="thk">sheet thickness</option><option value="model">material (thickness + rod)</option><option value="freq">frequency</option></select></label>
       <span style="flex:1"></span>
+      <button class="iconbtn ftoggle" id="f-toggle" style="width:auto;padding:0 10px" aria-expanded="false">Filters</button>
       <button class="iconbtn" id="f-reset" style="width:auto;padding:0 10px">Reset filters</button>
       <button class="iconbtn" id="csv" style="width:auto;padding:0 10px">Download visible as CSV</button>
     </div>
@@ -637,7 +662,7 @@ function renderWinners(){
     const ws=D.winners.filter(w=>w.study===st.id), fs=[...new Set(ws.map(w=>w.freq))].sort((a,b)=>a-b), ms=[...new Set(ws.map(w=>w.model))];
     ms.sort((a,b)=>MODEL[a].i-MODEL[b].i);
     const top=ws.filter(w=>w.key).reduce((a,b)=>!a||b.thrust>a.thrust?b:a,null);
-    h+=`<div class="card"><h3>${st.label}</h3><p class="small muted">${st.about}</p><div class="wgrid" style="grid-template-columns:136px repeat(${fs.length},minmax(0,1fr))"><div></div>${fs.map(f=>`<div class="colhead">${f} Hz</div>`).join('')}`;
+    h+=`<div class="card"><h3>${st.label}</h3><p class="small muted">${st.about}</p><div class="wgrid" style="--nf:${fs.length};grid-template-columns:136px repeat(${fs.length},minmax(0,1fr))"><div class="wcorner"></div>${fs.map(f=>`<div class="colhead">${f} Hz</div>`).join('')}`;
     for(const m of ms){h+=`<div class="rowlab"><span class="sw" style="background:${modelColor(m)}"></span>${MODEL[m].label}</div>`;
       for(const f of fs){const w=ws.find(x=>x.model===m&&x.freq===f);
         if(!w||!w.key){h+=`<div class="wcell" style="cursor:default"><div class="t">No verified design ≤ ${LIM} N·m</div></div>`;continue}
@@ -810,11 +835,12 @@ function renderSpan(){
 }
 
 const RENDERED={};
-function go(t){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
+function go(t){$$('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t===t);if(b.dataset.t===t&&b.scrollIntoView&&matchMedia('(max-width:760px)').matches)b.scrollIntoView({block:'nearest',inline:'nearest'})});$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   try{history.replaceState(null,'','#'+t)}catch(e){}
   if(!RENDERED[t]){RENDERED[t]=1;({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
   else if(t==='map')requestDraw()}
 $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+{const ft=$('#f-toggle');if(ft)ft.onclick=()=>{const c=ft.closest('.filters'),o=c.classList.toggle('open');ft.setAttribute('aria-expanded',o);ft.textContent=o?'Hide filters':'Filters'}}
 function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt})[t]()}}
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
   document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
