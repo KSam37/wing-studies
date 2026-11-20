@@ -1,0 +1,20 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-19-numerics-hardware-winner",
+ "title": "Mesh and time-step sensitivity of the hardware winner",
+ "author": "KSam37",
+ "question": "Does the rod-campaign 1 Hz winner (0.5 mm sheet + 5/3 mm rod, 2.33 N at 0.98 N·m on 8 × 4 panels and 50 steps per cycle) keep its thrust and stay within the 1 N·m budget when the spanwise mesh and the time step are both refined?",
+ "kind": "design-set",
+ "structure": "chordwise",
+ "models": ["t0.50r"],
+ "frequencies_hz": [1.0],
+ "numerics": [
+  {"span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4},
+  {"span_panels": 8, "chord_panels": 4, "steps_per_cycle": 100, "cycles": 4},
+  {"span_panels": 16, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4},
+  {"span_panels": 16, "chord_panels": 4, "steps_per_cycle": 100, "cycles": 4}
+ ],
+ "wings": {"from_atlas": ["41b86f0c5546d36090730546"]},
+ "budget": {"max_cases": 8},
+ "notes": "The first case repeats the campaign's own numerics, so it should reproduce the atlas value; the other three show how far the result moves under refinement."
+}
