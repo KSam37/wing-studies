@@ -59,7 +59,12 @@ TORQUE_TARGET = 1.0
 ROD_5x3 = {"diameter_m": 5e-3, "hollow_inner_diameter_m": 3e-3, "shear_modulus_pa": 4.5e9, "density_kg_m3": 1550.0}
 
 
-def default_plan(smoke=False, variant="plate") -> dict:
+def structural_fingerprint():
+    names = ('elastic.py', 'spanwise_elastic.py', 'finite_span.py', 'elastic_runner.py')
+    return hashlib.sha256(b''.join((HERE/name).read_bytes() for name in names)).hexdigest()
+
+
+def default_plan(smoke=False, variant="plate", spanwise_bending=False, large_deflection=False) -> dict:
     levels = [
         {"id": "rigid", "label": "Rigid", "thickness_mm": None, "tier": "context"},
         {"id": "t1.00", "label": "1.0 mm", "thickness_mm": 1.0, "tier": "context"},
@@ -121,6 +126,19 @@ def default_plan(smoke=False, variant="plate") -> dict:
                     seed_half_spans_m={"focus": [0.22], "context": [0.22]},
                     families=["triangle", "convex"], lineage_budget=6,
                     map={"focus_shapes": 8, "context_shapes": 4, "half_spans_m": [0.22, 0.28], "seed": 7})
+    if spanwise_bending:
+        from spanwise_elastic import MODEL_VERSION
+        plan["elastic_options"] = {"spanwise_bending": True}
+        plan["structural_model"] = MODEL_VERSION
+        plan["structural_code_sha256"] = structural_fingerprint()
+        plan["name"] += " — span bending + sheet flex"
+        if large_deflection:
+            from spanwise_elastic import FINITE_MODEL_VERSION
+            plan["structural_model"] = FINITE_MODEL_VERSION
+            plan["elastic_options"].update(large_deflection=True,max_bend_deg=75.,max_tip_deflection_fraction=.95)
+            # Current experimental focus: 0.5 mm sheet and its rigid reference.
+            plan["levels"] = [lv for lv in plan["levels"] if lv["thickness_mm"] in (None,0.5)]
+            plan["estimates_s_per_design"]["elastic"] = 30.0
     plan["chunks"], plan["phases"] = build_phases(plan)
     return plan
 
@@ -239,8 +257,10 @@ def sobol_shapes(plan, count):
     return out
 
 
-def design_key(level, freq, chords, half_span, numerics="base") -> str:
+def design_key(level, freq, chords, half_span, numerics="base", context=None) -> str:
     blob = json.dumps([level, round(freq, 6), [round(c, 6) for c in chords], round(half_span, 6), numerics])
+    if context is not None:
+        blob += json.dumps(context, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode()).hexdigest()[:24]
 
 
@@ -276,7 +296,8 @@ def _evaluate(task: dict) -> dict:
     cfg = None
     if task["thickness_mm"] is not None:
         cfg = elastic.ElasticConfig.from_dict({"stiffness_model": "plate", "thickness_m": task["thickness_mm"] * 1e-3,
-                                               "material": task["material"], "rod": task.get("rod") or {}})
+                                               "material": task["material"], "rod": task.get("rod") or {},
+                                               **task.get("elastic_options", {})})
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         if cfg is None:
             r = R.run(case, settings, None, ov)
@@ -371,15 +392,21 @@ def parent_row(rec):
 # Coordinator
 # ======================================================================================
 class Campaign:
-    def __init__(self, directory: Path, workers: int, smoke=False, variant="plate"):
+    def __init__(self, directory: Path, workers: int, smoke=False, variant="plate", spanwise_bending=False, large_deflection=False):
         self.dir = Path(directory)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.store = Store(self.dir / "campaign.sqlite")
         plan = self.store.get_meta("plan")
         if plan is None:
-            plan = default_plan(smoke, variant)
+            plan = default_plan(smoke, variant, spanwise_bending, large_deflection)
             self.store.set_meta("plan", plan)
             (self.dir / "plan.json").write_text(json.dumps(plan, indent=1))
+        if spanwise_bending and not plan.get("elastic_options", {}).get("spanwise_bending"):
+            raise ValueError("Choose a new campaign folder for span bending; existing runs retain their original model.")
+        if large_deflection and not plan.get("elastic_options", {}).get("large_deflection"):
+            raise ValueError("Choose a new campaign folder for finite rotations; do not mix structural models.")
+        if plan.get("structural_code_sha256") and plan["structural_code_sha256"] != structural_fingerprint():
+            raise ValueError("Structural solver code changed since this campaign was created. Use a new campaign folder to keep cached results reproducible.")
         self.plan = plan
         self.levels = {l["id"]: l for l in plan["levels"]}
         self.workers = workers
@@ -403,9 +430,17 @@ class Campaign:
     # ---------------- task plumbing ----------------
     def task(self, level, freq, chords, half_span, numerics="base", span_panels=None, dt_divisor=None):
         p = self.plan
-        key = design_key(level, freq, chords, half_span, numerics)
         lv = self.levels[level]
+        context = None
+        if p.get("elastic_options", {}).get("spanwise_bending"):
+            context = {"model": p["structural_model"], "code": p.get("structural_code_sha256"), "options": p["elastic_options"],
+                       "material": p["material"], "level": lv, "template": p["template_case"],
+                       "steps_per_cycle": p["steps_per_cycle"], "cycles": p["cycles"],
+                       "span_panels": span_panels or p["span_panels"], "chord_panels": p["chord_panels"],
+                       "dt_divisor": dt_divisor, "dt_refinements": p["dt_refinements"]}
+        key = design_key(level, freq, chords, half_span, numerics, context=context)
         return {"key": key, "level": level, "freq": freq, "chords": chords, "half_span": half_span,
+                "elastic_options": p.get("elastic_options", {}),
                 "thickness_mm": lv["thickness_mm"], "rod": lv.get("rod"), "material": p["material"], "template": p["template_case"],
                 "steps_per_cycle": p["steps_per_cycle"], "cycles": p["cycles"],
                 "span_panels": span_panels or p["span_panels"], "chord_panels": p["chord_panels"],
@@ -867,10 +902,12 @@ def replay(directory: Path, key: str, out: Path | None = None) -> Path:
     import elastic_runner as R
     store = Store(Path(directory) / "campaign.sqlite")
     plan = store.get_meta("plan")
-    row = store.db.execute("select level,freq,chords,half_span,dt,cycles,factor,status from designs where key=?", (key,)).fetchone()
+    row = store.db.execute("select level,freq,chords,half_span,dt,cycles,factor,status,numerics from designs where key=?", (key,)).fetchone()
     if row is None:
         raise KeyError(f"No stored design {key}")
-    level, freq, chords, hs, dt, cycles, factor, status = row
+    level, freq, chords, hs, dt, cycles, factor, status, numerics = row
+    if plan.get("structural_code_sha256") and plan["structural_code_sha256"] != structural_fingerprint():
+        raise ValueError("Cannot replay this span-flex result with changed structural code; use its recorded solver version.")
     chords = json.loads(chords)
     lv = {l["id"]: l for l in plan["levels"]}[level]
     template, settings = R.load_catalog_case(plan["template_case"])
@@ -881,10 +918,11 @@ def replay(directory: Path, key: str, out: Path | None = None) -> Path:
     if lv["thickness_mm"] is not None:
         cfg = elastic.ElasticConfig.from_dict({"stiffness_model": "plate", "thickness_m": lv["thickness_mm"] * 1e-3,
                                                "material": plan["material"], "rod": lv.get("rod") or {},
-                                               "added_mass_factor": factor or 0.5})
+                                               **plan.get("elastic_options", {}), "added_mass_factor": factor or 0.5})
     out = Path(out or Path(directory) / "animations" / key)
+    replay_panels = plan["finalists"]["span_panels"] if numerics == "span16" else plan["span_panels"]
     r = R.run(case, settings, cfg, {"dt_s": dt or 1 / (plan["steps_per_cycle"] * freq), "cycles": cycles or plan["cycles"],
-                                     "span_panels": plan["span_panels"], "chord_panels": plan["chord_panels"]}, output_dir=out)
+                                     "span_panels": replay_panels, "chord_panels": plan["chord_panels"]}, output_dir=out)
     r.pop("history", None)
     (out / "metrics.json").write_text(json.dumps({"key": key, "level": level, "freq": freq, "chords": chords,
                                                   "half_span": hs, "stored_status": status, **r}, indent=1, default=str))
@@ -901,6 +939,8 @@ def main(argv=None):
     d.add_argument("--smoke", action="store_true", help="tiny plan for testing the pipeline")
     d.add_argument("--autostart", action="store_true")
     d.add_argument("--no-browser", action="store_true")
+    d.add_argument("--spanwise-bending", action="store_true", help="new campaign: reduced span bending + sheet flex")
+    d.add_argument("--large-deflection", action="store_true", help="length-preserving finite rotations; requires span bending")
     d.add_argument("--variant", choices=["plate", "rod", "sweep"], default="plate",
                    help="plan for a NEW campaign folder: bare plate, or plate + 5 mm rod leading edge")
     rp = sub.add_parser("replay"); rp.add_argument("campaign", type=Path); rp.add_argument("key"); rp.add_argument("--out", type=Path)
@@ -909,7 +949,11 @@ def main(argv=None):
         print(replay(a.campaign, a.key, a.out))
         return
     import elastic_dashboard
-    camp = Campaign(a.campaign, a.workers, a.smoke, a.variant)
+    if a.large_deflection:
+        a.spanwise_bending = True
+    if a.spanwise_bending and a.campaign == DEFAULT_DIR:
+        a.campaign = ROOT / "outputs" / "elastic" / "campaigns" / (("finite-span-" if a.large_deflection else "span-") + a.variant)
+    camp = Campaign(a.campaign, a.workers, a.smoke, a.variant, a.spanwise_bending, a.large_deflection)
     elastic_dashboard.serve(camp, a.port, open_browser=not a.no_browser, autostart=a.autostart)
 
 

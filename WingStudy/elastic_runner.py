@@ -22,6 +22,7 @@ import model
 
 ROOT = Path(__file__).resolve().parent.parent
 CATALOGS = [ROOT / "outputs" / "master_runs.sqlite3", ROOT / "outputs" / "master_runs_old.sqlite3"]
+TEMPLATE_CASES = Path(__file__).resolve().parent / "template_cases"
 
 
 def load_catalog_case(case_no: int):
@@ -33,7 +34,12 @@ def load_catalog_case(case_no: int):
         if row:
             payload = json.loads(row[0])
             return payload["case"], payload["settings"]
-    raise KeyError(f"Case {case_no} not found in {', '.join(str(c) for c in CATALOGS)}")
+    # The legacy catalogs stay local; the template cases the elastic studies need ship with the repo.
+    frozen = TEMPLATE_CASES / f"case_{int(case_no)}.json"
+    if frozen.exists():
+        payload = json.loads(frozen.read_text(encoding="utf-8"))["payload"]
+        return payload["case"], payload["settings"]
+    raise KeyError(f"Case {case_no} not found in {', '.join(str(c) for c in CATALOGS)} or {TEMPLATE_CASES}")
 
 
 def sections_case(template_case, settings, chords_m, span_m, name="Elastic wing"):
@@ -64,6 +70,8 @@ def build_solver(case, settings, config: elastic.ElasticConfig | None):
     if config is None:
         rigid = dict(settings, aeroelastic_enabled=False)
         return model.build_solver(case, rigid), None
+    if config.large_deflection and not config.spanwise_bending:
+        raise ValueError("Enable spanwise_bending when requesting finite rotations.")
     if "sections" in case:
         sections, angles = model.custom_sections(case, settings, ps)
     else:
@@ -90,7 +98,12 @@ def build_solver(case, settings, config: elastic.ElasticConfig | None):
         delta_time=settings["dt_s"],
         num_steps=math.ceil(settings["cycles"] / case["frequency_hz"] / settings["dt_s"]),
         max_wake_rows=rows)
-    problem = elastic.problem_class()(movement, config, settings["rho"], 1 / case["frequency_hz"])
+    if config.spanwise_bending:
+        import spanwise_elastic
+        cls = spanwise_elastic.problem_class()
+    else:
+        cls = elastic.problem_class()
+    problem = cls(movement, config, settings["rho"], 1 / case["frequency_hz"])
     return ps.AeroelasticUnsteadyRingVortexLatticeMethodSolver(aeroelastic_unsteady_problem=problem), problem
 
 
@@ -160,6 +173,8 @@ def _run_verified_at_dt(case, settings, config: elastic.ElasticConfig, overrides
         attempts.append({"added_mass_factor": factor, "status": r["status"], "settled": r.get("settled"),
                          "mean_thrust_N": r.get("mean_thrust_N"), "peak_abs_root_torque_Nm": r.get("peak_abs_root_torque_Nm"),
                          "tip_twist_amplitude_deg": r.get("tip_twist_amplitude_deg"),
+                         "tip_bend_amplitude_m": r.get("tip_bend_amplitude_m"),
+                         "bend_cycle_error_pct": r.get("bend_cycle_error_pct"),
                          "elapsed_s": r["elapsed_s"], "error": r.get("error")})
         if r["status"] == "ok" and r["settled"]:
             r["added_mass_factor"] = factor
@@ -184,7 +199,11 @@ def _spread(good) -> float:
     def rel(key):
         v = [g[key] for g in good]
         return (max(v) - min(v)) / max(abs(sum(v) / len(v)), 1e-9)
-    return max(rel("mean_thrust_N"), rel("peak_abs_root_torque_Nm"))
+    values = [rel("mean_thrust_N"), rel("peak_abs_root_torque_Nm")]
+    if all("tip_bend_amplitude_m" in g for g in good):
+        values.append(rel("tip_bend_amplitude_m"))
+        values.append(rel("tip_twist_amplitude_deg"))
+    return max(values)
 
 
 def _uncertain(good) -> dict:
@@ -329,6 +348,35 @@ def run(case, settings, config: elastic.ElasticConfig | None, overrides: dict | 
             cyc["tip_twist"] = np.interp(tc, tt, tw[:, -1]).round(3).tolist()
             cyc["twist_profile_amplitude_deg"] = [round(v, 3) for v in out["twist_profile_amplitude_deg"]]
         out["final_cycle"] = cyc
+        if problem is not None and getattr(problem, "span_history", None):
+            import spanwise_elastic
+            bh = problem.span_history
+            bt = np.array([h[0] for h in bh])
+            bw = np.array([h[1] for h in bh])
+            bb = np.array([h[2] for h in bh])
+            sel = bt > bt[-1] - period
+            out.update(structural_model=spanwise_elastic.FINITE_MODEL_VERSION if config.large_deflection else spanwise_elastic.MODEL_VERSION,
+                tip_bend_amplitude_m=float(np.ptp(bw[sel,-1])/2),
+                peak_abs_tip_deflection_m=float(np.abs(bw[sel,-1]).max()),
+                peak_abs_bend_deg=float(np.abs(bb[sel]).max()),
+                span_stations_m=problem.structure.y.tolist(),
+                span_bending_EI_Nm2=problem.structure.ei,
+                chord_spring_Nm_per_rad=problem.structure.chord_k,
+                leading_edge_passive_pitch_deg=0. if config.rod.diameter_m and config.rod.fixed_rotation else None)
+            cyc["tip_deflection_m"] = np.interp(tc,bt,bw[:,-1]).tolist()
+            cyc["span_deflection_amplitude_m"] = (np.ptp(bw[sel],axis=0)/2).tolist()
+            bend_last = np.interp(end-period+phase,bt,bw[:,-1])
+            bend_prev = np.interp(end-2*period+phase,bt,bw[:,-1])
+            out["bend_cycle_error_pct"] = float(100*np.sqrt(np.mean((bend_last-bend_prev)**2))/max(np.sqrt(np.mean(bend_last**2)),1e-6))
+            pitch_last = np.interp(end-period+phase,tt,tw[:,-1])
+            pitch_prev = np.interp(end-2*period+phase,tt,tw[:,-1])
+            out["pitch_cycle_error_pct"] = float(100*np.sqrt(np.mean((pitch_last-pitch_prev)**2))/max(np.sqrt(np.mean(pitch_last**2)),1e-4))
+            out["settled"] = bool(out["settled"] and max(out["bend_cycle_error_pct"],out["pitch_cycle_error_pct"]) <= settings["cycle_tolerance_pct"])
+            out["span_history"] = {"t":bt.tolist(),"deflection_m":bw.tolist(),"slope_deg":bb.tolist()}
+            if config.large_deflection:
+                angles = np.radians((bb[:,:-1]+bb[:,1:])/2)
+                yl = np.cumsum(np.diff(problem.structure.y)[None,:]*np.cos(angles),axis=1)
+                out["span_history"]["leading_edge_y_m"] = np.column_stack((np.zeros(len(yl)),yl)).tolist()
         if output_dir is not None:
             save_native_outputs(solver, Path(output_dir))
     except elastic.ElasticDivergence as exc:

@@ -89,6 +89,7 @@ code{background:var(--surface-2);padding:1px 5px;border-radius:5px;font-size:12p
   <span id="state" class="badge">loading</span>
   <button class="btn primary" id="startBtn" onclick="control('start')">Start</button>
   <button class="btn" id="pauseBtn" onclick="control(STATE==='paused'?'resume':'pause')">Pause</button>
+  <button class="btn" onclick="post('/api/export-span-atlas',{}).then(r=>alert(r.error||r.message))">Save span-flex results to atlas</button>
   <button class="btn" id="stopBtn" onclick="if(confirm('Stop after running solves finish? You can restart later and it resumes where it left off.'))control('stop')">Stop</button>
   <label class="small" title="Off: the campaign waits after each chunk so you can check the report"><input type="checkbox" id="auto" onchange="post('/api/control',{action:'auto',value:this.checked})"> continue to next chunk automatically</label>
   <nav>
@@ -187,11 +188,12 @@ function renderPlan(){
   $('#title').textContent=p.name;
   const g=p.geometry;
   const rows=[
+    ['Structural model', p.elastic_options?.spanwise_bending ? `<b>${p.elastic_options.large_deflection?'Finite-rotation span springs + sheet flex.':'Linear span beam + sheet flex.'}</b> Root clamped; distributed fluid loads bend the span. ${p.elastic_options.large_deflection?`Span length is preserved. Configured span-slope guard: ${p.elastic_options.max_bend_deg}°. Higher deflection does not establish UVLM accuracy.`:'Small-deformation limits apply.'} A fitted rod contributes bending stiffness and mass; its passive pitch is fixed while the sheet behind it can flex. Rod longitudinal E defaults to 120 GPa (editable assumption).` : 'Version 1.5 legacy plate torsion; no span bending.'],
     ['Wing rules (same as rigid studies)',`${g.nodes} chord stations equally spaced on the half-span; root fixed at ${g.root_chord_m*1000} mm; chords non-increasing toward the tip; positive chords ≥ ${g.min_positive_chord_m*1000} mm; zero chords only as a tip suffix (shortens the wing); max chord ${g.max_chord_m*1000} mm.`],
     ['Search moves',`Coordinate ascent, identical to the rigid studies (coordinate_search.climb): ±${g.step_m*1000} mm per chord, remembered direction, one half-step retry, then the chord retires. Budget ${p.lineage_budget} evaluations per lineage.`],
     ['Objectives',`<b>torque_1Nm</b>: maximize mean thrust with peak root torque ≤ ${p.torque_target_nm} N·m (seeds above the limit first walk down in torque). <b>lambda_x</b>: S = T/Tref − x·M/Mref with Tref, Mref fixed from that stiffness × frequency's seeds. Focus thicknesses: ${p.objectives.focus.join(', ')}. Context: ${p.objectives.context.join(', ')}.`],
     ['Seeds per search',`${p.families.join(', ')} × half-spans ${p.seed_half_spans_m.focus.map(x=>x*1000+' mm').join(', ')} (focus) or ${p.seed_half_spans_m.context.map(x=>x*1000+' mm').join(', ')} (context).`],
-    ['Plate stiffness',p.levels.map(l=>`<span class="pill">${l.label}${l.tier==='focus'?' ★':''}</span>`).join(' ')+`<br><span class="small muted">★ focus (all objectives, 25 lineages). Plain-weave carbon: G = ${p.material.shear_modulus_pa/1e9} GPa, E = ${p.material.youngs_modulus_pa/1e9} GPa, ${p.material.density_kg_m3} kg/m³. Twist about the leading edge with plate torsion + warping stiffness.${p.rod?` Leading-edge rod ${p.rod.diameter_m*1000}/${p.rod.hollow_inner_diameter_m*1000} mm (G = ${p.rod.shear_modulus_pa/1e9} GPa), held at the root: its torsion adds to the plate's.`:''}</span>`],
+    ['Plate stiffness',p.levels.map(l=>`<span class="pill">${l.label}${l.tier==='focus'?' ★':''}</span>`).join(' ')+`<br><span class="small muted">Plain-weave carbon: G = ${p.material.shear_modulus_pa/1e9} GPa, E = ${p.material.youngs_modulus_pa/1e9} GPa, ${p.material.density_kg_m3} kg/m³. ${p.elastic_options?.spanwise_bending?'Span bending, sheet torsion/warping and, with a fixed-rotation rod, independent sheet-pitch springs.':'Twist about the leading edge with plate torsion + warping stiffness.'}${p.rod?` Leading-edge rod ${p.rod.diameter_m*1000}/${p.rod.hollow_inner_diameter_m*1000} mm: ${p.elastic_options?.spanwise_bending?'bending and mass active; passive rod pitch fixed by default.':"its torsion adds to the plate’s."}`:''}</span>`],
     ['Motion',`${p.frequencies_hz.join(', ')} Hz; ${p.stroke}; ${p.speed_mps} m/s; ${p.steps_per_cycle} time steps per cycle; ${p.cycles} cycles (doubled automatically if a soft plate has not settled).`],
     ['Numerics',`${p.span_panels} × ${p.chord_panels} panels, prescribed wake (rigid-study settings). Each elastic design is solved with ≥ 2 stabilization settings (verified / uncertain); dt halved automatically for soft plates that fail.`],
     ['Shape map',`The same ${p.map.focus_shapes} Sobol shapes at every focus thickness (first ${p.map.context_shapes} at context levels) and every frequency, so stiffness effects compare identical shapes.`],
@@ -336,7 +338,7 @@ function detailHTML(d){
    ${d.rechecks.length?`<tr><th>Finalist re-check</th><td>${d.rechecks.map(r=>`${r.numerics}: ${fmt(r.thrust,3)} N / ${fmt(r.torque,3)} N·m (${fmt(100*(r.thrust-d.thrust)/d.thrust,1)}% thrust)`).join('<br>')}</td></tr>`:''}
    <tr><th>Used by</th><td class="small">${d.uses.map(u=>`${u.source} ${u.search_id||''} ${u.role}`).slice(0,6).join('<br>')}</td></tr>
   </table>
-  ${fc?trace(fc.thrust,fc.phase,'Thrust','N',c)+trace(fc.torque,fc.phase,'Root torque','N·m',c)+(fc.tip_twist?trace(fc.tip_twist,fc.phase,'Tip twist','deg',c):''):''}
+  ${fc?trace(fc.thrust,fc.phase,'Thrust','N',c)+trace(fc.torque,fc.phase,'Root torque','N·m',c)+(fc.tip_twist?trace(fc.tip_twist,fc.phase,'Sheet pitch','deg',c):'')+(fc.tip_deflection_m?trace(fc.tip_deflection_m.map(v=>v*1000),fc.phase,'Spanwise tip deflection','mm',c):''):''}
   <p><button class="btn primary" ${d.animation.state==='running'?'disabled':''} onclick="post('/api/replay',{key:'${d.key}'}).then(()=>showDesign('${d.key}'))">${d.animation.state==='done'?'Re-render':'Render'} Ptera animation</button></p>
   <p class="small muted">Or from a terminal: <code>${d.replay_command}</code></p>${anim}`;
 }

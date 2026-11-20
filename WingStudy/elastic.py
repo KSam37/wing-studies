@@ -82,6 +82,8 @@ class Rod:
     shear_modulus_pa: float = 4.5e9
     density_kg_m3: float = 1550.0
     hollow_inner_diameter_m: float = 0.0
+    youngs_modulus_pa: float = 120e9  # longitudinal bending; editable laminate assumption
+    fixed_rotation: bool = True     # used by the span-bending model, not legacy torsion
 
     @property
     def polar_moment_m4(self) -> float:
@@ -114,6 +116,10 @@ class ElasticConfig:
     step_discards: int = 5
     ramp_cycles: float = 0.25
     max_twist_deg: float = 80.0
+    spanwise_bending: bool = False  # opt in; existing atlas results retain their model
+    large_deflection: bool = False  # finite-rotation, length-preserving span segments
+    max_bend_deg: float = 20.0      # reduced linear beam validity guard
+    max_tip_deflection_fraction: float = 0.25
 
     def to_dict(self) -> dict:
         return asdict(self)

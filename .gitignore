@@ -13,6 +13,13 @@
 !/Run Wing Studies.cmd
 !/Run Master Catalog.cmd
 !/Check Installation.cmd
+!/Run Frontier Span Study.cmd
+!/Run Span Flex Study.cmd
+!/CLAUDE.md
+!/V1_5_SYSTEM_GUIDE.md
+!/SPANWISE_ELASTICITY.md
+!/SPANWISE_FRONTIER_STUDY.md
+!/RESTRUCTURE_PLAN.md
 !/WingStudy/
 !/PteraSoftware
 !/tests/
@@ -31,17 +38,9 @@ WingStudy/tmp*/
 !/Open Results.cmd
 !/Open Master Excel.cmd
 
-# Share recorded studies and the master catalog; keep caches and old packages local.
-!/outputs/
-/outputs/*
-!/outputs/studies/
-!/outputs/provenance/
-!/outputs/study_organization.json
-!/outputs/master_runs.xlsx
-!/outputs/master_runs.sqlite3
-!/outputs/master_runs_old.xlsx
-!/outputs/master_runs_old.sqlite3
-outputs/studies/**/*.tmp
+# All simulation outputs, catalogs and legacy studies stay local (never pushed).
+# Shared results will live in studies/ once the restructure lands (see RESTRUCTURE_PLAN.md).
+/outputs/
 
 # Temporary isolated native-case staging; removed after completion.
 .parallel-*/

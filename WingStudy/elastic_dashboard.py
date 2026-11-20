@@ -148,6 +148,11 @@ def make_handler(camp):
             u = urlparse(self.path)
             n = int(self.headers.get("Content-Length") or 0)
             body = json.loads(self.rfile.read(n) or b"{}")
+            if u.path == "/api/export-span-atlas":
+                if not camp.plan.get("elastic_options", {}).get("spanwise_bending"):
+                    return self.send({"error": "This export is for span-flex campaigns."}, code=400)
+                result = subprocess.run([sys.executable, str(HERE / "span_atlas.py"), "--campaign", str(camp.dir)], capture_output=True, text=True)
+                return self.send({"message": result.stdout.strip(), "error": result.stderr.strip() if result.returncode else None}, code=500 if result.returncode else 200)
             if u.path == "/api/control":
                 a = body.get("action")
                 if a == "start" and camp.state in ("ready", "waiting"):
@@ -175,7 +180,8 @@ def make_handler(camp):
 def serve(camp, port=8777, open_browser=True, autostart=False):
     import faulthandler, signal
     # `kill -USR1 <pid>` prints every thread's stack to the terminal (diagnosing hangs).
-    faulthandler.register(signal.SIGUSR1, all_threads=True)
+    if hasattr(signal, "SIGUSR1"):
+        faulthandler.register(signal.SIGUSR1, all_threads=True)
     t = threading.Thread(target=camp.run, daemon=True)
     t.start()
     if autostart:

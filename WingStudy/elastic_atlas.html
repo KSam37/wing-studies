@@ -76,7 +76,7 @@ canvas#map{display:block;width:100%;height:560px;cursor:crosshair;touch-action:n
 @media (max-width:640px){canvas#map{height:420px}}
 .zoom{position:absolute;right:14px;top:14px;display:flex;gap:4px}
 .zoom button{width:30px;height:30px;padding:0}
-.tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12.5px;max-width:300px;display:none}
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12.5px;overflow-wrap:anywhere;max-width:min(380px,calc(100vw - 16px));display:none}
 .tip b{font-weight:650}
 .wgrid{display:grid;gap:10px}
 .wcell{background:var(--surface-2);border-radius:10px;padding:8px 10px;cursor:pointer;border:1px solid transparent;min-width:0}
@@ -95,6 +95,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .dlg-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
 .dlg-b{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1024px) minmax(240px,1fr);gap:16px}
 @media (max-width:1100px){.dlg-b{grid-template-columns:1fr}}
+.dlg-b img.anim.span-replay{background:#fff}
 .dlg-b img.anim{width:100%;border-radius:8px;background:#000;display:block}
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px}
 .seg button{border:0;background:var(--surface);color:var(--text-2);font:inherit;font-size:12.5px;padding:4px 10px;cursor:pointer}
@@ -117,6 +118,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
   <nav id="nav">
     <button data-t="overview" class="on">Overview</button>
     <button data-t="map">Wing map</button>
+    <button data-t="span">Spanwise elasticity</button>
     <button data-t="winners">Winners</button>
     <button data-t="stiff">Stiffness effects</button>
     <button data-t="opt">Optimized shapes</button>
@@ -141,6 +143,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
     <div class="ctl"><span class="small muted" style="min-width:64px">Study</span><div class="chips" id="f-study"></div></div>
     <div class="ctl"><span class="small muted" style="min-width:64px">Frequency</span><div class="chips" id="f-freq"></div></div>
     <div class="ctl"><span class="small muted" style="min-width:64px">Plate</span><div class="chips" id="f-model"></div></div>
+    <div class="ctl"><span class="small muted" style="min-width:64px">Spanwise elasticity</span><div class="chips" id="f-elasticity"></div></div>
     <div class="ctl"><span class="small muted" style="min-width:64px">Objective</span><div class="chips" id="f-obj"></div></div>
     <div class="ctl"><span class="small muted" style="min-width:64px">Half-span</span>
       <label>from <input type="number" id="sp-lo" step="5" style="width:76px"> mm</label>
@@ -165,6 +168,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
     <div class="card" id="detail"><h3>Design details</h3><p class="muted small">Click a dot to see its outline, loads, numerics and animation here.</p></div>
   </div>
 </section>
+<section class="tab" id="t-span"></section>
 <section class="tab" id="t-winners"></section>
 <section class="tab" id="t-stiff"></section>
 <section class="tab" id="t-opt"></section>
@@ -180,24 +184,42 @@ const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim
 const fmt=(v,d=2)=>v==null||!isFinite(v)?'–':(+v).toFixed(d);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LIM=D.torque_limit;
+// Register matched model results in the same map, filters and detail inspector.
+const EXTRA={}; const ORIGINAL_N=D.cols.s.length;
+(D.span_comparisons||[]).forEach((pair,pi)=>{
+  pair.mapRows={};
+  for(const kind of ['baseline','spanwise']){
+    const r=pair[kind],w=pair.source;
+    if(!Number.isFinite(r.mean_thrust_N)||!Number.isFinite(r.peak_abs_root_torque_Nm))continue;
+    const baseId=w.source_model||'t0.50';const id=(kind==='spanwise'?'span-flex:':'chord-rerun:')+baseId;
+    let mi=D.models.findIndex(m=>m.id===id);
+    if(mi<0){mi=D.models.length;D.models.push({id,label:(w.material_label||'0.5 mm (no rod)')+' · '+(kind==='spanwise'?'span + chord':'chord rerun'),thickness:w.thickness_mm??0.5,rod:w.has_rod||false})}
+    let fi=D.freqs.indexOf(w.freq);if(fi<0){fi=D.freqs.length;D.freqs.push(w.freq)}
+    let si=D.studies.findIndex(st=>st.id===w.study);if(si<0)si=0;
+    let status=D.statuses.indexOf(r.status);if(status<0){status=D.statuses.length;D.statuses.push(r.status)}
+    const i=D.cols.s.length;pair.mapRows[kind]=i;EXTRA[i]={pair,kind,result:r};
+    const vals={s:si,m:mi,f:fi,T:r.mean_thrust_N,Q:r.peak_abs_root_torque_Nm,H:w.half_span,W:r.tip_twist_amplitude_deg??null,S:status,src:0,k:w.key+':'+kind,obj:512};
+    for(const k of Object.keys(D.cols))if(k==='C')D.cols.C.push(...Array.from({length:8},(_,j)=>w.chords[j]??0));else D.cols[k].push(vals[k]??null);
+  }
+});
 const C=D.cols, N=C.s.length;
 const MODEL=Object.fromEntries(D.models.map((m,i)=>[m.id,{...m,i}]));
 const STUDY=Object.fromEntries(D.studies.map((s,i)=>[s.id,{...s,i}]));
 // Fixed colour per entity (never by rank). Rod models take the first slots: they are the hardware.
-const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','t0.20':'--s5','t1.00':'--s7','rigid':'--neutral'};
+const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','t0.20':'--s5','t1.00':'--s7','rigid':'--neutral','span-flex':'--s2','chord-rerun':'--s1'};
 const STUDY_VAR_ID={rod:'--s1',weekend:'--s2',sweep:'--s3',spanfree:'--s7',catalog:'--neutral'}, FREQ_VAR=['--f1','--f2','--f3'];
-const modelColor=id=>css(MODEL_VAR[id]); const studyColor=i=>css(STUDY_VAR_ID[D.studies[i].id]||'--s5'); const freqColor=i=>css(FREQ_VAR[i]);
+const modelColor=id=>css(MODEL_VAR[id]||(id.startsWith('span-flex')?'--s2':'--s1')); const studyColor=i=>css(STUDY_VAR_ID[D.studies[i].id]||'--s5'); const freqColor=i=>css(FREQ_VAR[i%FREQ_VAR.length]);
 const STATUS=D.statuses, GOOD=new Set(['verified','ok']);
 const statusPill=s=>`<span class="pill ${GOOD.has(s)?'good':s==='uncertain'?'warn':'bad'}">${s==='ok'?'settled (rigid)':s}</span>`;
 
 /* ---------- derived geometry ---------- */
-const chordsOf=i=>C.C.slice(8*i,8*i+8);
+const chordsOf=i=>EXTRA[i]?.pair.source.chords||C.C.slice(8*i,8*i+8);
 function activeOutline(chords,hs){const n=chords.length,pts=[];chords.forEach((c,j)=>{if(c>0)pts.push([hs*j/(n-1),c])});return pts}
-const CAT=D.catalog, CAT0=CAT?CAT.first:N, isCat=i=>i>=CAT0;
+const CAT=D.catalog, CAT0=CAT?CAT.first:N, isCat=i=>i>=CAT0&&i<ORIGINAL_N;
 const AREA=new Float32Array(N), SPAN=new Float32Array(N), ROOT=new Float32Array(N);
 for(let i=0;i<N;i++){
   if(isCat(i)){AREA[i]=CAT.area[i-CAT0]??NaN;SPAN[i]=C.H[i];ROOT[i]=CAT.root[i-CAT0]??NaN;continue}
-  const o=activeOutline(chordsOf(i),C.H[i]);let a=0;for(let j=1;j<o.length;j++)a+=(o[j][0]-o[j-1][0])*(o[j][1]+o[j-1][1])/2;AREA[i]=a/100;SPAN[i]=o.length?o[o.length-1][0]:0;ROOT[i]=C.C[8*i]}
+  const o=activeOutline(chordsOf(i),C.H[i]);let a=0;for(let j=1;j<o.length;j++)a+=(o[j][0]-o[j-1][0])*(o[j][1]+o[j-1][1])/2;AREA[i]=a/100;SPAN[i]=o.length?o[o.length-1][0]:0;ROOT[i]=chordsOf(i)[0]}
 // polygon [[spanwise mm, chordwise mm]...] for any row
 function polyOf(i){if(isCat(i)){const f=CAT.poly[i-CAT0],p=[];for(let k=0;k<f.length;k+=2)p.push([f[k],f[k+1]]);return p}
   const o=designOutline(i);return [...o.map(p=>[p[0],0]),...o.slice().reverse().map(p=>[p[0],p[1]])]}
@@ -256,13 +278,13 @@ viewer.addEventListener('click',e=>{if(e.target===viewer)viewer.close()});
 /* ---------- tooltip ---------- */
 const tip=$('#tip');
 function showTip(html,x,y){tip.innerHTML=html;tip.style.display='block';const r=tip.getBoundingClientRect();
-  tip.style.left=Math.min(x+14,innerWidth-r.width-8)+'px';tip.style.top=(y+14+r.height>innerHeight?y-r.height-10:y+14)+'px'}
+  tip.style.left=Math.max(8,Math.min(x+14,innerWidth-r.width-8))+'px';tip.style.top=Math.max(8,Math.min(y+14,innerHeight-r.height-8))+'px'}
 const hideTip=()=>tip.style.display='none';
 
 /* ---------- small chart helpers (SVG) ---------- */
 function niceTicks(lo,hi,n){if(!(hi>lo)){hi=lo+1}const span=hi-lo,step0=span/n,mag=10**Math.floor(Math.log10(step0)),step=[1,2,2.5,5,10].map(k=>k*mag).find(s=>s>=step0);const out=[];for(let v=Math.ceil(lo/step-1e-9)*step;v<=hi+1e-9;v+=step)out.push(+v.toFixed(6));return out}
 // series: [{name,color,points:[{x,y,label,tip}]}], cats: optional category labels for x
-function lineChart({series,cats=null,xlabel='',ylabel='',w=460,h=250,ymin=0,ymax=null,hline=null,xfmt=v=>v}){
+function lineChart({series,links=[],cats=null,xlabel='',ylabel='',w=460,h=250,ymin=0,ymax=null,hline=null,xfmt=v=>v}){
   const m={l:46,r:12,t:10,b:38};
   const ys=series.flatMap(s=>s.points.map(p=>p.y)).filter(v=>v!=null);
   const hi=ymax??Math.max(...ys,ymin+0.01)*1.08;
@@ -271,18 +293,20 @@ function lineChart({series,cats=null,xlabel='',ylabel='',w=460,h=250,ymin=0,ymax
   const X=v=>m.l+(w-m.l-m.r)*(xhi===xlo?.5:(v-xlo)/(xhi-xlo)), Y=v=>h-m.b-(h-m.t-m.b)*(v-ymin)/(hi-ymin);
   let g='';
   niceTicks(ymin,hi,5).forEach(t=>g+=`<line class="gl" x1="${m.l}" x2="${w-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${t}</text>`);
-  (cats?cats.map((c,i)=>[i,c]):[...new Set(xs)].sort((a,b)=>a-b).map(v=>[v,xfmt(v)])).forEach(([v,l])=>g+=`<text x="${X(v)}" y="${h-m.b+15}" text-anchor="middle">${l}</text>`);
+  (cats?cats.map((c,i)=>[i,c]):([...new Set(xs)].length>12?niceTicks(xlo,xhi,6):[...new Set(xs)].sort((a,b)=>a-b)).map(v=>[v,xfmt(v)])).forEach(([v,l])=>g+=`<text x="${X(v)}" y="${h-m.b+15}" text-anchor="middle">${l}</text>`);
   g+=`<line class="ax" x1="${m.l}" x2="${w-m.r}" y1="${h-m.b}" y2="${h-m.b}"/>`;
   if(hline!=null&&hline<=hi)g+=`<line x1="${m.l}" x2="${w-m.r}" y1="${Y(hline)}" y2="${Y(hline)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
   g+=`<text x="${(w+m.l)/2}" y="${h-4}" text-anchor="middle">${xlabel}</text><text transform="translate(12 ${(h-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;
+  for(const link of links)g+=`<line x1="${X(link[0].x)}" y1="${Y(link[0].y)}" x2="${X(link[1].x)}" y2="${Y(link[1].y)}" stroke="var(--muted)" stroke-dasharray="4 4" stroke-opacity=".5"/>`;
   for(const s of series){const pts=s.points.filter(p=>p.y!=null);
     g+=`<polyline fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" points="${pts.map(p=>X(cats?p.x:p.x).toFixed(1)+','+Y(p.y).toFixed(1)).join(' ')}"/>`;
     for(const p of pts){g+=p.hollow?`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="var(--surface)" stroke="${s.color}" stroke-width="2"/>`:`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
       if(p.range)g+=`<line x1="${X(p.x)}" x2="${X(p.x)}" y1="${Y(p.range[0])}" y2="${Y(p.range[1])}" stroke="${s.color}" stroke-width="2"/>`;
-      g+=`<circle class="hit" cx="${X(p.x)}" cy="${Y(p.y)}" r="11" fill="transparent" data-tip="${esc(p.tip||`${s.name}: ${fmt(p.y)}`)}"/>`}}
+      g+=`<circle class="hit" ${p.pairKey?`data-span-pair="${esc(p.pairKey)}" style="cursor:pointer"`:""} ${Number.isInteger(p.row)?`data-row="${p.row}" style="cursor:pointer"`:""} cx="${X(p.x)}" cy="${Y(p.y)}" r="11" fill="transparent" data-tip="${esc(p.tip||`${s.name}: ${fmt(p.y)}`)}"/>`}}
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img">${g}</svg>`;
 }
 document.addEventListener('mouseover',e=>{const t=e.target.closest&&e.target.closest('[data-tip]');if(t)showTip(t.dataset.tip,e.clientX,e.clientY)});
+document.addEventListener('click',e=>{const pair=e.target.closest&&e.target.closest('[data-span-pair]');if(pair){hideTip();openSpanComparison(pair.dataset.spanPair);return}const t=e.target.closest&&e.target.closest('[data-row]');if(t){hideTip();showOnMap(+t.dataset.row)}});
 document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('[data-tip]'))hideTip()});
 const legend=items=>`<div class="legend">${items.map(([c,l])=>`<span><span class="sw" style="background:${c}"></span>${l}</span>`).join('')}</div>`;
 
@@ -343,7 +367,7 @@ function renderOverview(){
 /* ======================================================================================
    Wing map (canvas)
    ====================================================================================== */
-const M={x:'torque',y:'thrust',color:'study',objs:new Set([1,2,4,8,32,64,128,256]),onlyLim:false,source:'all',quality:'good',catCohort:-1,catStudy:-1,catRoot:false,
+const M={x:'torque',y:'thrust',color:'study',elasticity:new Set([0,1]),objs:new Set([1,2,4,8,32,64,128,256,512]),onlyLim:false,source:'all',quality:'good',catCohort:-1,catStudy:-1,catRoot:false,
   studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([1]),models:new Set(D.models.map((_,i)=>i)),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];
@@ -382,15 +406,17 @@ function chipRow(el,items,set,colorFn){
     chipRow(el,items,set,colorFn);M.view=null;drawMap()});
 }
 function renderChips(){
+  chipRow($('#f-elasticity'),[[0,'Off · rigid / chordwise'],[1,'On · span + chord']],M.elasticity,null);
   chipRow($('#f-study'),D.studies.map((s,i)=>[i,s.label]),M.studies,M.color==='study'?studyColor:null);
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
-  chipRow($('#f-obj'),[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[32,'Shape map (campaigns)'],[64,'Geometric sweep'],[128,'Earlier rigid studies: objective searches'],[256,'Earlier rigid studies: geometry sweeps']],M.objs,null);
+  chipRow($('#f-obj'),[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[32,'Shape map (campaigns)'],[64,'Geometric sweep'],[128,'Earlier rigid studies: objective searches'],[256,'Earlier rigid studies: geometry sweeps'],[512,'Elasticity comparisons']],M.objs,null);
   chipRow($('#f-model'),D.models.map((m,i)=>[i,m.label]),M.models,M.color==='model'?(i=>modelColor(D.models[i].id)):null);
 }
 function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   let objMask=0;for(const b of M.objs)objMask|=b;
   for(let i=0;i<N;i++){
+    if(!M.elasticity.has(EXTRA[i]?.kind==='spanwise'?1:0))continue;
     if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(C.m[i]))continue;
     const st=STATUS[C.S[i]];
     if(M.quality==='good'&&!GOOD.has(st))continue;
@@ -473,7 +499,7 @@ function updateCounts(){
   $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} winners). Shift-click a chip to show only that one. Hollow = uncertain.`;
 }
 function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
-const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75']];
+const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75'],[512,'matched elasticity comparison']];
 function objText(i){const o=C.obj[i];const n=OBJ_NAMES.filter(x=>o&x[0]).map(x=>x[1]);
   const parts=[];if(n.length)parts.push((o&16?'seed of ':'')+n.join(', ')+(isCat(i)?' study':' search'+(n.length>1?'es':'')));
   if(o&32)parts.push('shape map (no objective)');if(o&64)parts.push('geometric sweep (no objective)');
@@ -534,12 +560,13 @@ function selectDesign(i){
     <div>Tip twist</div><div>${C.W[i]==null?'– (rigid)':'±'+fmt(C.W[i],1)+'°'}</div>
     <div>Half-span</div><div>${Math.round(SPAN[i])} mm effective${Math.abs(SPAN[i]-C.H[i])>1?` (${Math.round(C.H[i])} mm nominal)`:''}</div>
     <div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
-    <div>Chords</div><div class="small">${chordsOf(i).map(Math.round).join(' · ')} mm (root → tip, 8 equally spaced stations)</div>
+    <div>Chords</div><div class="small">${chordsOf(i).map(Math.round).join(' · ')} mm (root → tip, ${chordsOf(i).length} equally spaced stations)</div>
     <div>Quality</div><div>${statusPill(st)}</div>
     <div>Found by</div><div class="small">${[C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):''].filter(Boolean).join(' and ')||'–'}</div>
     <div>Objective</div><div class="small">${C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
+  if(EXTRA[i]){const e=EXTRA[i];$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button>`;return}
   $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Winner: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python WingStudy/elastic_campaign.py replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>'}</div>${info}`;
@@ -588,7 +615,7 @@ function renderWinners(){
   }
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(D.models.map((_,k)=>k));M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.elasticity.add(EXTRA[i]?.kind==='spanwise'?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(D.models.map((_,k)=>k));M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Stiffness effects
@@ -707,18 +734,57 @@ function optSet(R,set){
 /* ======================================================================================
    Tabs, theme, boot
    ====================================================================================== */
+
+function spanPointDetails(pair,kind){
+  const w=pair.source,r=pair[kind],i=pair.mapRows[kind],n=w.numerics||{};
+  const rod=w.rod,rodText=rod?.diameter_m?`${fmt(rod.diameter_m*1000,1)} mm OD / ${fmt((rod.hollow_inner_diameter_m||0)*1000,1)} mm ID`:(w.has_rod?'Yes · dimensions not recorded':'None');
+  const dt=r.dt_s??n.dt_s??(w._steps?1/(w._steps*w.freq):null),cycles=r.cycles??n.cycles;
+  const rows=[['Model',kind==='spanwise'?'Span + chord elasticity':'Chordwise elasticity'],['Material',w.material_label||'0.5 mm (no rod)'],['Leading-edge rod',rodText],['Frequency',`${fmt(w.freq,2)} Hz`],['Inflow / flap amplitude',`${fmt(w.motion?.speed_mps,2)} m/s / ${fmt(w.motion?.amplitude_deg,1)}°`],['Active half-span',`${fmt(SPAN[i],1)} mm`],['Area / root chord',`${fmt(AREA[i],1)} cm² / ${fmt(ROOT[i],1)} mm`],['Chords, root → tip',w.chords.map(v=>fmt(v,1)).join(' · ')+' mm'],['Mean thrust',`${fmt(r.mean_thrust_N,4)} N`],['Peak fluid root torque',`${fmt(r.peak_abs_root_torque_Nm,4)} N·m`],['Thrust / torque',`${fmt(r.mean_thrust_N/r.peak_abs_root_torque_Nm,3)} m⁻¹`],['Tip twist amplitude',r.tip_twist_amplitude_deg==null?'—':`±${fmt(r.tip_twist_amplitude_deg,1)}°`],['Tip span deflection',r.tip_bend_amplitude_m==null?'—':`±${fmt(1000*r.tip_bend_amplitude_m,1)} mm`],['Peak span slope',r.peak_abs_bend_deg==null?'—':`${fmt(r.peak_abs_bend_deg,1)}°`],['Time step / cycles',`${fmt(dt,5)} s / ${cycles??'not recorded'}`],['Mesh',n.span_panels!=null?`${n.span_panels} × ${n.chord_panels} panels`:'8 × 4 panels (screening)']];
+  return `<b>${esc(w.study)} · ${esc(w.key)}</b>${rowSVG(i,{w:300,h:85,labels:true,color:css(kind==='spanwise'?'--s2':'--s1')})}${statusPill(r.status)}<div class="kv">${rows.map(([a,b])=>`<div>${esc(a)}</div><div>${esc(b)}</div>`).join('')}</div><p class="tiny muted">${esc(w.comparison_note||'Matched screening rerun')} · Click for matched animations and comparison.</p>`;
+}
+
+function spanTopRows(rows){
+  const keep=new Set();
+  for(const f of new Set(rows.map(p=>p.source.freq))){const group=rows.filter(p=>p.source.freq===f);for(const k of ['baseline','spanwise']){const best=group.reduce((a,b)=>!a||b[k].mean_thrust_N>a[k].mean_thrust_N?b:a,null);if(best)keep.add(best)}}
+  return [...keep].sort((a,b)=>a.source.freq-b.source.freq||b.baseline.mean_thrust_N-a.baseline.mean_thrust_N);
+}
+function openSpanComparison(key){
+  const p=(D.span_comparisons||[]).find(r=>r.source.key===key);if(!p)return;
+  $('#v-title').textContent=`Matched elasticity comparison · ${p.source.freq} Hz · ${p.source.material_label||'0.5 mm bare sheet'}`;
+  $('#v-body').innerHTML=`<div style="grid-column:1/-1"><div class="seg">${[['main','Side'],['front','Front'],['top','Top']].map(([v,l])=>`<button onclick="document.querySelectorAll('.span-replay').forEach(im=>{im.src=im.dataset['${v}']})">${l}</button>`).join('')}</div><div class="grid2">${['baseline','spanwise'].map(k=>{const r=p[k],m=r.media;return `<div class="card"><h3>${k==='baseline'?'Chordwise only':'Spanwise + chordwise'}</h3>${m?`<img class="anim span-replay" src="${MU(m.front)}" data-main="${MU(m.main)}" data-front="${MU(m.front)}" data-top="${MU(m.top)}" alt="Native Ptera deformation animation">`:'<p class="muted">Native animation has not been rendered for this design.</p>'}<p><b>${fmt(r.mean_thrust_N,3)} N</b> mean thrust · <b>${fmt(r.peak_abs_root_torque_Nm,3)} N·m</b> peak root torque</p><p class="small">${statusPill(r.status)} · tip twist ±${fmt(r.tip_twist_amplitude_deg,1)}°${k==='spanwise'?` · span deflection ±${fmt(1000*r.tip_bend_amplitude_m,1)} mm`:''}</p></div>`}).join('')}</div><p class="small muted">Same outline, material, motion and numerical settings. Native Ptera animations are replayed at the saved stabilization factor and checked against saved thrust and torque. Rod cases also include the fixed-rotation rod boundary condition. Numerical verification is not experimental validation.</p>${outlineSVG(activeOutline(p.source.chords,p.source.half_span),{w:320,h:100,labels:true})}<p class="small">${esc(p.source.comparison_note||'Matched screening rerun')}</p></div>`;
+  viewer.showModal();
+}
+viewer.addEventListener('close',()=>{$$('.span-replay').forEach(im=>im.src='')});
+function renderSpan(){
+  const all=(D.span_comparisons||[]).filter(p=>p.source.batch==='preserved-frontier');
+  const good=r=>r&&GOOD.has(r.status)&&Number.isFinite(r.mean_thrust_N);
+  const matched=all.filter(p=>good(p.baseline)&&good(p.spanwise));
+  const enabled=window.spanModels||{baseline:true,spanwise:true,mode:'top',frequency:'all'};window.spanModels=enabled;
+  const scope=matched.filter(p=>!enabled.frequency||enabled.frequency==='all'||p.source.freq===+enabled.frequency);
+  const rows=enabled.mode==='all'?scope:spanTopRows(scope);
+  const series=[];
+  rows.forEach(p=>{for(const kind of ['baseline','spanwise'])if(enabled[kind]){
+    const r=p[kind];series.push({name:kind,color:css(kind==='baseline'?'--s1':'--s2'),points:[{x:r.peak_abs_root_torque_Nm,y:r.mean_thrust_N,pairKey:p.source.key,tip:spanPointDetails(p,kind)}]});
+  }});
+  const delta=(a,b)=>a?`${fmt(100*(b/a-1),1)}%`:'—';
+  $('#t-span').innerHTML=`<h2>How much does spanwise elasticity change the result?</h2><p class="lede">Highest mean-thrust performer under each model, selected separately at each frequency from wings with verified results in both models. Each selected wing is shown in both models so the difference is a matched comparison. No torque ceiling is applied.</p>
+  <div class="card"><div class="ctl"><label>Show <select onchange="window.spanModels.mode=this.value;renderSpan()"><option value="top" ${enabled.mode!=='all'?'selected':''}>Top performers</option><option value="all" ${enabled.mode==='all'?'selected':''}>All verified matched comparisons</option></select></label><label>Frequency <select onchange="window.spanModels.frequency=this.value;renderSpan()"><option value="all">All frequencies</option>${[...new Set(matched.map(p=>p.source.freq))].sort().map(f=>`<option value="${f}" ${+enabled.frequency===f?'selected':''}>${f} Hz</option>`).join('')}</select></label>${[['baseline','Chordwise only'],['spanwise','Span + chord']].map(([k,l])=>`<label><input type="checkbox" ${enabled[k]?'checked':''} onchange="window.spanModels['${k}']=this.checked;renderSpan()"> ${l}</label>`).join('')}</div>
+  ${legend([[css('--s1'),'Chordwise only'],[css('--s2'),'Span + chord']])}${series.length?lineChart({series,links:enabled.baseline&&enabled.spanwise?rows.map(p=>['baseline','spanwise'].map(k=>({x:p[k].peak_abs_root_torque_Nm,y:p[k].mean_thrust_N}))):[],xlabel:'Peak fluid root torque (N·m)',ylabel:'Mean thrust (N)',w:1000,h:350,xfmt:x=>fmt(x,2)}):'<p class="muted">No verified pairs match these selections.</p>'}<p class="small muted">Dashed links connect the same wing under both models. Hover for the outline and full details. Click a point or comparison row to open both models’ animations. ${rows.length} designs shown; ${matched.length} verified pairs out of ${all.length} attempted. The unresolved cases limit what this comparison can establish, especially for thin bare sheets.</p></div>
+  <div class="card" style="overflow:auto"><h3>Matched performance changes</h3><table><thead><tr><th>Wing</th><th>Chordwise: thrust / torque</th><th>Span + chord: thrust / torque</th><th>Thrust change</th><th>Torque change</th><th>Span deflection</th><th>Animation</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${outlineSVG(activeOutline(p.source.chords,p.source.half_span),{w:150,h:65})}${esc(p.source.material_label)} · ${p.source.freq} Hz</td><td>${fmt(p.baseline.mean_thrust_N,3)} N / ${fmt(p.baseline.peak_abs_root_torque_Nm,3)} N·m</td><td>${fmt(p.spanwise.mean_thrust_N,3)} N / ${fmt(p.spanwise.peak_abs_root_torque_Nm,3)} N·m</td><td>${delta(p.baseline.mean_thrust_N,p.spanwise.mean_thrust_N)}</td><td>${delta(p.baseline.peak_abs_root_torque_Nm,p.spanwise.peak_abs_root_torque_Nm)}</td><td>±${fmt(1000*p.spanwise.tip_bend_amplitude_m,1)} mm</td><td><button class="iconbtn" data-span-pair="${esc(p.source.key)}">${p.baseline.media&&p.spanwise.media?'▶ Compare animations':'Open comparison'}</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+
 const RENDERED={};
 function go(t){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   try{history.replaceState(null,'','#'+t)}catch(e){}
-  if(!RENDERED[t]){RENDERED[t]=1;({overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
+  if(!RENDERED[t]){RENDERED[t]=1;({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
   else if(t==='map')requestDraw()}
 $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
-function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt})[t]()}}
+function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt})[t]()}}
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
   document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
 try{const t=localStorage.getItem('atlas-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',rerenderAll);
-go((location.hash||'#overview').slice(1).replace(/[^a-z]/g,'')in{overview:1,map:1,winners:1,stiff:1,opt:1}?location.hash.slice(1):'overview');
+go((location.hash||'#overview').slice(1).replace(/[^a-z]/g,'')in{span:1,overview:1,map:1,winners:1,stiff:1,opt:1}?location.hash.slice(1):'overview');
 </script>
 </body>
 </html>
