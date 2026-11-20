@@ -1,5 +1,5 @@
 """Catalog identity, reuse, provenance and portable Excel regression checks."""
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import copy
 import csv
 import json

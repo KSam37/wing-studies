@@ -1,4 +1,4 @@
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import copy
 import tempfile
 import unittest
@@ -27,10 +27,6 @@ class AdaptiveChecks(unittest.TestCase):
         self.assertNotIn('max_root_moment_nm',p['config']['optimization'])
         self.assertEqual((r['simulation_budget'],r['evaluation_budget']),(500,None))
         self.assertEqual(p['search_job_count'],3)
-        html=(_paths.LEGACY/'workflow.html').read_text(encoding='utf-8')
-        for field,key in {'adaptiveSpanMin':'span_min_m','adaptiveSpanMax':'span_max_m','adaptiveSpanCount':'span_count','adaptiveNodes':'node_count','adaptiveStep':'initial_step_m','adaptiveBudget':'simulation_budget'}.items():
-            value=re.search('id="'+field+'"[^>]*value="([^"]+)"',html)[1]
-            self.assertEqual(float(value),r[key])
 
     def test_endpoints_are_search_coordinates_and_root_max_is_not_a_fixed_width(self):
         c=self.config();c['adaptive_search'].update(root_chord_m=.12,tip_chord_m=.04,maximum_root_chord_m=.2,initial_step_m=.04,minimum_step_m=.01,max_passes=1,paired_moves=False)
@@ -169,24 +165,6 @@ class AdaptiveChecks(unittest.TestCase):
             return row(str(len(jobs)),sum(chords),sum(chords))
         adaptive.run_search(r,evaluate)
         self.assertEqual(jobs[:2],[1,2])
-
-    def test_app_launch_writes_adaptive_manifest_and_budget_for_worker(self):
-        import app
-        from types import SimpleNamespace
-        with tempfile.TemporaryDirectory(dir=model.HERE) as temp:
-            out=Path(temp)/'studies';out.mkdir()
-            process=SimpleNamespace(pid=123,poll=lambda:None)
-            with patch.object(model,'OUTPUTS',out),patch.object(app,'PROCESS',None),patch.object(app,'ACTIVE',None),patch.object(app,'SERVER',SimpleNamespace(server_port=8766)),patch.object(app,'studies',return_value=[]),patch.object(app.subprocess,'check_output',return_value='verification'),patch.object(app.subprocess,'Popen',return_value=process) as launch:
-                result=app.start(self.config())
-                manifest=model.read_json(out/result['id']/'manifest.json')
-                self.assertIn('adaptive_search',manifest)
-                from wingstudy import catalog
-                self.assertTrue(catalog.verified_import(model,manifest))
-                self.assertEqual(manifest['simulation_budget'],500)
-                self.assertEqual(manifest['worker_pid'],123)
-                self.assertEqual(model.read_json(out/result['id']/'status.json')['total'],500)
-                self.assertIn('--worker',launch.call_args.args[0])
-                self.assertEqual(str(out/result['id']),launch.call_args.args[0][-1])
 
     def test_worker_strict_new_solve_budget_and_geometry_dedup(self):
         with tempfile.TemporaryDirectory(dir=model.HERE) as temp:

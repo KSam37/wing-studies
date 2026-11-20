@@ -108,7 +108,7 @@ def main(args=None):
             run([python,"-m","unittest","discover","-s",ROOT/"tests","-p","test_*.py"])
             print("Installation and application checks passed.",flush=True)
             return
-        run([python,"-u",ROOT/"legacy/app.py",*args[1:]])
+        run([python,"-u","-m","wingstudy",*args[1:]])
         return
     ensure_source()
     if args:

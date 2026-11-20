@@ -13,7 +13,7 @@ Read [V1_5_SYSTEM_GUIDE.md](V1_5_SYSTEM_GUIDE.md) before editing or running stud
 - The 578-case batch and twelve highlight animation replays are complete. Inspect progress before restarting.
 - `verified` means numerical settling and stabilization agreement, not mesh convergence or experimental validation. Failures are not zero-valued results.
 - Keep environments outside OneDrive; reuse registered launchers. Check the actual installed Ptera import path before changing solver code.
-- This folder is the `KSam37/wing-studies` Git repository (clone it outside OneDrive). `outputs/` and the legacy master catalogs stay local and are never pushed; the template cases the elastic studies need are in `wingstudy/data/template_cases/`. A restructure is in progress: see `RESTRUCTURE_PLAN.md`.
+- This folder is the `KSam37/wing-studies` Git repository. The working copy lives in OneDrive by the owner's choice; keep the Python environment and numba cache in `%LOCALAPPDATA%\WingStudies` (the launchers do this), and treat GitHub as the code backup. `outputs/` and the legacy master catalogs stay local and are never pushed; the template cases the elastic studies need are in `wingstudy/data/template_cases/`. A restructure is in progress: see `RESTRUCTURE_PLAN.md`.
 - Prefer bounded diagnostics before large reruns. Do not increase damping or deformation guards merely to obtain passing results.
 
 ## First five minutes

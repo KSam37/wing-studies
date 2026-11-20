@@ -21,7 +21,6 @@
 !/SPANWISE_FRONTIER_STUDY.md
 !/RESTRUCTURE_PLAN.md
 !/wingstudy/
-!/legacy/
 !/pyproject.toml
 !/PteraSoftware
 !/tests/
@@ -38,7 +37,6 @@ __pycache__/
 .env.*
 *.log
 wingstudy/tmp*/
-legacy/tmp*/
 
 !/tools/
 !/Open Results.cmd

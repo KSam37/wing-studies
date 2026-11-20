@@ -9,7 +9,6 @@
     python -m wingstudy span-atlas [args]  span comparison export (span_atlas)
     python -m wingstudy report    [args]   PDF report of a campaign (elastic_report)
     python -m wingstudy fingerprint        structural-code fingerprint used by saved plans
-    python -m wingstudy rigid-app [args]   the earlier rigid study editor (legacy/app.py)
 
 Each command forwards its remaining arguments to the module's own command line, so
 `python -m wingstudy frontier --help` shows that tool's options.
@@ -43,11 +42,6 @@ def main(argv=None) -> int:
         return 0
     if cmd == "dashboard":
         cmd, rest = "campaign", ["dashboard", *rest]
-    if cmd == "rigid-app":
-        from . import ROOT
-        sys.argv = [str(ROOT / "legacy" / "app.py"), *rest]
-        runpy.run_path(sys.argv[0], run_name="__main__")
-        return 0
     if cmd not in COMMANDS:
         print(f"unknown command {cmd!r}\n{__doc__}", file=sys.stderr)
         return 2

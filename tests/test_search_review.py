@@ -1,5 +1,5 @@
 """Behavioral checks for seed diversity, guaranteed refinement and safe reuse."""
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import copy
 import unittest
 from wingstudy import adaptive

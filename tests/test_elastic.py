@@ -2,7 +2,7 @@
 
   python -m unittest discover -s tests -p test_elastic.py -v
 """
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import unittest
 
 from wingstudy import elastic

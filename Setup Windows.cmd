@@ -13,5 +13,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Ready. Open Run Wing Studies.cmd or Run Master Catalog.cmd.
+echo Ready. Open Run Span Flex Study.cmd, or run tools\wingstudy.cmd --help.
 pause

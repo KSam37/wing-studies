@@ -23,9 +23,8 @@ Wings are carbon-fibre sheets of several thicknesses, either bare or with a carb
 | `atlas/data/` | Atlas data: one file per study plus metadata, catalog and span comparisons |
 | `atlas/media/`, `atlas/files/` | Animations (recompressed to one flap cycle), plots and reports |
 | `wingstudy/` | The study engine (Python package): geometry, rigid and elastic solvers, campaigns, searches, the atlas exporter. Run tools with `python -m wingstudy <command>` |
-| `legacy/` | The earlier rigid study app (browser editor, master catalog, lambda reviews), kept working for the rigid studies |
 | `tools/` | Setup, launchers, site build, media compression, data import |
-| `tests/` | Python tests for the package and the legacy app, plus the atlas UI test (the legacy app's UI tests sit beside its pages in `legacy/`) |
+| `tests/` | Python tests for the package, plus the atlas UI test |
 | `docs/history/` | Earlier READMEs and results notes, kept for provenance |
 
 Large raw outputs (full time histories, SQLite catalogs, older rigid studies) stay on the machine that produced them and are never committed. See [RESTRUCTURE_PLAN.md](RESTRUCTURE_PLAN.md) for where the project is heading.
@@ -42,16 +41,15 @@ Then open `_site/index.html` (landing page) or `_site/atlas/index.html` directly
 
 Simulations run on your own computer. A study builder on the website is planned: it will submit a study spec to this repository for a local run to pick up. Until then:
 
-1. **Set up (Windows).** Clone outside OneDrive (`git clone https://github.com/KSam37/wing-studies.git C:\dev\wing-studies`). Then double-click `Setup Windows.cmd`, which installs Python dependencies and the pinned Ptera solver into `%LOCALAPPDATA%\WingStudies`. Linux: `tools/setup_linux.sh`.
+1. **Set up (Windows).** Clone the repository (`git clone --recurse-submodules https://github.com/KSam37/wing-studies.git`). Then double-click `Setup Windows.cmd`, which installs the Python dependencies and the pinned Ptera solver into `%LOCALAPPDATA%\WingStudies`. That environment is tied to the folder you set up from: after moving the folder, run `Setup Windows.cmd` again. Linux: `tools/setup_linux.sh`.
 2. **Run.**
    - `Run Span Flex Study.cmd` opens the campaign dashboard.
    - `Run Frontier Span Study.cmd` resumes the matched chordwise/spanwise frontier rerun.
-   - `Run Wing Studies.cmd` opens the earlier rigid study editor (`legacy/`).
-   - Every tool is also available from the command line in the registered environment: `python -m wingstudy --help` lists the commands (`dashboard`, `frontier`, `spanfree`, `study`, `refine`, `report`, ...). Run them from the repository root.
+   - `tools\wingstudy.cmd <command>` runs any tool in the registered environment; `tools\wingstudy.cmd --help` lists the commands (`dashboard`, `frontier`, `spanfree`, `study`, `refine`, `report`, ...). The same commands are `python -m wingstudy <command>` from the repository root.
    - [V1_5_SYSTEM_GUIDE.md](V1_5_SYSTEM_GUIDE.md) explains each workflow and its options.
 3. **Publish.** Add results to `atlas/data/` and open a pull request. When it merges, the site rebuilds automatically.
 
-Set `NUMBA_CACHE_DIR` to a short path (for example `C:\dev\.numba`). Long Windows paths can make the solver's compiled-function cache fail.
+The launchers keep the solver's compiled-function cache in `%LOCALAPPDATA%\WingStudies\numba`. If you run Python directly, set `NUMBA_CACHE_DIR` to a short path: long Windows paths (OneDrive folders, for example) can make the cache fail.
 
 ## Tests
 
@@ -59,7 +57,7 @@ Set `NUMBA_CACHE_DIR` to a short path (for example `C:\dev\.numba`). Long Window
 python -m unittest discover -s tests
 ```
 
-Run this with the registered Ptera environment's Python. `Check Installation.cmd` does the same after verifying the installation.
+Run this with the registered Ptera environment's Python. `tools\Check Installation.cmd` does the same after verifying the installation.
 
 ## Credits
 

@@ -328,10 +328,8 @@ Original campaigns (databases missing in this imported copy)
 Commands assume APP and registered Python. The portable atlas needs no server.
 
 Windows entry points:
-- Run Wing Studies.cmd: older/general editor.
 - Run Span Flex Study.cmd: finite-span 0.5 mm bare-sheet campaign GUI, not automatically the preserved-frontier batch.
 - Run Frontier Span Study.cmd: resume preserved plan with four workers; matching completed cases are skipped.
-- Run Master Catalog.cmd: older catalog interface, not elastic atlas.
 
 Read-only remaining-count check:
 

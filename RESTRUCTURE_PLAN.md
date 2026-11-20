@@ -163,6 +163,7 @@ Each phase ends in a working state and can be paused there.
 **Status (2026-11-19): done, with one item deferred.**
 - `WingStudy/` became the `wingstudy/` package at the repo root (not `src/`: modules locate `outputs/` as `Path(__file__).parent.parent`, so the root keeps every path unchanged). History follows the files (`git mv`).
 - The 8 modules only the rigid app uses, and its pages and JS tests, moved to `legacy/`. They import the shared engine from `wingstudy`.
+- **Later (same day):** the legacy rigid app was removed from the repository at the owner's request: `legacy/`, its 5 test files, 2 tests in `test_adaptive.py`, and the `Run Wing Studies.cmd`, `Run Master Catalog.cmd` and `Open Master Excel.cmd` launchers. It remains in git history (commit `8f327b4` and earlier). The shared engine it used stays in `wingstudy/`.
 - Python tests moved to `tests/` (`python -m unittest discover -s tests`). Result: 248 tests in 28 suites pass, the same suites as before the move. The setup check also passes once the Ptera submodule is initialized.
 - `python -m wingstudy <command>` is the single CLI (`pyproject.toml` also declares a `wingstudy` script). The `.cmd` launchers run `-m wingstudy.*`.
 - Ptera was already a pinned submodule (`17a98a1…`), not vendored code. That item needed no change.

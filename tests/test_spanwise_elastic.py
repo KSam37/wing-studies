@@ -1,5 +1,5 @@
 """Analytical structure checks and native Ptera geometry/load regression checks."""
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import unittest
 import numpy as np
 from wingstudy import elastic

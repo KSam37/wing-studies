@@ -1,4 +1,4 @@
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import unittest
 from wingstudy import convergence_report as report
 from test_torque_study import row

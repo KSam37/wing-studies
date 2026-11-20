@@ -1,5 +1,5 @@
 """Engineering checks: input constraints, geometry, motion, and summary arithmetic."""
-import _paths  # noqa: F401  (repo root + legacy/ on sys.path)
+import _paths  # noqa: F401  (repo root on sys.path)
 import copy
 import math
 import csv

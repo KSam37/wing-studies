@@ -1,3 +1,3 @@
 @echo off
-call "%~dp0..\Run Wing Studies.cmd" --example %*
+call "%~dp0wingstudy.cmd" --example %*
 pause

@@ -1,2 +1,2 @@
 @echo off
-call "%~dp0..\Run Wing Studies.cmd" --check-installation %*
+call "%~dp0wingstudy.cmd" --check-installation %*
