@@ -4,5 +4,6 @@
  "done": 4,
  "failed": 0,
  "started": "2026-11-20T04:31:00Z",
- "finished": "2026-11-20T04:32:23Z"
+ "finished": "2026-11-20T04:32:23Z",
+ "note": "test edit (should be rejected)"
 }

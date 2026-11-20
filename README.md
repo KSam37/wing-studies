@@ -78,3 +78,5 @@ Run this with the registered Ptera environment's Python. `tools\Check Installati
 Aerodynamic loads come from [Ptera Software](https://github.com/camUrban/PteraSoftware) by Cameron Urban and contributors. Ptera is an unsteady vortex-lattice method solver released under the MIT licence. This project pins upstream commit `17a98a10f724a743f1b5f1597579b24edf95cf2d` (see `tools/ptera-source.json`). The water operating point, the chordwise and spanwise structural models, and the study tooling are this project's extensions; they are not part of Ptera.
 
 Developed for MIT 2.S986 Robotics in Fluids.
+
+<!-- check_pr test -->
