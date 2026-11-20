@@ -71,12 +71,12 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .ctl label{font-size:12.5px;color:var(--text-2)}
 .filters .viewbar{padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:12px}
 .fh{font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.fgrid{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:12px}
-@media (max-width:1180px){.fgrid{grid-template-columns:1fr 1fr}}
+.fgrid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}
+@media (max-width:1180px){.fgrid{grid-template-columns:1fr}}
 @media (max-width:760px){.fgrid{grid-template-columns:1fr}}
 fieldset.fg{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:8px 12px 10px;margin:0;min-width:0}
 fieldset.fg legend{font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 6px}
-.frow{display:grid;grid-template-columns:88px 1fr;gap:8px;align-items:start;margin:6px 0}
+.frow{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:start;margin:6px 0}
 .frow .fl{font-size:12.5px;color:var(--text-2);padding-top:4px}
 .frow.sub{transition:opacity .15s}
 .frow label{font-size:12.5px;color:var(--text-2)}
@@ -144,7 +144,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
 <section class="tab on" id="t-overview"></section>
 <section class="tab" id="t-map">
   <h2>Every simulated wing</h2>
-  <p class="lede">Each dot is one design from one study. Scroll to zoom at the cursor, drag to pan, double-click to reset. Hover to see the outline; click for details and, where one was rendered, the Ptera animation. Stars mark the winners of each category.</p>
+  <p class="lede">Each dot is one design from one study. Scroll to zoom at the cursor, drag to pan, double-click to reset. Hover to see the outline; click for details and, where one was rendered, the Ptera animation. Stars mark the top performer in each category.</p>
   <div class="card filters">
     <div class="ctl viewbar">
       <span class="fh">View</span>
@@ -156,21 +156,14 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
       <button class="iconbtn" id="csv" style="width:auto;padding:0 10px">Download visible as CSV</button>
     </div>
     <div class="fgrid">
-      <fieldset class="fg"><legend>Analysis &amp; material</legend>
+      <fieldset class="fg"><legend>Analysis</legend>
         <div class="frow"><span class="fl">Analysis type</span><div class="chips" id="f-struct"></div></div>
         <div class="frow"><span class="fl">Construction</span><div class="chips" id="f-constr"></div></div>
         <div class="frow"><span class="fl">Sheet thickness</span><div class="chips" id="f-thk"></div></div>
-        <p class="tiny muted" style="margin:2px 0 0">Analysis type is the physics a wing was simulated with. Rigid wings have no material, so construction and thickness apply to the elastic analyses only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge.</p>
-      </fieldset>
-      <fieldset class="fg"><legend>Data source</legend>
+        <div class="frow"><span class="fl">Torque penalty λ</span><div class="chips" id="f-lambda"></div></div>
         <div class="frow"><span class="fl">Study</span><div class="chips" id="f-study"></div></div>
-        <div class="frow"><span class="fl">Searches</span><div class="chips" id="f-obj-search"></div></div>
-        <div class="frow"><span class="fl">Sampling</span><div class="chips" id="f-obj-sample"></div></div>
-        <div class="frow"><span class="fl">Reruns</span><div class="chips" id="f-obj-rerun"></div></div>
-        <div class="frow sub" id="cat-ctl"><span class="fl">Rigid catalog</span><div class="chips">
-          <label>Conditions <select id="cat-cohort" style="max-width:230px"></select></label>
-          <label>Study <select id="cat-study" style="max-width:230px"></select></label>
-          <label><input type="checkbox" id="cat-root"> 200 mm root only</label></div></div>
+        <p class="tiny muted" style="margin:2px 0 0">Analysis type is the physics a wing was simulated with. Rigid wings have no material, so construction and thickness apply to the elastic analyses only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge.
+        λ is the torque penalty in the search score S = T/T<sub>ref</sub> − λ·M/M<sub>ref</sub>: a larger λ steers the search toward lower root torque. Designs found any other way (the torque-budget search, shape maps, sweeps, reruns) have no λ.</p>
       </fieldset>
       <fieldset class="fg"><legend>Geometry, conditions &amp; quality</legend>
         <div class="frow"><span class="fl">Half-span</span><div class="chips">
@@ -412,11 +405,11 @@ const constrColor=k=>css(CONSTR_VAR[k]), thkColor=k=>css(THK_VAR[k%THK_VAR.lengt
 const matLabel=mi=>BASE_OF[mi]==='rigid'?'none (rigid analysis)':`${MODEL[BASE_OF[mi]].thickness} mm carbon sheet${ROD_OF[mi]?' + leading-edge rod':''}`;
 const QUAL_OF=st=>GOOD.has(st)?0:st==='uncertain'?1:2;
 const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / unresolved']];
-const OBJ_GROUPS={'f-obj-search':[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[128,'Earlier rigid searches']],
-  'f-obj-sample':[[32,'Shape map (campaigns)'],[64,'Geometric sweep'],[256,'Earlier rigid sweeps']],
-  'f-obj-rerun':[[512,'Matched elasticity comparisons']]};
-const ALL_OBJS=Object.values(OBJ_GROUPS).flat().map(x=>x[0]);
-const mapDefaults=()=>({objs:new Set(ALL_OBJS),lim:new Set([0,1]),quality:new Set([0]),catCohort:-1,catStudy:-1,catRoot:false,
+// Torque penalty lambda (objective bits 2/4/8). A design may have been found by several lambda searches.
+const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low torque'],[0,'No λ (other searches, maps, sweeps, reruns)']];
+const LAMBDA_BITS=2|4|8;
+const lambdaPass=i=>{const o=C.obj[i]&LAMBDA_BITS;if(!o)return M.lambda.has(0);for(const b of [2,4,8])if(o&b&&M.lambda.has(b))return true;return false};
+const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),
   studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),thk:new Set(THKS.map((_,k)=>k))});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
@@ -432,7 +425,7 @@ function initMapControls(){
   $('#colorby').onchange=e=>{M.color=e.target.value;drawMap()};
   $('#csv').onclick=downloadCSV;
   $('#f-reset').onclick=()=>{Object.assign(M,mapDefaults(),{spLo:SPAN_LIM[0],spHi:SPAN_LIM[1],view:null});spSync();
-    if(CAT){$('#cat-cohort').value=-1;$('#cat-study').value=-1;$('#cat-root').checked=false}drawMap()};
+    drawMap()};
   const spSync=()=>{$('#sp-lo').value=M.spLo;$('#sp-hi').value=M.spHi;$('#sp-lo-r').value=M.spLo;$('#sp-hi-r').value=M.spHi};
   for(const id of ['sp-lo','sp-hi','sp-lo-r','sp-hi-r']){const el=$('#'+id);el.min=SPAN_LIM[0];el.max=SPAN_LIM[1];
     el.oninput=()=>{let v=+el.value;if(!isFinite(v))return;v=Math.max(SPAN_LIM[0],Math.min(SPAN_LIM[1],v));
@@ -440,13 +433,6 @@ function initMapControls(){
       spSync();M.view=null;drawMap()}}
   $('#sp-all').onclick=()=>{M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];spSync();M.view=null;drawMap()};
   spSync();
-  if(CAT){
-    $('#cat-cohort').innerHTML='<option value="-1">all groups</option>'+CAT.cohorts.map((g,k)=>`<option value="${k}">${g.count.toLocaleString()} runs · dt ${g.dt} s · ${g.panels} panels · ${g.waveform} stroke</option>`).join('');
-    $('#cat-study').innerHTML='<option value="-1">all studies</option>'+CAT.studies.map((s,k)=>`<option value="${k}">${esc(s.name)}</option>`).join('');
-    $('#cat-cohort').onchange=e=>{M.catCohort=+e.target.value;M.view=null;drawMap()};
-    $('#cat-study').onchange=e=>{M.catStudy=+e.target.value;M.view=null;drawMap()};
-    $('#cat-root').onchange=e=>{M.catRoot=e.target.checked;M.view=null;drawMap()};
-  }else $('#cat-ctl').style.display='none';
 }
 function chipRow(el,items,set,colorFn){
   el.innerHTML=items.map(([v,l])=>`<button class="chip ${set.has(v)?'':'off'}" data-v="${v}" aria-pressed="${set.has(v)}">${colorFn?`<span class="sw" style="background:${colorFn(v)}"></span>`:''}${l}<span class="c" data-c="${v}"></span></button>`).join('');
@@ -456,7 +442,7 @@ function chipRow(el,items,set,colorFn){
 }
 function renderChips(){
   chipRow($('#f-study'),D.studies.map((s,i)=>[i,s.label]),M.studies,M.color==='study'?studyColor:null);
-  for(const [id,items] of Object.entries(OBJ_GROUPS))chipRow($('#'+id),items,M.objs,null);
+  chipRow($('#f-lambda'),LAMBDAS,M.lambda,null);
   chipRow($('#f-struct'),STRUCTS,M.struct,M.color==='struct'?structColor:null);
   chipRow($('#f-constr'),CONSTRS,M.constr,M.color==='constr'?constrColor:null);
   chipRow($('#f-thk'),THKS.map((t,k)=>[k,t+' mm']),M.thk,M.color==='thk'?thkColor:null);
@@ -466,14 +452,12 @@ function renderChips(){
 }
 function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
-  let objMask=0;for(const b of M.objs)objMask|=b;
   for(let i=0;i<N;i++){
     const m=C.m[i];
     if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m]))continue;
     if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
     if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
-    if(!(C.obj[i]&objMask))continue;
-    if(isCat(i)){const r=i-CAT0;if(M.catCohort>=0&&CAT.cohort[r]!==M.catCohort)continue;if(M.catStudy>=0&&CAT.study[r]!==M.catStudy)continue;if(M.catRoot&&!(Math.abs(ROOT[i]-200)<0.5))continue}
+    if(!lambdaPass(i))continue;
     if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
     if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
     const x=gx(i),y=gy(i); if(x==null||y==null||!isFinite(x)||!isFinite(y))continue;
@@ -546,8 +530,7 @@ function updateCounts(){
   const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
   const cnt={};for(const i of VIS){const k=key(i);cnt[k]=(cnt[k]||0)+1}
   $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span>`;
-  const catOn=STUDY.catalog&&M.studies.has(STUDY.catalog.i);
-  $('#cat-ctl').style.opacity=catOn?1:.4;$$('#cat-ctl select,#cat-ctl input').forEach(e=>e.disabled=!catOn);
+
   const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
   $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} top performers). Shift-click a chip to show only that one. Hollow = uncertain.`;
 }
@@ -668,7 +651,7 @@ function renderWinners(){
   }
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));for(const b of ALL_OBJS)if(C.obj[i]&b)M.objs.add(b);M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Stiffness effects
