@@ -1,9 +1,10 @@
 """Plan and run a study: expand its spec into cases and solve them with the existing engines.
 
-Study kinds map onto the engines the campaigns already use, unchanged:
+Studies use the engines the campaigns already use, unchanged:
 
-    design-set, geometry-sweep  ->  elastic_campaign._evaluate   (one design, verification ladder)
-    matched-comparison          ->  span_atlas.evaluate          (chordwise vs spanwise pair)
+    chordwise / spanwise cases  ->  elastic_campaign._evaluate   (one design, verification ladder)
+    matched cases               ->  span_atlas.evaluate          (chordwise vs spanwise pair)
+    evolutionary searches       ->  coordinate_search.climb      (see evolve.py), solving as above
 
 Every solved case is cached under outputs/study-cache/<key>.json. The key covers the
 wing, model, motion template, numerics and the code identity, so reruns and later
@@ -112,22 +113,37 @@ def estimate_seconds(case: dict) -> float:
     return SECONDS[kind] * scale
 
 
-def prepare(study_id: str):
+def load_valid(study_id: str) -> dict:
     spec = S.load(study_id)
     errors = S.validate(spec)
     if errors:
         raise ValueError("invalid spec:\n  " + "\n  ".join(errors))
     if spec["id"] != study_id and Path(study_id).name != spec["id"]:
         raise ValueError(f"spec id {spec['id']!r} does not match its folder {study_id!r}")
+    return spec
+
+
+def prepare(study_id: str):
+    spec = load_valid(study_id)
     from ..identity import code_identity
     code = code_identity()
-    cases = S.expand(spec)
+    cases = [] if spec["kind"] == "evolutionary" else S.expand(spec)
     jobs = [job_for(c, code["digest"]) for c in cases]
     return spec, code, cases, jobs
 
 
 def plan(study_id: str, workers: int = 1) -> dict:
     spec, code, cases, jobs = prepare(study_id)
+    if spec["kind"] == "evolutionary":
+        from . import evolve
+        typical, most = evolve.estimate_cases(spec)
+        per = estimate_seconds({"model": spec["models"][0], "structure": "chordwise" if spec.get("structure") == "matched"
+                                else spec.get("structure", "chordwise"), "numerics": S.numerics_of(spec["numerics"][0])})
+        return {"study": spec["id"], "kind": spec["kind"], "cases": most, "cached": 0, "to_solve": typical,
+                "estimated_minutes": round(typical * per / 60 / max(workers, 1), 1),
+                "estimated_minutes_max": round(most * per / 60 / max(workers, 1), 1),
+                "searches": len(spec["models"]) * len(spec["frequencies_hz"]) * len(spec["search"]["objectives"]),
+                "lineages_per_search": S.lineages_per_search(spec), "workers": workers, "code": code["digest"]}
     cached = sum((CACHE / f"{j['key']}.json").exists() for j in jobs)
     secs = sum(estimate_seconds(c) for c, j in zip(cases, jobs) if not (CACHE / f"{j['key']}.json").exists())
     return {"study": spec["id"], "kind": spec["kind"], "cases": len(cases), "cached": cached,
@@ -135,9 +151,66 @@ def plan(study_id: str, workers: int = 1) -> dict:
             "workers": workers, "code": code["digest"]}
 
 
+class Solver:
+    """Solves cases through the study cache, in parallel when workers > 1."""
+
+    def __init__(self, code: dict, workers: int, log, on_solved=None):
+        self.code, self.workers, self.log, self.on_solved = code, workers, log, on_solved
+        self.jobs, self.pool, self.fresh, self.cached = {}, None, 0, 0
+
+    def __enter__(self):
+        if self.workers > 1:
+            import multiprocessing as mp
+            from concurrent.futures import ProcessPoolExecutor
+            self.pool = ProcessPoolExecutor(max_workers=self.workers, mp_context=mp.get_context("spawn"))
+        return self
+
+    def __exit__(self, *exc):
+        if self.pool:
+            self.pool.shutdown(cancel_futures=True)
+
+    def many(self, cases: list[dict]) -> dict:
+        """Sets each case's "key"; returns {key: result} for all of them."""
+        out, todo = {}, {}
+        for c in cases:
+            j = job_for(c, self.code["digest"])
+            c["key"] = j["key"]
+            self.jobs[j["key"]] = j
+            if j["key"] in out or j["key"] in todo:
+                continue
+            p = CACHE / f"{j['key']}.json"
+            if p.exists():
+                out[j["key"]] = S.read_json(p)["result"]
+                self.cached += 1
+            else:
+                todo[j["key"]] = (c, j)
+
+        def finish(c, j, r):
+            S.write_json(CACHE / f"{j['key']}.json", {"key": j["key"], "job": j, "result": r, "code": self.code, "solved": now()})
+            out[j["key"]] = r
+            self.fresh += 1
+            if self.on_solved:
+                self.on_solved(c, r)
+
+        if self.pool is None or len(todo) <= 1:
+            for c, j in todo.values():
+                finish(c, j, solve(j))
+        else:
+            from concurrent.futures import as_completed
+            futures = {self.pool.submit(solve, j): (c, j) for c, j in todo.values()}
+            for f in as_completed(futures):
+                c, j = futures[f]
+                try:
+                    r = f.result()
+                except Exception as exc:
+                    r = {"status": "failed", "error": f"worker crashed: {exc}"}
+                finish(c, j, r)
+        return out
+
+
 # ----------------------------------------------------------------------------- run
 def run(study_id: str, workers: int = 1, force: bool = False, log=print) -> dict:
-    spec, code, cases, jobs = prepare(study_id)
+    spec, code, cases, _ = prepare(study_id)
     folder = S.study_dir(spec["id"])
     sha = S.spec_sha256(spec)
     results_path = folder / "results.json"
@@ -147,53 +220,45 @@ def run(study_id: str, workers: int = 1, force: bool = False, log=print) -> dict
             raise RuntimeError("This study already has results for a different spec. Results are immutable: "
                                "create a new study (with \"parent\") instead of editing this one.")
     CACHE.mkdir(parents=True, exist_ok=True)
-    status = {"state": "running", "total": len(cases), "done": 0, "failed": 0, "started": now(), "finished": None}
+    evo = spec["kind"] == "evolutionary"
+    total = S.case_count(spec)
+    status = {"state": "running", "total": total, "done": 0, "failed": 0, "started": now(), "finished": None}
+    if evo:
+        status["note"] = "total is the most an evolutionary search can solve; lineages usually stop earlier"
     S.write_json(folder / "status.json", status)
-    results = {}
-    todo = []
-    for c, j in zip(cases, jobs):
-        p = CACHE / f"{j['key']}.json"
-        if p.exists():
-            results[c["case_id"]] = S.read_json(p)["result"]
-        else:
-            todo.append((c, j))
-    log(f"{spec['id']}: {len(cases)} cases, {len(cases) - len(todo)} cached, {len(todo)} to solve with {workers} worker(s)")
 
-    def finish(c, j, r):
-        S.write_json(CACHE / f"{j['key']}.json", {"key": j["key"], "job": j, "result": r, "code": code, "solved": now()})
-        results[c["case_id"]] = r
-        status["done"] = len(results)
-        status["failed"] = sum(1 for x in results.values() if x["status"] == "failed")
+    def solved(c, r):
+        status["done"] += 1
+        status["failed"] += r["status"] == "failed"
         S.write_json(folder / "status.json", status)
-        log(f"[{len(results)}/{len(cases)}] {c['case_id']} {c['model']} {c['freq']:g} Hz: {summary(r)}")
+        log(f"[{status['done']}{'' if evo else '/' + str(total)}] {c['model']} {c['freq']:g} Hz {c['wing']}: {summary(r)}")
 
+    extra = {}
     try:
-        if workers <= 1 or len(todo) <= 1:
-            for c, j in todo:
-                finish(c, j, solve(j))
-        else:
-            import multiprocessing as mp
-            from concurrent.futures import ProcessPoolExecutor, as_completed
-            with ProcessPoolExecutor(max_workers=workers, mp_context=mp.get_context("spawn")) as pool:
-                futures = {pool.submit(solve, j): (c, j) for c, j in todo}
-                for f in as_completed(futures):
-                    c, j = futures[f]
-                    try:
-                        r = f.result()
-                    except Exception as exc:
-                        r = {"status": "failed", "error": f"worker crashed: {exc}"}
-                    finish(c, j, r)
+        with Solver(code, workers, log, solved) as solver:
+            if evo:
+                from . import evolve
+                log(f"{spec['id']}: evolutionary, up to {total} solves with {workers} worker(s)")
+                found = evolve.search(spec, solver.many, log=log)
+                cases, results = found["cases"], found["results"]
+                for j, c in enumerate(cases):
+                    c["case_id"] = f"c{j + 1:04d}"
+                extra["searches"] = found["searches"]
+            else:
+                log(f"{spec['id']}: {len(cases)} cases with {workers} worker(s)")
+                results = solver.many(cases)
+            jobs = solver.jobs
     except BaseException:
-        status.update(state="failed" if status["done"] < len(cases) else "running", finished=now())
+        status.update(state="failed", finished=now())
         S.write_json(folder / "status.json", status)
         raise
     out = {"schema": S.RESULTS_SCHEMA, "study": spec["id"], "kind": spec["kind"], "spec_sha256": sha,
            "code": code, "completed": now(),
-           "counts": _counts(results.values()),
-           "cases": [dict(c, key=j["key"], replay={"engine": j["engine"], "input": j["input"]}, **results[c["case_id"]])
-                     for c, j in zip(cases, jobs)]}
+           "counts": _counts(results[c["key"]] for c in cases),
+           "cases": [dict(c, replay={"engine": jobs[c["key"]]["engine"], "input": jobs[c["key"]]["input"]}, **results[c["key"]])
+                     for c in cases], **extra}
     S.write_json(results_path, out)
-    status.update(state="complete", finished=now())
+    status.update(state="complete", done=len(cases), finished=now())
     S.write_json(folder / "status.json", status)
     log(f"{spec['id']}: complete. {out['counts']}")
     return out
@@ -228,14 +293,26 @@ def results_errors(results: dict, spec: dict) -> list[str]:
     if results.get("spec_sha256") != S.spec_sha256(spec):
         e.append("results.spec_sha256: spec.json changed after the run (results are immutable; make a new study)")
     cases = results.get("cases")
-    if not isinstance(cases, list) or len(cases) != S.case_count(spec):
+    if spec.get("kind") == "evolutionary":
+        if not isinstance(cases, list) or not 1 <= len(cases) <= S.case_count(spec):
+            e.append(f"results.cases: expected 1-{S.case_count(spec)} cases")
+            return e
+        keys = {c.get("key") for c in cases if isinstance(c, dict)}
+        searches = results.get("searches")
+        if not isinstance(searches, list) or not searches:
+            e.append("results.searches: required for evolutionary studies")
+        else:
+            for x in searches:
+                if not isinstance(x, dict) or (x.get("winner") is not None and x["winner"] not in keys):
+                    e.append(f"results.searches: {x.get('id') if isinstance(x, dict) else x!r} names a winner that is not a case")
+    elif not isinstance(cases, list) or len(cases) != S.case_count(spec):
         e.append(f"results.cases: expected {S.case_count(spec)} cases")
         return e
     for c in cases:
         if not isinstance(c, dict) or not {"case_id", "key", "status", "model", "freq", "chords_mm", "half_span_mm"} <= set(c):
             e.append(f"results.cases: {c.get('case_id') if isinstance(c, dict) else c!r} is missing fields")
             continue
-        if spec["kind"] != "matched-comparison":
+        if c.get("structure") != "matched":
             for k in ("thrust_N", "torque_Nm"):
                 v = c.get(k)
                 if v is not None and not (isinstance(v, (int, float)) and math.isfinite(v)):

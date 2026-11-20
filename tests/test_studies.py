@@ -132,13 +132,45 @@ class Expansion(unittest.TestCase):
         self.assertEqual(cases[0]["numerics"], S.NUMERICS_DEFAULT)
 
     def test_matched_structure(self):
-        s = filled("matched-comparison")
+        s = design_spec(structure="matched", models=["t0.50"])
+        self.assertEqual(S.validate(s), [])
         self.assertTrue(all(c["structure"] == "matched" for c in S.expand(s)))
+        self.assertTrue(any("rigid" in e for e in S.validate(design_spec(structure="matched", models=["rigid"]))))
 
     def test_spec_hash_ignores_key_order(self):
         s = design_spec()
         t = json.loads(json.dumps(s, sort_keys=True))
         self.assertEqual(S.spec_sha256(s), S.spec_sha256(dict(reversed(list(t.items())))))
+
+
+class Evolutionary(unittest.TestCase):
+    def test_upper_bound_and_matched_winners(self):
+        s = filled("evolutionary")
+        n = 2 * (2 * 2) * (1 + 30)               # 2 objectives x (2 spans x 2 families) x (seed + 30)
+        self.assertEqual(S.case_count(s), n)
+        s.update(structure="matched", models=["t0.50"], budget={"max_cases": 1000})
+        self.assertEqual(S.case_count(s), n + 2)
+
+    def test_search_rules(self):
+        def errs(**search):
+            s = filled("evolutionary")
+            s["search"] = dict(s["search"], **search)
+            return S.validate(s)
+        self.assertTrue(any("repeats" in e for e in errs(objectives=[{"lambda": 1}, {"lambda": 1.0}])))
+        self.assertTrue(any("go together" in e for e in errs(seed_families=[])))
+        self.assertTrue(any("objectives[0]" in e for e in errs(objectives=[{"lambda": 1, "torque_budget_Nm": 1}])))
+        self.assertTrue(any("seed_families" in e for e in errs(seed_families=["blob"])))
+        self.assertTrue(any("step_mm" in e for e in errs(step_mm=0)))
+        self.assertTrue(any("give seed" in e for e in errs(seed_half_spans_mm=[], seed_families=[])))
+        s = filled("evolutionary")
+        s["numerics"] = [{}, {"steps_per_cycle": 100}]
+        self.assertTrue(any("exactly one" in e for e in S.validate(s)))
+        s = filled("evolutionary")
+        s["wings"] = {"designs": [{"name": "up", "chords_mm": [200, 210, 100, 50, 20, 8, 0, 0], "half_span_mm": 300}]}
+        e = S.validate(s)
+        self.assertTrue(any("must not increase" in x for x in e) and any("min_chord_mm" in x for x in e), e)
+        self.assertTrue(any("only for evolutionary" in e for e in S.validate(design_spec(search={"objectives": [{"lambda": 1}]}))))
+
 
 
 class SchemaAgreement(unittest.TestCase):
@@ -179,6 +211,24 @@ def fake_solve(job):
     if job["input"]["level"] == "t0.25r":
         return {"status": "failed", "thrust_N": None, "torque_Nm": None, "error": "did not settle", "elapsed_s": 0.0}
     return {"status": "verified", "thrust_N": 2.0, "torque_Nm": 0.9, "tip_twist_deg": 12.0, "elapsed_s": 0.0}
+
+
+def evo_job(case, digest):
+    blob = json.dumps([case["model"], case["structure"], case["freq"], case["chords_mm"], case["half_span_mm"]])
+    import hashlib
+    key = hashlib.sha256(blob.encode()).hexdigest()[:24]
+    return {"engine": "matched" if case["structure"] == "matched" else "design", "key": key,
+            "input": {"chords": case["chords_mm"], "half_span": case["half_span_mm"], "structure": case["structure"]}}
+
+
+def evo_solve(job):
+    """Thrust grows with area; torque with area x span. Lambda searches have an interior optimum."""
+    if job["engine"] == "matched":
+        return {"status": "complete", "baseline": {"status": "verified", "mean_thrust_N": 2.0, "peak_abs_root_torque_Nm": 0.9},
+                "spanwise": {"status": "verified", "mean_thrust_N": 1.9, "peak_abs_root_torque_Nm": 0.8}, "elapsed_s": 0.0}
+    c, hs = job["input"]["chords"], job["input"]["half_span"]
+    area = sum(c) * hs / 8 / 1e4
+    return {"status": "verified", "thrust_N": 0.2 * area, "torque_Nm": 0.0004 * area * hs, "elapsed_s": 0.0}
 
 
 class RunAndMerge(unittest.TestCase):
@@ -234,8 +284,41 @@ class RunAndMerge(unittest.TestCase):
         self.assertEqual(len(D["cols"]["C"]), 8 * 3)
         self.assertIn("100 steps per cycle", D["row_notes"]["2"])
 
+    def test_evolutionary_run(self):
+        try:
+            import numpy  # noqa: F401  (family seeds use adaptive.seed, which imports numpy)
+        except ImportError:
+            self.skipTest("numpy not installed")
+        spec = filled("evolutionary", "2026-11-20-evo")
+        spec.update(structure="matched", models=["t0.50"], budget={"max_cases": 1000})
+        spec["search"].update(solves_per_lineage=12)
+        S.write_json(S.study_dir(spec["id"]) / "spec.json", spec)
+        with mock.patch.object(R, "job_for", evo_job), mock.patch.object(R, "solve", evo_solve):
+            out = R.run(spec["id"], log=lambda *a: None)
+        self.assertEqual(R.results_errors(out, spec), [])
+        self.assertEqual(len(out["searches"]), 2)
+        keys = {c["key"]: c for c in out["cases"]}
+        for x in out["searches"]:
+            self.assertIn(x["winner"], keys)
+            self.assertEqual(keys[x["matched"]]["structure"], "matched")
+            self.assertEqual(len(x["lineages"]), 4)
+            for lin in x["lineages"]:
+                self.assertLessEqual(lin["solves"], 12)
+                scores = [a["score"] for a in lin["accepted"]]
+                self.assertEqual(scores, sorted(scores))              # a climb only accepts improvements
+        budget = next(x for x in out["searches"] if "torque_budget_Nm" in x["objective"])
+        self.assertLessEqual(keys[budget["winner"]]["torque_Nm"], 1.0)
+        self.assertLessEqual(len(out["cases"]), S.case_count(spec))
+        D = {"studies": [], "models": [], "freqs": [], "statuses": [], "cols": {k: [] for k in ("s", "m", "f", "T", "Q", "H", "W", "S", "src", "k", "obj", "C")}}
+        added = A.merge(D, [(spec, out)])
+        self.assertEqual(added, sum(1 for c in out["cases"] if c["structure"] != "matched"))
+        self.assertEqual(len(D["span_comparisons"]), 2)
+        win = D["row_search"]
+        self.assertTrue(any(v.get("winner") for v in win.values()))
+        self.assertTrue(all(src & A.SRC_STUDY and src & 1 for src in D["cols"]["src"]))
+
     def test_matched_merge(self):
-        spec = filled("matched-comparison", "2026-11-20-matched")
+        spec = design_spec(id="2026-11-20-matched", structure="matched", models=["t0.50"])
         cases = [dict(c, key="ab" * 12, status="complete", replay={"engine": "matched", "input": {"numerics": {}}},
                       baseline={"status": "verified", "mean_thrust_N": 3.0}, spanwise={"status": "verified", "mean_thrust_N": 2.5})
                  for c in S.expand(spec)]

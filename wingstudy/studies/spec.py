@@ -22,8 +22,10 @@ STUDIES = ROOT / "studies"
 SPEC_SCHEMA = "wingstudy/study-spec@1"
 RESULTS_SCHEMA = "wingstudy/study-results@1"
 
-KINDS = ("design-set", "geometry-sweep", "matched-comparison")
-STRUCTURES = ("chordwise", "spanwise")
+KINDS = ("evolutionary", "geometry-sweep", "design-set")
+# matched: every wing solved with chordwise elasticity only and with spanwise bending added
+# (an evolutionary search climbs on chordwise and re-solves each search's winner matched).
+STRUCTURES = ("chordwise", "spanwise", "matched")
 STATES = ("proposed", "running", "complete", "failed")
 
 # Material models, as in the atlas. Sheets are plain-weave carbon fibre; the rod is the
@@ -44,10 +46,24 @@ FREQ_RANGE = (0.25, 3.0)
 HALF_SPAN_RANGE = (100.0, 800.0)
 CHORD_RANGE = (5.0, 400.0)
 SWEEP_COUNT = (1, 4096)
+# Evolutionary searches: the campaigns' coordinate climb (wingstudy/coordinate_search.py).
+FAMILIES = ("triangle", "square", "concave", "convex", "narrow")
+SEARCH_KEYS = {"objectives", "seed_half_spans_mm", "seed_families", "solves_per_lineage", "step_mm",
+               "min_chord_mm", "decreasing"}
+SEARCH_DEFAULT = {"seed_half_spans_mm": [], "seed_families": [], "solves_per_lineage": 60, "step_mm": 20.0,
+                  "min_chord_mm": 10.0, "decreasing": True}
+LAMBDA_RANGE = (0.0, 10.0)
+TORQUE_BUDGET_RANGE = (0.05, 20.0)
+OBJECTIVES_MAX = 6
+SEED_SPANS_MAX = 10
+SOLVES_PER_LINEAGE = (1, 500)
+STEP_RANGE = (1.0, 100.0)
+MIN_CHORD_RANGE = (5.0, 100.0)
+SEED_ROOT_MM = 200.0            # family seeds use the campaigns' fixed 200 mm root chord
 ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*$")
 KEY_RE = re.compile(r"^[0-9a-f]{24}$")
 TOP_KEYS = {"schema", "id", "title", "author", "question", "kind", "structure", "models", "frequencies_hz",
-            "numerics", "wings", "sweep", "budget", "parent", "notes"}
+            "numerics", "wings", "sweep", "search", "budget", "parent", "notes"}
 REQUIRED = ("schema", "id", "title", "author", "question", "kind", "models", "frequencies_hz")
 
 
@@ -135,7 +151,7 @@ def validate(spec: dict) -> list[str]:
             bad = [m for m in models if not isinstance(m, str) or m not in MODELS]
             if bad:
                 e.append(f"models: unknown {bad}; choose from {', '.join(MODELS)}")
-            if "rigid" in models and (kind == "matched-comparison" or structure == "spanwise"):
+            if "rigid" in models and structure in ("spanwise", "matched"):
                 e.append("models: rigid wings have no structure to bend; remove 'rigid' for spanwise or matched studies")
     freqs = spec.get("frequencies_hz")
     if freqs is not None:
@@ -160,11 +176,21 @@ def validate(spec: dict) -> list[str]:
                     e.append(f"numerics[{j}].{k}: whole number {lo}-{hi}")
         if len({json.dumps(numerics_of(n), sort_keys=True) for n in numerics if isinstance(n, dict)}) != len(numerics):
             e.append("numerics: settings repeat")
-    wings, sweep = spec.get("wings"), spec.get("sweep")
-    if kind in ("design-set", "matched-comparison"):
+        elif kind == "evolutionary" and len(numerics) != 1:
+            e.append("numerics: evolutionary searches use exactly one numerical setting")
+    wings, sweep, search = spec.get("wings"), spec.get("sweep"), spec.get("search")
+    if kind != "evolutionary" and search is not None:
+        e.append("search: only for evolutionary studies")
+    if kind == "evolutionary":
         if sweep is not None:
             e.append("sweep: only for geometry-sweep studies")
-        if not isinstance(wings, dict) or not (wings.get("designs") or wings.get("from_atlas")):
+        e += _search_errors(search)
+        if wings is not None and not isinstance(wings, dict):
+            e.append("wings: seed outlines as designs and/or from_atlas")
+    if kind == "design-set" or (kind == "evolutionary" and isinstance(wings, dict)):
+        if sweep is not None and kind == "design-set":
+            e.append("sweep: only for geometry-sweep studies")
+        if kind == "design-set" and (not isinstance(wings, dict) or not (wings.get("designs") or wings.get("from_atlas"))):
             e.append("wings: give designs and/or from_atlas")
         else:
             for k in wings:
@@ -187,7 +213,10 @@ def validate(spec: dict) -> list[str]:
                     e.append(f"{where}.name: unique text, 1-60 characters")
                 if isinstance(name, str):
                     names.add(name)
-                e += validate_chords(w.get("chords_mm"), f"{where}.chords_mm")
+                ce = validate_chords(w.get("chords_mm"), f"{where}.chords_mm")
+                e += ce
+                if not ce and kind == "evolutionary" and isinstance(search, dict):
+                    e += seed_rule_errors(w["chords_mm"], search, f"{where}.chords_mm")
                 hs = w.get("half_span_mm")
                 if not _num(hs) or not HALF_SPAN_RANGE[0] <= hs <= HALF_SPAN_RANGE[1]:
                     e.append(f"{where}.half_span_mm: {HALF_SPAN_RANGE[0]:g}-{HALF_SPAN_RANGE[1]:g} mm")
@@ -213,6 +242,9 @@ def validate(spec: dict) -> list[str]:
                 e.append(f"sweep.half_span_mm: [low, high] within {HALF_SPAN_RANGE[0]:g}-{HALF_SPAN_RANGE[1]:g} mm")
             if "seed" in sweep and not (_int(sweep["seed"]) and sweep["seed"] >= 0):
                 e.append("sweep.seed: whole number >= 0")
+    if (kind == "evolutionary" and not _search_errors(search) and not e
+            and not lineages_per_search(spec)):
+        e.append("search: give seed half-spans and families, or seed wings")
     budget = spec.get("budget")
     if budget is not None:
         if not isinstance(budget, dict) or set(budget) - {"max_cases"} or not _int(budget.get("max_cases")) or budget["max_cases"] < 1:
@@ -228,8 +260,72 @@ def validate(spec: dict) -> list[str]:
         n = case_count(spec)
         cap = (budget or {}).get("max_cases")
         if cap is not None and n > cap:
-            e.append(f"budget.max_cases: the spec expands to {n} cases, more than {cap}")
+            e.append(f"budget.max_cases: the spec expands to {'up to ' if kind == 'evolutionary' else ''}{n} cases, more than {cap}")
     return e
+
+
+def _search_errors(search) -> list[str]:
+    if not isinstance(search, dict):
+        return ["search: required for evolutionary studies"]
+    e = [f"search.{k}: unknown field" for k in search if k not in SEARCH_KEYS]
+    objs = search.get("objectives")
+    if not isinstance(objs, list) or not 1 <= len(objs) <= OBJECTIVES_MAX:
+        e.append(f"search.objectives: a list of 1-{OBJECTIVES_MAX} objectives")
+    else:
+        seen = set()
+        for j, o in enumerate(objs):
+            where = f"search.objectives[{j}]"
+            if not isinstance(o, dict) or len(o) != 1 or not set(o) <= {"lambda", "torque_budget_Nm"}:
+                e.append(f"{where}: one of lambda or torque_budget_Nm"); continue
+            (k, v), = o.items()
+            lo, hi = LAMBDA_RANGE if k == "lambda" else TORQUE_BUDGET_RANGE
+            if not _num(v) or not lo <= v <= hi:
+                e.append(f"{where}.{k}: {lo:g}-{hi:g}")
+            elif (k, float(v)) in seen:
+                e.append(f"{where}: repeats an earlier objective")
+            else:
+                seen.add((k, float(v)))
+    spans = search.get("seed_half_spans_mm", [])
+    spans_ok = (isinstance(spans, list) and len(spans) <= SEED_SPANS_MAX and all(_num(x) for x in spans)
+                and len(set(spans)) == len(spans) and all(HALF_SPAN_RANGE[0] <= x <= HALF_SPAN_RANGE[1] for x in spans))
+    if not spans_ok:
+        e.append(f"search.seed_half_spans_mm: up to {SEED_SPANS_MAX} distinct half-spans, "
+                 f"{HALF_SPAN_RANGE[0]:g}-{HALF_SPAN_RANGE[1]:g} mm")
+    fams = search.get("seed_families", [])
+    if not isinstance(fams, list) or not all(isinstance(f, str) and f in FAMILIES for f in fams) or len(set(fams)) != len(fams):
+        e.append(f"search.seed_families: distinct names from {', '.join(FAMILIES)}")
+    elif spans_ok and bool(spans) != bool(fams):
+        e.append("search: seed half-spans and seed families go together (give both or neither)")
+    for k, (lo, hi), whole in (("solves_per_lineage", SOLVES_PER_LINEAGE, True), ("step_mm", STEP_RANGE, False),
+                               ("min_chord_mm", MIN_CHORD_RANGE, False)):
+        v = search.get(k, SEARCH_DEFAULT[k])
+        if not (_int(v) if whole else _num(v)) or not lo <= v <= hi:
+            e.append(f"search.{k}: {'whole number ' if whole else ''}{lo:g}-{hi:g}")
+    if not isinstance(search.get("decreasing", True), bool):
+        e.append("search.decreasing: true or false")
+    return e
+
+
+def search_of(spec: dict) -> dict:
+    return {**SEARCH_DEFAULT, **spec["search"]}
+
+
+def seed_rule_errors(chords, search: dict, where: str) -> list[str]:
+    """A seed outline must already obey the search's mutation rules."""
+    e = []
+    mn = search.get("min_chord_mm", SEARCH_DEFAULT["min_chord_mm"])
+    if _num(mn) and any(0 < c < mn for c in chords):
+        e.append(f"{where}: to seed a search, positive chords must be at least search.min_chord_mm")
+    if search.get("decreasing", True) is not False and any(b > a for a, b in zip(chords, chords[1:])):
+        e.append(f"{where}: to seed a search with decreasing chords, chords must not increase toward the tip")
+    return e
+
+
+def lineages_per_search(spec: dict) -> int:
+    s = search_of(spec)
+    w = spec.get("wings") or {}
+    return (len(s["seed_half_spans_mm"]) * len(s["seed_families"])
+            + len(w.get("designs") or []) + len(w.get("from_atlas") or []))
 
 
 # ----------------------------------------------------------------------------- expansion
@@ -289,6 +385,11 @@ def sweep_wings(sweep: dict) -> list[dict]:
 
 
 def case_count(spec: dict) -> int:
+    """Cases a study expands to; for an evolutionary study, the most it can solve."""
+    if spec["kind"] == "evolutionary":
+        searches = len(spec["models"]) * len(spec["frequencies_hz"]) * len(spec["search"]["objectives"])
+        per = lineages_per_search(spec) * (1 + search_of(spec)["solves_per_lineage"])
+        return searches * (per + (1 if spec.get("structure") == "matched" else 0))
     n_w = (spec["sweep"]["count"] if spec["kind"] == "geometry-sweep"
            else len(spec["wings"].get("designs") or []) + len(spec["wings"].get("from_atlas") or []))
     return n_w * len(spec["models"]) * len(spec["frequencies_hz"]) * len(spec.get("numerics", [NUMERICS_DEFAULT]))
@@ -297,7 +398,7 @@ def case_count(spec: dict) -> int:
 def expand(spec: dict, wings: list[dict] | None = None) -> list[dict]:
     """Every case of the study, in a stable order: wing, model, frequency, numerics."""
     wings = wings_of(spec) if wings is None else wings
-    structure = "matched" if spec["kind"] == "matched-comparison" else spec.get("structure", "chordwise")
+    structure = spec.get("structure", "chordwise")
     cases = []
     for w in wings:
         for m in spec["models"]:
@@ -321,11 +422,16 @@ def limits() -> dict:
             "numerics_ranges": {k: list(v) for k, v in NUMERICS_RANGES.items()},
             "freq_range": list(FREQ_RANGE), "half_span_range": list(HALF_SPAN_RANGE),
             "chord_range": list(CHORD_RANGE), "sweep_count": list(SWEEP_COUNT),
+            "families": list(FAMILIES), "search_keys": sorted(SEARCH_KEYS), "search_default": SEARCH_DEFAULT,
+            "lambda_range": list(LAMBDA_RANGE), "torque_budget_range": list(TORQUE_BUDGET_RANGE),
+            "objectives_max": OBJECTIVES_MAX, "seed_spans_max": SEED_SPANS_MAX,
+            "solves_per_lineage": list(SOLVES_PER_LINEAGE), "step_range": list(STEP_RANGE),
+            "min_chord_range": list(MIN_CHORD_RANGE), "seed_root_mm": SEED_ROOT_MM,
             "id_re": ID_RE.pattern, "key_re": KEY_RE.pattern, "top_keys": sorted(TOP_KEYS),
             "required": list(REQUIRED), "placeholders": PLACEHOLDERS}
 
 
-def template(study_id: str, kind: str = "design-set", author: str = "") -> dict:
+def template(study_id: str, kind: str = "evolutionary", author: str = "") -> dict:
     """A starting spec. Its title and question are placeholders that validate() rejects until replaced."""
     base = {"schema": SPEC_SCHEMA, "id": study_id, "title": PLACEHOLDERS["title"],
             "author": author or "your-name", "question": PLACEHOLDERS["question"], "kind": kind}
@@ -338,8 +444,11 @@ def template(study_id: str, kind: str = "design-set", author: str = "") -> dict:
         return {**base, "structure": "chordwise", "models": ["t0.50r"], "frequencies_hz": [1.0],
                 "numerics": [dict(NUMERICS_DEFAULT)], "sweep": {"count": 16, "half_span_mm": [280, 400], "seed": 1},
                 "budget": {"max_cases": 64}}
-    if kind == "matched-comparison":
-        return {**base, "models": ["t0.50"], "frequencies_hz": [1.0], "numerics": [dict(NUMERICS_DEFAULT)],
-                "wings": {"designs": [{"name": "taper", "chords_mm": [200, 150, 110, 80, 55, 35, 20, 10], "half_span_mm": 340}]},
-                "budget": {"max_cases": 10}}
+    if kind == "evolutionary":
+        return {**base, "structure": "chordwise", "models": ["t0.50r"], "frequencies_hz": [1.0],
+                "numerics": [dict(NUMERICS_DEFAULT)],
+                "search": {"objectives": [{"torque_budget_Nm": 1.0}, {"lambda": 1.25}],
+                           "seed_half_spans_mm": [220, 340], "seed_families": ["triangle", "convex"],
+                           "solves_per_lineage": 30, "step_mm": 20, "min_chord_mm": 10, "decreasing": True},
+                "budget": {"max_cases": 250}}
     raise ValueError(f"kind: one of {', '.join(KINDS)}")

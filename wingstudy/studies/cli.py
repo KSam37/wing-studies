@@ -105,9 +105,15 @@ def cmd_validate(a) -> int:
 def cmd_plan(a) -> int:
     from .run import plan
     p = plan(_id(a.id), workers=a.workers)
-    print(json.dumps(p, indent=1) if a.json else
-          f"{p['study']} ({p['kind']}): {p['cases']} cases, {p['cached']} already solved, {p['to_solve']} to solve.\n"
-          f"Estimated {p['estimated_minutes']} min with {p['workers']} worker(s). Code identity {p['code']}.")
+    if a.json:
+        print(json.dumps(p, indent=1))
+    elif p["kind"] == "evolutionary":
+        print(f"{p['study']} (evolutionary): {p['searches']} search(es) x {p['lineages_per_search']} lineage(s), at most {p['cases']} solves, "
+              f"typically about {p['to_solve']}.\nEstimated {p['estimated_minutes']} min (at most {p['estimated_minutes_max']}) with "
+              f"{p['workers']} worker(s); cached solves are reused. Code identity {p['code']}.")
+    else:
+        print(f"{p['study']} ({p['kind']}): {p['cases']} cases, {p['cached']} already solved, {p['to_solve']} to solve.\n"
+              f"Estimated {p['estimated_minutes']} min with {p['workers']} worker(s). Code identity {p['code']}.")
     return 0
 
 
@@ -205,7 +211,7 @@ def main(cmd: str, argv: list[str]) -> int:
     ap = argparse.ArgumentParser(prog=f"python -m wingstudy {cmd}", description=__doc__)
     if cmd == "new":
         ap.add_argument("id", help="YYYY-MM-DD-name, or just a name (today's date is added)")
-        ap.add_argument("--kind", choices=S.KINDS, default="design-set")
+        ap.add_argument("--kind", choices=S.KINDS, default="evolutionary")
         ap.add_argument("--author", default="")
     elif cmd == "import":
         ap.add_argument("file", help="a spec.json downloaded from the website's study builder")

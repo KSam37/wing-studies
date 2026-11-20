@@ -2,10 +2,10 @@
 
 Planned studies (studies/<id>/spec.json -> results -> pull request):
 
-    python -m wingstudy new NAME [--kind design-set|geometry-sweep|matched-comparison]
+    python -m wingstudy new NAME [--kind evolutionary|geometry-sweep|design-set]
     python -m wingstudy import FILE                  a spec.json downloaded from the website's study builder
     python -m wingstudy validate ID... | --all
-    python -m wingstudy plan ID [--workers N]        case count, cache hits, time estimate
+    python -m wingstudy plan ID [--workers N]        case count (searches: the most), cache hits, time estimate
     python -m wingstudy run ID [--workers N]         solve; writes results.json and status.json
     python -m wingstudy publish ID                   study/<id> branch, push, open a PR (never merges)
     python -m wingstudy list

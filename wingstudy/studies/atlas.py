@@ -2,10 +2,13 @@
 
 Each ``studies/<id>/results.json`` becomes one atlas study:
 
-* design-set and geometry-sweep cases become map rows (``src`` bit 4, "a planned study"),
+* chordwise and spanwise cases become map rows (``src`` bit 4, "a planned study"),
   with spanwise cases under ``span-flex:<model>`` like the matched reruns;
-* matched-comparison cases join ``span_comparisons``, so they appear in the
-  Spanwise elasticity tab and on the map exactly like the original matched reruns.
+* matched cases join ``span_comparisons``, so they appear in the Elasticity effects
+  tab and on the map exactly like the original matched reruns;
+* evolutionary cases are also search rows (``src`` bit 1). ``row_search[row]`` names
+  the objective(s) that reached each one and marks search winners, and each winner
+  carries its lineage's accepted outlines (``evolution``) for the atlas to animate.
 
 Rows are appended after the rigid catalog, so ``catalog.end`` marks where it stops.
 """
@@ -18,6 +21,41 @@ from pathlib import Path
 from . import spec as S
 
 SRC_STUDY = 4
+SRC_SEARCH = 1
+# atlas objective bits for the campaigns' own objectives (other values are spelled out)
+OBJ_BITS = {("torque_budget_Nm", 1.0): 1, ("lambda", 0.75): 2, ("lambda", 1.25): 4, ("lambda", 1.75): 8}
+
+
+def _search_roles(results: dict) -> dict:
+    """key -> {"objectives": [...], "winner_of": [...], "seed": bool, "evolution": {...}}"""
+    roles = {}
+    for x in results.get("searches") or []:
+        (k, v), = x["objective"].items()
+        label = x.get("objective_label") or f"{k} {v}"
+        for lin in x.get("lineages") or []:
+            for n, a in enumerate(lin.get("accepted") or []):
+                e = roles.setdefault(a["key"], {"objectives": [], "bits": 0, "winner_of": [], "seed": False})
+                if label not in e["objectives"]:
+                    e["objectives"].append(label)
+                e["bits"] |= OBJ_BITS.get((k, float(v)), 0)
+                e.setdefault("lambda", set())
+                if k == "lambda":
+                    e["lambda"].add(float(v))
+                else:
+                    e.setdefault("budget", set()).add(float(v))
+                e["seed"] |= n == 0
+            best = lin.get("best")
+            if best and best == x.get("winner"):
+                e = roles[best]
+                e["winner_of"].append(x["id"])
+                seed = lin.get("seed") or {}
+                e["evolution"] = {"search": x["id"], "objective": label,
+                                  "lambda": float(v) if k == "lambda" else None,
+                                  "torque_budget_Nm": float(v) if k != "lambda" else None,
+                                  "family": seed.get("family"), "seed_label": seed.get("label"),
+                                  "seed_half_span_mm": seed.get("half_span_mm"),
+                                  "steps": [a["key"] for a in lin["accepted"]]}
+    return roles
 
 
 def _finite(v) -> bool:
@@ -71,9 +109,11 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
                              "about": f"{spec['question']} Planned study by {spec['author']}; "
                                       f"{len(results['cases'])} cases, code {results['code']['digest']}.",
                              "planned": True, "kind": spec["kind"]})
+        roles = _search_roles(results) if spec["kind"] == "evolutionary" else {}
+        rows_of = {}
         for c in results["cases"]:
             fi = _index(D["freqs"], c["freq"])
-            if spec["kind"] == "matched-comparison":
+            if c.get("structure") == "matched":
                 if not all(isinstance(c.get(k), dict) for k in ("baseline", "spanwise")):
                     continue
                 m = S.MODELS[c["model"]]
@@ -88,9 +128,19 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
             if not (_finite(c.get("thrust_N")) and _finite(c.get("torque_Nm"))):
                 continue                      # failed cases stay in results.json, not on the map
             row = len(cols["s"])
+            role = roles.get(c["key"])
             vals = {"s": sid, "m": _model(D, c["model"], c["structure"]), "f": fi, "T": c["thrust_N"],
                     "Q": c["torque_Nm"], "H": c["half_span_mm"], "W": c.get("tip_twist_deg"),
-                    "S": _index(D["statuses"], c["status"]), "src": SRC_STUDY, "k": c["key"], "obj": 0}
+                    "S": _index(D["statuses"], c["status"]),
+                    "src": SRC_STUDY | (SRC_SEARCH if spec["kind"] == "evolutionary" else 0), "k": c["key"],
+                    "obj": (role["bits"] | (16 if role["seed"] and not role["winner_of"] else 0)) if role else 0}
+            rows_of[c["key"]] = row
+            if spec["kind"] == "evolutionary":
+                D.setdefault("row_search", {})[str(row)] = (
+                    {"objectives": role["objectives"], "lambda": sorted(role["lambda"]),
+                     "torque_budget_Nm": sorted(role.get("budget", ())), "winner": bool(role["winner_of"]),
+                     "winner_of": role["winner_of"], **({"evolution": role["evolution"]} if role.get("evolution") else {})}
+                    if role else {"objectives": [], "lambda": [], "torque_budget_Nm": [], "winner": False, "trial": True})
             for k in cols:
                 if k == "C":
                     cols["C"].extend(list(c["chords_mm"]) + [0.0] * (S.NODES - len(c["chords_mm"])))
@@ -100,4 +150,8 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
             notes[str(row)] = (f"{spec['id']} case {c['case_id']} ({c['wing']}): {n['span_panels']} × {n['chord_panels']} "
                                f"panels, {n['steps_per_cycle']} steps per cycle, {n['cycles']} cycles")
             added += 1
+        for v in (D.get("row_search") or {}).values():          # evolution steps as atlas rows
+            ev = v.get("evolution")
+            if ev and ev.get("steps") and isinstance(ev["steps"][0], str):
+                ev["steps"] = [rows_of.get(k) for k in ev["steps"]]
     return added

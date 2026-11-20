@@ -2,7 +2,7 @@
 
 Simulation studies of flapping carbon-fibre wings in water, and an interactive atlas of every wing simulated so far.
 
-**Website:** the landing page, atlas and (soon) study builder are published from this repository with GitHub Pages.
+**Website:** the landing page, atlas and study builder are published from this repository with GitHub Pages.
 
 Each study predicts the mean thrust and the peak fluid root torque of one isolated wing. It uses one of three analysis types:
 
@@ -50,14 +50,18 @@ Simulations run on your own computer. A study is a folder `studies/<id>/` holdin
 **Plan, run, publish.** Use `tools\wingstudy.cmd` (the registered environment) or `python -m wingstudy`:
 
 ```powershell
-tools\wingstudy.cmd new my-question --kind design-set   # writes studies/<today>-my-question/spec.json
+tools\wingstudy.cmd new my-question --kind evolutionary # writes studies/<today>-my-question/spec.json
 tools\wingstudy.cmd validate 2026-11-19-my-question     # every problem, in plain words
 tools\wingstudy.cmd plan 2026-11-19-my-question --workers 4
 tools\wingstudy.cmd run 2026-11-19-my-question --workers 4
 tools\wingstudy.cmd publish 2026-11-19-my-question      # study/<id> branch, push, pull request
 ```
 
-- Kinds: `design-set` (named outlines and/or atlas designs by key, each solved for every model, frequency and numerical setting), `geometry-sweep` (scrambled-Sobol outlines, the campaign rules) and `matched-comparison` (each wing solved chordwise-only and with spanwise bending).
+- Kinds:
+  - `evolutionary`: the campaigns' coordinate climb. Every model × frequency × objective is one search; each search runs one lineage per seed (seed half-spans × seed families, plus any seed wings). Objectives are a torque budget (max thrust with peak torque ≤ B) or a λ trade-off (T/T<sub>ref</sub> − λ·M/M<sub>ref</sub>). The search block also sets the solves per lineage, the chord step, the smallest chord and whether chords must decrease. `results.json` records every lineage's accepted steps, and the atlas animates each search winner's shape evolution from them.
+  - `geometry-sweep`: scrambled-Sobol outlines with the campaign rules, no climbing.
+  - `design-set`: re-solve named outlines and/or atlas designs (by key) for every model, frequency and numerical setting.
+- `structure` is `chordwise`, `spanwise` or `matched` (every wing solved chordwise-only and with spanwise bending). A matched evolutionary search climbs chordwise and re-solves each search winner as a matched pair.
 - Every solved case is cached in `outputs/study-cache/` under a key covering the outline, model, motion, numerics and code identity (structural and solve-path source, Ptera and library versions). Reruns and later studies reuse identical solves, and changing the code re-solves.
 - Results are immutable: once a study has run, edit nothing in its spec; start a new study and name the old one as its `parent`.
 - `publish` commits only `studies/<id>/` and opens a pull request. CI validates the spec and results and builds the site with the study merged into the atlas. A person merges it; nothing is merged automatically. After the merge the study appears in the atlas as its own study, its designs marked "found by a planned study".

@@ -324,7 +324,21 @@ function openViewer(id){
   $$('#v-seg button').forEach(b=>b.onclick=()=>{$$('#v-seg button').forEach(x=>x.classList.toggle('on',x===b));$('#v-img').src=MU(media[b.dataset.v]);$('#v-note').textContent=NOTE[b.dataset.v]||PTERA});
   viewer.showModal();
 }
-viewer.addEventListener('close',()=>{const im=$('#v-img');if(im)im.src=''});
+viewer.addEventListener('close',()=>{const im=$('#v-img');if(im)im.src='';clearInterval(window.evoTimer)});
+// Shape evolution of a planned-study search winner, drawn from its lineage's accepted outlines.
+function openEvolution(i){
+  const e=RS(i).evolution,steps=e.steps.filter(j=>j!=null),col=modelColor(D.models[C.m[i]].id);
+  const frames=steps.map((j,k)=>`<div class="evo-f" style="display:${k?'none':'block'}">${outlineSVG(designOutline(j),{w:520,h:190,color:k===steps.length-1?col:'var(--muted)',labels:true})}<p class="small" style="margin:4px 0 0">${k?`Step ${k} of ${steps.length-1}`:'Seed'} · ${fmt(C.T[j],3)} N, ${fmt(C.Q[j],3)} N·m</p></div>`).join('');
+  const path=[{name:'path',color:col,points:steps.map((j,k)=>({x:C.Q[j],y:C.T[j],row:j,tip:`${k?'Step '+k:'Seed'}: ${fmt(C.T[j],3)} N at ${fmt(C.Q[j],3)} N·m`}))}];
+  $('#v-title').textContent=`Shape evolution · ${e.search}`;
+  $('#v-body').innerHTML=`<div><div class="seg"><button id="evo-play">Pause</button><button id="evo-back">◀</button><button id="evo-next">▶</button></div>${frames}
+    <p class="tiny muted">Each frame is an accepted step of the lineage that won this search: one chord station moved by the search step (or half of it on the single retry) and kept only because the objective improved. Objective: ${esc(e.objective)}.</p></div>
+    <div style="max-width:440px">${lineChart({series:path,xlabel:'Peak root torque (N·m)',ylabel:'Mean thrust (N)',w:420,h:260,xfmt:x=>fmt(x,2)})}<p class="tiny muted">Path of the lineage in thrust–torque space, seed to winner.${e.torque_budget_Nm!=null?' Torque budget: '+e.torque_budget_Nm+' N·m.':''}</p></div>`;
+  const F=$$('.evo-f');let k=0,on=true;const show=n=>{k=(n+F.length)%F.length;F.forEach((f,q)=>f.style.display=q===k?'block':'none')};
+  clearInterval(window.evoTimer);window.evoTimer=setInterval(()=>{if(on)show(k+1)},700);
+  $('#evo-play').onclick=()=>{on=!on;$('#evo-play').textContent=on?'Pause':'Play'};$('#evo-back').onclick=()=>{on=false;$('#evo-play').textContent='Play';show(k-1)};$('#evo-next').onclick=()=>{on=false;$('#evo-play').textContent='Play';show(k+1)};
+  viewer.showModal();
+}
 viewer.addEventListener('click',e=>{if(e.target===viewer)viewer.close()});
 
 /* ---------- tooltip ---------- */
@@ -575,7 +589,13 @@ function objText(i){const o=C.obj[i];const n=OBJ_NAMES.filter(x=>o&x[0]).map(x=>
 // Torque penalty λ of the search(es) that found a design, spelled out for the sidebar.
 const LAMBDA_OF={2:0.75,4:1.25,8:1.75};
 const BUDGET_SEARCH=()=>'torque-budget search: max thrust with peak torque ≤ '+LIM+' N·m';
+// Planned evolutionary studies record their own objectives per row (any λ, any torque budget).
+const RS=i=>i!=null&&D.row_search?D.row_search[i]:null;
+function rsLambda(x){const t=[];if(x.lambda.length)t.push(`<b>λ = ${x.lambda.join(', ')}</b> <span class="muted">(${x.lambda.length>1?'reached by several λ searches':`score T/T<sub>ref</sub> − ${x.lambda[0]}·M/M<sub>ref</sub>`})</span>`);
+  if(x.torque_budget_Nm.length)t.push((x.lambda.length?'<span class="muted">and the ':'<b>none</b> <span class="muted">(')+x.torque_budget_Nm.map(b=>'torque-budget search: max thrust with peak torque ≤ '+b+' N·m').join(', ')+(x.lambda.length?'</span>':')</span>'));
+  return t.join(' ')||null}
 function lambdaText(i,w){
+  {const x=RS(i);if(x)return x.trial?'<span class="muted">a trial step the search did not accept</span>':rsLambda(x)}
   if(w&&w.evolution)return w.evolution.lambda!=null?`<b>λ = ${w.evolution.lambda}</b> <span class="muted">(score T/T<sub>ref</sub> − ${w.evolution.lambda}·M/M<sub>ref</sub>)</span>`:`<b>none</b> <span class="muted">(${BUDGET_SEARCH()})</span>`;
   if(i==null||!(C.src[i]&1))return null;
   const o=C.obj[i],ls=[2,4,8].filter(b=>o&b).map(b=>LAMBDA_OF[b]);
@@ -584,10 +604,12 @@ function lambdaText(i,w){
   return t||null}
 const lambdaRow=(i,w)=>{const t=lambdaText(i,w);return t?`<div>Torque penalty λ</div><div class="small">${t}</div>`:''};
 function lambdaTag(i,w){
+  {const x=RS(i);if(x)return x.trial?'trial':x.lambda.length?'λ '+x.lambda.join(', '):x.torque_budget_Nm.length?'≤ '+x.torque_budget_Nm.join(', ')+' N·m search':''}
   if(w&&w.evolution)return w.evolution.lambda!=null?'λ '+w.evolution.lambda:'≤ '+LIM+' N·m search';
   if(i==null)return '';if(!(C.src[i]&1))return C.src[i]&2?'shape map':'';
   const ls=[2,4,8].filter(b=>C.obj[i]&b).map(b=>LAMBDA_OF[b]);return ls.length?'λ '+ls.join(', '):'≤ '+LIM+' N·m search'}
-const evoRow=w=>w&&w.evolution?`<div>Evolution</div><div class="small">${w.evolution.steps} accepted steps from a ${esc(w.evolution.family)} seed at ${Math.round(w.evolution.seed_half_span_mm)} mm (${esc(w.evolution.search)})</div>`:'';
+const evoRow=(w,i)=>{const x=RS(i);if(x&&x.evolution){const e=x.evolution;return `<div>Evolution</div><div class="small">${e.steps.length-1} accepted step${e.steps.length===2?'':'s'} from the ${esc(e.seed_label)}${e.family==='wing'?' seed wing':''} (${esc(e.search)}) <button class="iconbtn" style="width:auto;padding:0 8px;margin-top:4px" onclick="openEvolution(${i})">▶ Shape evolution</button></div>`}
+  return w&&w.evolution?`<div>Evolution</div><div class="small">${w.evolution.steps} accepted steps from a ${esc(w.evolution.family)} seed at ${Math.round(w.evolution.seed_half_span_mm)} mm (${esc(w.evolution.search)})</div>`:''};
 function rowTip(i){
   const st=STATUS[C.S[i]],w=WIN_ROWS.get(i);
   if(isCat(i)){const r=i-CAT0;return `<b>Rigid catalog</b> · #${CAT.number[r]} ${esc(CAT.name[r])}${w?' · ★ winner':''}<br>${polySVG(polyOf(i),{w:260,h:90,color:colorOf(i)})}
@@ -663,8 +685,8 @@ function selectDesign(i){
     <div>Quality</div><div>${statusPill(st)}</div>
     <div>Found by</div><div class="small">${[C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):'',C.src[i]&4?'a planned study':''].filter(Boolean).join(' and ')||'–'}</div>
     ${D.row_notes&&D.row_notes[i]?`<div>Numerics</div><div class="small">${esc(D.row_notes[i])}</div>`:''}
-    <div>Objective</div><div class="small">${C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
-    ${lambdaRow(i,w)}${evoRow(w)}
+    <div>Objective</div><div class="small">${RS(i)?(RS(i).trial?'trial step (not accepted)':esc(RS(i).objectives.join(' · '))+(RS(i).winner?' · <b>★ search winner</b>':'')):C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
+    ${lambdaRow(i,w)}${evoRow(w,i)}
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
   if(EXTRA[i]){const e=EXTRA[i],em=e.result.media;$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}<div style="margin:10px 0">${em&&em.poster?posterButton(em,`${e.kind==='spanwise'?'Spanwise + chordwise':'Chordwise only'} · ${esc(e.pair.source.material_label||'')} · ${D.freqs[C.f[i]]} Hz`,info)+` <button class="iconbtn" data-span-pair="${esc(e.pair.source.key)}">▶ Compare both models side by side</button>`:'<p class="tiny muted">No animation rendered for this matched pair.</p>'}</div>${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button> ${basketButton(i)}`;return}

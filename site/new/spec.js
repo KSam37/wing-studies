@@ -47,7 +47,66 @@
       return e;
     }
 
+    const searchOf = spec => Object.assign({}, L.search_default, spec.search);
+    function lineagesPerSearch(spec) {
+      const sr = searchOf(spec), w = truthy(get(spec, "wings")) ? spec.wings : {};
+      return sr.seed_half_spans_mm.length * sr.seed_families.length
+        + (truthy(get(w, "designs")) ? w.designs : []).length + (truthy(get(w, "from_atlas")) ? w.from_atlas : []).length;
+    }
+
+    function searchErrors(search) {
+      if (!isObj(search)) return ["search: required for evolutionary studies"];
+      const e = Object.keys(search).filter(k => !L.search_keys.includes(k)).map(k => `search.${k}: unknown field`);
+      const objs = get(search, "objectives");
+      if (!Array.isArray(objs) || !(1 <= objs.length && objs.length <= L.objectives_max))
+        e.push(`search.objectives: a list of 1-${L.objectives_max} objectives`);
+      else {
+        const seen = new Set();
+        objs.forEach((o, j) => {
+          const where = `search.objectives[${j}]`;
+          if (!isObj(o) || Object.keys(o).length !== 1 || !["lambda", "torque_budget_Nm"].includes(Object.keys(o)[0])) {
+            e.push(`${where}: one of lambda or torque_budget_Nm`); return;
+          }
+          const k = Object.keys(o)[0], v = o[k];
+          const [lo, hi] = k === "lambda" ? L.lambda_range : L.torque_budget_range;
+          if (!isNum(v) || !(lo <= v && v <= hi)) e.push(`${where}.${k}: ${g(lo)}-${g(hi)}`);
+          else if (seen.has(k + "|" + v)) e.push(`${where}: repeats an earlier objective`);
+          else seen.add(k + "|" + v);
+        });
+      }
+      const spans = get(search, "seed_half_spans_mm", []);
+      const spansOk = Array.isArray(spans) && spans.length <= L.seed_spans_max && spans.every(isNum)
+        && new Set(spans).size === spans.length && spans.every(x => HLO <= x && x <= HHI);
+      if (!spansOk) e.push(`search.seed_half_spans_mm: up to ${L.seed_spans_max} distinct half-spans, ${g(HLO)}-${g(HHI)} mm`);
+      const fams = get(search, "seed_families", []);
+      if (!Array.isArray(fams) || !fams.every(f => typeof f === "string" && L.families.includes(f)) || new Set(fams).size !== fams.length)
+        e.push(`search.seed_families: distinct names from ${L.families.join(", ")}`);
+      else if (spansOk && (spans.length > 0) !== (fams.length > 0))
+        e.push("search: seed half-spans and seed families go together (give both or neither)");
+      for (const [k, [lo, hi], whole] of [["solves_per_lineage", L.solves_per_lineage, true], ["step_mm", L.step_range, false],
+                                          ["min_chord_mm", L.min_chord_range, false]]) {
+        const v = get(search, k, L.search_default[k]);
+        if (!(whole ? isInt(v) : isNum(v)) || !(lo <= v && v <= hi)) e.push(`search.${k}: ${whole ? "whole number " : ""}${g(lo)}-${g(hi)}`);
+      }
+      if (typeof get(search, "decreasing", true) !== "boolean") e.push("search.decreasing: true or false");
+      return e;
+    }
+
+    function seedRuleErrors(chords, search, where) {
+      const e = [], mn = get(search, "min_chord_mm", L.search_default.min_chord_mm);
+      if (isNum(mn) && chords.some(c => 0 < c && c < mn))
+        e.push(`${where}: to seed a search, positive chords must be at least search.min_chord_mm`);
+      if (get(search, "decreasing", true) !== false && chords.slice(1).some((b, j) => b > chords[j]))
+        e.push(`${where}: to seed a search with decreasing chords, chords must not increase toward the tip`);
+      return e;
+    }
+
     function caseCount(spec) {
+      if (spec.kind === "evolutionary") {
+        const searches = spec.models.length * spec.frequencies_hz.length * spec.search.objectives.length;
+        const per = lineagesPerSearch(spec) * (1 + searchOf(spec).solves_per_lineage);
+        return searches * (per + (get(spec, "structure") === "matched" ? 1 : 0));
+      }
       const nw = spec.kind === "geometry-sweep" ? spec.sweep.count
         : (spec.wings.designs || []).length + (spec.wings.from_atlas || []).length;
       return nw * spec.models.length * spec.frequencies_hz.length * get(spec, "numerics", [DEF]).length;
@@ -77,7 +136,7 @@
         else {
           const bad = models.filter(m => typeof m !== "string" || !has(MODELS, m));
           if (bad.length) e.push(`models: unknown ${pyRepr(bad)}; choose from ${Object.keys(MODELS).join(", ")}`);
-          if (models.includes("rigid") && (kind === "matched-comparison" || structure === "spanwise"))
+          if (models.includes("rigid") && (structure === "spanwise" || structure === "matched"))
             e.push("models: rigid wings have no structure to bend; remove 'rigid' for spanwise or matched studies");
         }
       }
@@ -99,11 +158,18 @@
           }
         });
         if (new Set(numerics.filter(isObj).map(n => canon(numericsOf(n)))).size !== numerics.length) e.push("numerics: settings repeat");
+        else if (kind === "evolutionary" && numerics.length !== 1) e.push("numerics: evolutionary searches use exactly one numerical setting");
       }
-      const wings = get(spec, "wings"), sweep = get(spec, "sweep");
-      if (kind === "design-set" || kind === "matched-comparison") {
+      const wings = get(spec, "wings"), sweep = get(spec, "sweep"), search = get(spec, "search");
+      if (kind !== "evolutionary" && search !== null) e.push("search: only for evolutionary studies");
+      if (kind === "evolutionary") {
         if (sweep !== null) e.push("sweep: only for geometry-sweep studies");
-        if (!isObj(wings) || !(truthy(get(wings, "designs")) || truthy(get(wings, "from_atlas")))) e.push("wings: give designs and/or from_atlas");
+        e.push(...searchErrors(search));
+        if (wings !== null && !isObj(wings)) e.push("wings: seed outlines as designs and/or from_atlas");
+      }
+      if (kind === "design-set" || (kind === "evolutionary" && isObj(wings))) {
+        if (sweep !== null && kind === "design-set") e.push("sweep: only for geometry-sweep studies");
+        if (kind === "design-set" && (!isObj(wings) || !(truthy(get(wings, "designs")) || truthy(get(wings, "from_atlas"))))) e.push("wings: give designs and/or from_atlas");
         else {
           for (const k of Object.keys(wings)) if (k !== "designs" && k !== "from_atlas") e.push(`wings.${k}: unknown field`);
           const names = new Set();
@@ -116,7 +182,9 @@
             const name = get(w, "name", `wing ${j + 1}`);
             if (typeof name !== "string" || !(1 <= clen(name) && clen(name) <= 60) || names.has(name)) e.push(`${where}.name: unique text, 1-60 characters`);
             if (typeof name === "string") names.add(name);
-            e.push(...validateChords(get(w, "chords_mm"), `${where}.chords_mm`));
+            const ce = validateChords(get(w, "chords_mm"), `${where}.chords_mm`);
+            e.push(...ce);
+            if (!ce.length && kind === "evolutionary" && isObj(search)) e.push(...seedRuleErrors(w.chords_mm, search, `${where}.chords_mm`));
             const hs = get(w, "half_span_mm");
             if (!isNum(hs) || !(HLO <= hs && hs <= HHI)) e.push(`${where}.half_span_mm: ${g(HLO)}-${g(HHI)} mm`);
           });
@@ -138,6 +206,8 @@
           if (has(sweep, "seed") && !(isInt(sweep.seed) && sweep.seed >= 0)) e.push("sweep.seed: whole number >= 0");
         }
       }
+      if (kind === "evolutionary" && !searchErrors(search).length && !e.length && !lineagesPerSearch(spec))
+        e.push("search: give seed half-spans and families, or seed wings");
       const budget = get(spec, "budget");
       if (budget !== null && (!isObj(budget) || Object.keys(budget).some(k => k !== "max_cases") || !isInt(get(budget, "max_cases")) || budget.max_cases < 1))
         e.push('budget: {"max_cases": whole number >= 1}');
@@ -146,11 +216,11 @@
       for (const k of ["title", "question"]) if (get(spec, k) === L.placeholders[k]) e.push(`${k}: replace the template text`);
       if (!e.length) {
         const n = caseCount(spec), cap = budget ? budget.max_cases : null;
-        if (cap !== null && n > cap) e.push(`budget.max_cases: the spec expands to ${n} cases, more than ${cap}`);
+        if (cap !== null && n > cap) e.push(`budget.max_cases: the spec expands to ${kind === "evolutionary" ? "up to " : ""}${n} cases, more than ${cap}`);
       }
       return e;
     }
-    return { validate, caseCount, validateChords, numericsOf };
+    return { validate, caseCount, validateChords, numericsOf, lineagesPerSearch, searchOf };
   }
 
   const api = { make, pyRepr };

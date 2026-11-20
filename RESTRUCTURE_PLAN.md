@@ -187,7 +187,7 @@ Each phase ends in a working state and can be paused there.
 
 **Status (2026-11-19): done.** The first study went spec → run → PR #1 → CI → merged → live in the atlas.
 - `wingstudy/studies/`: `spec.py` (stdlib validator and expansion; `schema/study-spec.schema.json` is kept in step by `tests/test_studies.py`), `run.py` (wraps `elastic_campaign._evaluate` and `span_atlas.evaluate` unchanged, caches by key in `outputs/study-cache/`), `atlas.py` (merges completed studies into the atlas at site build; `catalog.end` keeps the catalog range correct), `cli.py` (`new / validate / plan / run / publish / list`).
-- Kinds: `design-set`, `geometry-sweep`, `matched-comparison`. Search, evolution and replay kinds are deferred.
+- Kinds: `design-set`, `geometry-sweep`, `matched-comparison`. Search, evolution and replay kinds are deferred. (Since 2026-11-20: `evolutionary` added and `matched-comparison` became `structure: "matched"`; see Phase 4.)
 - Identity: `identity.code_identity()` adds a solve-path digest (`model.py`, `elastic_campaign.py`, `span_atlas.py`, `cases.py`) and Ptera, numpy, numba, scipy and Python versions to the structural fingerprint; its digest is part of every case key (known issue #7). Each result case carries its exact solver input as `replay` (known issue #5).
 - Not done: `span_atlas.publish()` and `elastic_atlas.py` still write the old atlas for existing campaigns. New results go through studies; retiring the old publishers waits until the campaigns' raw data is imported.
 - First study: `2026-11-19-numerics-hardware-winner`, 4 cases (the 0.5 mm + rod 1 Hz winner at 8×4 / 16×4 panels × 50 / 100 steps per cycle). Its 8×4/50 case reproduces the atlas value to 0.006% (the atlas stores chords to 0.1 mm).
@@ -205,6 +205,7 @@ Each phase ends in a working state and can be paused there.
 - Atlas: *Add to a new study* on any non-catalog design, plus a *New study (n)* link. Campaign rows go in by key (`wings.from_atlas`); matched and planned-study rows are copied as outlines. `wingstudy validate` and `import` check that atlas keys exist; rigid-catalog rows have no chord stations and are refused.
 - `wingstudy import FILE` places a downloaded spec, refusing invalid specs and never overwriting a different one.
 - Proof: a spec written in the builder (2 spanwise cases, one by atlas key and one copied outline) was saved byte for byte (SHA-256 checked), then imported, planned and run with no edits; both cases verified. The run was a local check and was not published.
+- Study kinds, revised 2026-11-20: the builder offers *Evolutionary search* (`evolutionary`, new: `studies/evolve.py` drives `coordinate_search.climb` unchanged through the study cache, lineages in parallel waves; objective, seeds, solves per lineage and mutation rules are set in the spec), *Geometric sweep* and *Re-solve chosen wings* (`design-set`). Matched comparison is now a structure choice (`structure: "matched"`) available to every kind. Planned search winners get a *Shape evolution* player in the atlas, drawn from their lineage's accepted outlines, so they need no campaign database.
 - Queue states: `proposed` (spec merged, no results) and `complete`. `running` appears only on the machine doing the run, since `status.json` is committed with the results.
 
 ### Phase 5: Agents and docs (1–2 days)

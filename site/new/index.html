@@ -122,7 +122,7 @@ header .brand,nav a,nav button{white-space:nowrap}
 <main>
 <section id="p-new">
   <h1>Set up a new study</h1>
-  <p class="lede">Choose wings, plate models, frequencies and numerics. The page checks the spec with the same rules as the study tools. Submit it on GitHub, where it becomes a pull request, or download it. Studies are solved on a contributor's own computer, and their results appear in the atlas once the results pull request is merged.</p>
+  <p class="lede">Choose the kind of study, plate models, frequencies and numerics. The page checks the spec with the same rules as the study tools. Submit it on GitHub, where it becomes a pull request, or download it. Studies are solved on a contributor's own computer, and their results appear in the atlas once the results pull request is merged.</p>
   <div class="layout">
   <div>
     <div class="card">
@@ -141,7 +141,7 @@ header .brand,nav a,nav button{white-space:nowrap}
 
     <div class="card">
       <h2>Kind of study</h2>
-      <p class="sub">Each kind runs an existing solver path unchanged.</p>
+      <p class="sub">Each kind runs the campaigns' own solver and search code unchanged.</p>
       <div class="kinds" id="kinds"></div>
     </div>
 
@@ -150,6 +150,7 @@ header .brand,nav a,nav button{white-space:nowrap}
       <div id="struct-box">
         <label class="f">Structural model</label>
         <div class="chips" id="structs"></div>
+        <p class="tiny" id="struct-note" style="margin:6px 0 0"></p>
       </div>
       <label class="f">Plate models</label>
       <div class="chips" id="models"></div>
@@ -159,10 +160,33 @@ header .brand,nav a,nav button{white-space:nowrap}
       <div style="display:flex;gap:6px;margin-top:6px;max-width:260px"><input type="number" id="f-freq-add" step="0.05" min="0.25" max="3" placeholder="Other, e.g. 0.9"><button class="btn" id="b-freq-add">Add</button></div>
     </div>
 
+    <div class="card" id="search-card">
+      <h2>Search</h2>
+      <p class="sub">Every model × frequency × objective is one search. Each search runs one lineage per seed: a lineage tries moving one chord station at a time by the step, keeps a move only if the objective improves, gets one half-step retry per station, and stops when every station is settled or its solve budget is spent. Only verified results can become parents.</p>
+      <label class="f">Objectives</label>
+      <div id="objectives"></div>
+      <div class="chips" style="margin-top:6px"><button class="chip" data-addobj="torque_budget_Nm:1">+ Max thrust, torque ≤ 1 N·m</button><button class="chip" data-addobj="lambda:0.75">+ λ 0.75</button><button class="chip" data-addobj="lambda:1.25">+ λ 1.25</button><button class="chip" data-addobj="lambda:1.75">+ λ 1.75</button></div>
+      <p class="tiny" style="margin:6px 0 0">Torque budget: maximize mean thrust with peak root torque at most the budget (seeds above it first walk down in torque). λ: maximize T/T<sub>ref</sub> − λ·M/M<sub>ref</sub>, with T<sub>ref</sub> and M<sub>ref</sub> the largest thrust and torque among that search's seeds; larger λ favours lower torque.</p>
+      <label class="f">Seed half-spans (mm)</label>
+      <div class="chips" id="seed-spans"></div>
+      <div style="display:flex;gap:6px;margin-top:6px;max-width:260px"><input type="number" id="f-span-add" min="100" max="800" placeholder="Other, e.g. 300"><button class="btn" id="b-span-add">Add</button></div>
+      <label class="f">Seed families (200 mm root)</label>
+      <div class="chips" id="seed-fams"></div>
+      <p class="tiny" id="seed-note" style="margin:6px 0 0"></p>
+      <div class="row2">
+        <div><label class="f" for="f-solves">Solves per lineage (search budget)</label><input type="number" id="f-solves" min="1" max="500" step="1"></div>
+        <div><label class="f" for="f-step">Chord step (mm)</label><input type="number" id="f-step" min="1" max="100" step="1"></div>
+        <div><label class="f" for="f-minc">Smallest positive chord (mm)</label><input type="number" id="f-minc" min="5" max="100" step="1"></div>
+        <div><label class="f">&nbsp;</label><label class="small"><input type="checkbox" id="f-dec"> Chords never increase toward the tip</label></div>
+      </div>
+      <p class="tiny" style="margin:6px 0 0">The campaigns used 60 solves per lineage, a 20 mm step, a 10 mm smallest chord and decreasing chords; lineages there finished after about 22 solves on average. The root chord stays fixed at each seed's root.</p>
+    </div>
+
     <div class="card" id="wings-card">
-      <h2>Wings</h2>
+      <h2 id="wings-h">Wings</h2>
       <div id="wings-designs">
-        <p class="sub">Atlas designs you picked (use "Add to a new study" on any design in the <a href="../atlas/">atlas</a>), plus outlines you enter. Chords are 8 equally spaced stations from root to tip; zeros may only end the wing.</p>
+        <p class="sub hidden" id="wings-evo-note">Optional: each atlas design you pick and each outline you enter starts one more lineage in every search. Seeds must already obey the search rules.</p>
+        <p class="sub" id="wings-set-note">Atlas designs you picked (use "Add to a new study" on any design in the <a href="../atlas/">atlas</a>), plus outlines you enter. Chords are 8 equally spaced stations from root to tip; zeros may only end the wing.</p>
         <div id="basket-box"></div>
         <div id="outlines"></div>
         <button class="btn" id="b-add-outline">+ Add an outline</button>
@@ -180,9 +204,9 @@ header .brand,nav a,nav button{white-space:nowrap}
 
     <div class="card">
       <h2>Numerics</h2>
-      <p class="sub">Every case is solved at each setting. The campaigns used 8 × 4 panels, 50 steps per cycle, 4 cycles; every elastic solve is also checked at dt/2 and dt/4.</p>
+      <p class="sub" id="num-note">Every case is solved at each setting. The campaigns used 8 × 4 panels, 50 steps per cycle, 4 cycles; every elastic solve is also checked at dt/2 and dt/4.</p>
       <div id="numerics"></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="num-btns">
         <button class="btn" id="b-num-add">+ Add a setting</button>
         <button class="btn" data-preset="8,4,50,4">Campaign 8 × 4, 50</button>
         <button class="btn" data-preset="16,4,100,4">Fine 16 × 4, 100</button>
@@ -196,7 +220,7 @@ header .brand,nav a,nav button{white-space:nowrap}
       <label class="f" for="f-id">Study id</label>
       <input type="text" id="f-id" spellcheck="false">
       <p class="tiny" id="id-note" style="margin:4px 0 8px">Date and a short name; it becomes the folder name.</p>
-      <div class="stat"><span>Cases</span><b id="o-cases">–</b></div>
+      <div class="stat"><span id="o-cases-l">Cases</span><b id="o-cases">–</b></div>
       <div class="stat"><span>Estimated run time</span><b id="o-time">–</b></div>
       <div class="stat"><span>Case limit</span><span><input type="number" id="f-budget" min="1" step="1" style="width:90px;padding:3px 6px"></span></div>
       <ul class="errors" id="o-errors"></ul>
@@ -233,10 +257,14 @@ const root=document.documentElement;
 const saved=localStorage.getItem('atlas-theme');if(saved)root.dataset.theme=saved;
 $('#theme').onclick=()=>{const dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;root.dataset.theme=dark?'light':'dark';localStorage.setItem('atlas-theme',root.dataset.theme)};
 
-const KINDS={'design-set':['Design set','Named outlines and atlas designs, each solved for every model, frequency and numerical setting.'],
-  'geometry-sweep':['Geometry sweep','Many generated outlines over a half-span range, no climbing. Good for maps.'],
-  'matched-comparison':['Matched comparison','Each wing solved with chordwise elasticity only and with spanwise bending added, everything else equal.']};
-const STRUCTS={chordwise:'Chordwise elasticity',spanwise:'Spanwise + chordwise elasticity'};
+const KINDS={evolutionary:['Evolutionary search','Seeds climb toward an objective (a torque budget or a λ trade-off), one chord station at a time, as in the campaigns.'],
+  'geometry-sweep':['Geometric sweep','Many generated outlines over a half-span range, solved once each with no climbing. Good for maps.'],
+  'design-set':['Re-solve chosen wings','Atlas designs and outlines you enter, each solved for every model, frequency and numerical setting.']};
+const STRUCTS={chordwise:'Chordwise elasticity',spanwise:'Spanwise + chordwise elasticity',matched:'Both, matched'};
+const STRUCT_NOTES={chordwise:'The sheet twists passively about the leading edge.',spanwise:'The sheet also bends along the span, with large deflections.',
+  matched:'Every wing solved twice, chordwise only and with spanwise bending, everything else equal (as on the Elasticity effects page).',
+  matchedEvo:'The search climbs with chordwise elasticity; each search winner is then re-solved with spanwise bending as a matched pair.'};
+const SPAN_CHIPS=[150,220,280,340,400];
 const FREQ_CHIPS=[0.75,1,1.25];
 const TAPER=[200,150,110,80,55,35,20,10];
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -245,9 +273,11 @@ const EXISTING=new Set(B.studies.map(s=>s.id));
 
 /* ---------- state (kept as a draft in localStorage, so a trip to the atlas keeps it) ---------- */
 const BASKET_KEY='wingstudy-basket', DRAFT_KEY='wingstudy-draft';
-const fresh=()=>({title:'',question:'',author:'',parent:'',notes:'',kind:'design-set',structure:'chordwise',models:['t0.50r'],freqs:[1],
-  outlines:[],sweep:{count:16,seed:1,lo:280,hi:400},numerics:[{...L.numerics_default}],id:'',idTouched:false,budget:null});
+const freshSearch=()=>({objectives:[{torque_budget_Nm:1},{lambda:1.25}],spans:[220,340],fams:['triangle','convex'],solves:30,step:20,minc:10,dec:true});
+const fresh=()=>({title:'',question:'',author:'',parent:'',notes:'',kind:'evolutionary',structure:'chordwise',models:['t0.50r'],freqs:[1],
+  outlines:[],sweep:{count:16,seed:1,lo:280,hi:400},search:freshSearch(),numerics:[{...L.numerics_default}],id:'',idTouched:false,budget:null});
 let st=Object.assign(fresh(),JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}'));
+if(!KINDS[st.kind])st.kind='evolutionary';if(!st.search)st.search=freshSearch();
 const basket=()=>JSON.parse(localStorage.getItem(BASKET_KEY)||'[]');
 const setBasket=b=>{localStorage.setItem(BASKET_KEY,JSON.stringify(b))};
 const save=()=>localStorage.setItem(DRAFT_KEY,JSON.stringify(st));
@@ -255,7 +285,7 @@ const save=()=>localStorage.setItem(DRAFT_KEY,JSON.stringify(st));
 /* ---------- spec from state ---------- */
 function specOf(){
   const s={schema:L.spec_schema,id:st.id,title:st.title.trim(),author:st.author.trim(),question:st.question.trim(),kind:st.kind};
-  if(st.kind!=='matched-comparison')s.structure=st.structure;
+  s.structure=st.structure;
   s.models=[...st.models];s.frequencies_hz=[...st.freqs];
   s.numerics=st.numerics.map(n=>({span_panels:+n.span_panels,chord_panels:+n.chord_panels,steps_per_cycle:+n.steps_per_cycle,cycles:+n.cycles}));
   if(st.kind==='geometry-sweep')s.sweep={count:+st.sweep.count,half_span_mm:[+st.sweep.lo,+st.sweep.hi],seed:+st.sweep.seed};
@@ -263,19 +293,33 @@ function specOf(){
     const designs=[...st.outlines.map(o=>({name:o.name.trim(),chords_mm:o.chords.map(Number),half_span_mm:+o.half_span})),
                    ...b.filter(x=>!x.atlas).map(x=>({name:x.name,chords_mm:x.chords_mm,half_span_mm:x.half_span_mm}))];
     const keys=b.filter(x=>x.atlas).map(x=>x.key);
-    if(designs.length)w.designs=designs;if(keys.length)w.from_atlas=keys;s.wings=w}
+    if(designs.length)w.designs=designs;if(keys.length)w.from_atlas=keys;
+    if(st.kind==='design-set'||designs.length||keys.length)s.wings=w}
+  if(st.kind==='evolutionary'){const q=st.search;
+    s.search={objectives:q.objectives.map(o=>{const [k,v]=Object.entries(o)[0];return {[k]:v===''?null:+v}}),seed_half_spans_mm:[...q.spans],seed_families:[...q.fams],
+      solves_per_lineage:q.solves===''?null:+q.solves,step_mm:q.step===''?null:+q.step,min_chord_mm:q.minc===''?null:+q.minc,decreasing:!!q.dec}}
   const n=safeCount(s);s.budget={max_cases:st.budget!=null?+st.budget:Math.max(1,n||1)};
   if(st.parent)s.parent=st.parent;if(st.notes.trim())s.notes=st.notes.trim();
   return s;
 }
 function safeCount(s){try{return V.caseCount(s)}catch(_){return null}}
+const perCase=(m,structure,x)=>B.seconds[m==='rigid'?'rigid':structure]*Math.pow(x.steps_per_cycle/50,.6)*Math.pow(x.span_panels*x.chord_panels/32,.6)*(x.cycles/4);
+const TYPICAL_SOLVES=22;   // campaigns' mean solves per lineage
 function estimate(s){
-  const n=s.numerics,wn=s.kind==='geometry-sweep'?s.sweep.count:((s.wings.designs||[]).length+(s.wings.from_atlas||[]).length);let t=0;
-  for(const m of s.models)for(const _ of s.frequencies_hz)for(const x of n){
-    const kind=m==='rigid'?'rigid':(s.kind==='matched-comparison'?'matched':(s.structure||'chordwise'));
-    t+=B.seconds[kind]*Math.pow(x.steps_per_cycle/50,.6)*Math.pow(x.span_panels*x.chord_panels/32,.6)*(x.cycles/4)*wn}
-  return t;
+  if(s.kind==='evolutionary'){const x=s.numerics[0],lin=V.lineagesPerSearch(s),q=V.searchOf(s),climb=s.structure==='matched'?'chordwise':s.structure;
+    let typ=0,max=0;for(const m of s.models)for(const _ of s.frequencies_hz)for(const __ of s.search.objectives){
+      const c=perCase(m,climb,x),extra=s.structure==='matched'?perCase(m,'matched',x):0;
+      typ+=lin*(1+Math.min(TYPICAL_SOLVES,q.solves_per_lineage))*c+extra;max+=lin*(1+q.solves_per_lineage)*c+extra}
+    return {typ,max}}
+  const wn=s.kind==='geometry-sweep'?s.sweep.count:((s.wings.designs||[]).length+(s.wings.from_atlas||[]).length);let t=0;
+  for(const m of s.models)for(const _ of s.frequencies_hz)for(const x of s.numerics)t+=perCase(m,s.structure||'chordwise',x)*wn;
+  return {typ:t};
 }
+function seedChords(fam,minc){   // adaptive.seed with a 200 mm root (preview only)
+  const n=L.nodes,root=L.seed_root_mm,tip=+minc||10,out=[];
+  for(let i=0;i<n;i++){const eta=i/(n-1),pr={triangle:1-eta,square:1,concave:(1-eta)**2,convex:1-eta**2,narrow:1}[fam];
+    let v=i?Math.min(root,Math.max(i<2?tip:0,(tip+(root-tip)*pr)*(fam==='narrow'?.5:1))):root;if(out.length)v=Math.min(v,out[out.length-1]);out.push(v)}
+  return out}
 const dur=s=>s<90?Math.round(s)+' s':s<5400?Math.round(s/60)+' min':(s/3600).toFixed(1)+' h';
 
 /* ---------- outline drawing ---------- */
@@ -291,15 +335,38 @@ function outlineSVG(chords,hs,{w=230,h=78}={}){
 function renderStatic(){
   $('#kinds').innerHTML=Object.entries(KINDS).map(([k,[t,d]])=>`<div class="kind ${st.kind===k?'on':''}" data-kind="${k}" role="button" tabindex="0"><b>${t}</b><span>${d}</span></div>`).join('');
   $('#structs').innerHTML=Object.entries(STRUCTS).map(([k,t])=>`<button class="chip ${st.structure===k?'on':''}" data-struct="${k}">${t}</button>`).join('');
-  const noRigid=st.kind==='matched-comparison'||st.structure==='spanwise';
+  const noRigid=st.structure==='spanwise'||st.structure==='matched';
   $('#models').innerHTML=Object.entries(L.models).map(([k,m])=>`<button class="chip ${st.models.includes(k)?'on':''}" data-model="${k}" ${k==='rigid'&&noRigid?'disabled title="Rigid wings have no structure to bend"':''}>${esc(m.label)}</button>`).join('');
   const fs=[...new Set([...FREQ_CHIPS,...st.freqs])].sort((a,b)=>a-b);
   $('#freqs').innerHTML=fs.map(f=>`<button class="chip ${st.freqs.includes(f)?'on':''}" data-freq="${f}">${f} Hz</button>`).join('');
-  $('#struct-box').classList.toggle('hidden',st.kind==='matched-comparison');
+  $('#struct-note').textContent=STRUCT_NOTES[st.structure==='matched'&&st.kind==='evolutionary'?'matchedEvo':st.structure]||'';
+  const evo=st.kind==='evolutionary';
+  $('#search-card').classList.toggle('hidden',!evo);
+  $('#wings-h').textContent=evo?'Seed wings (optional)':st.kind==='geometry-sweep'?'Wings':'Wings to re-solve';
+  $('#wings-evo-note').classList.toggle('hidden',!evo);$('#wings-set-note').classList.toggle('hidden',evo);
   $('#wings-designs').classList.toggle('hidden',st.kind==='geometry-sweep');
   $('#wings-sweep').classList.toggle('hidden',st.kind!=='geometry-sweep');
-  renderBasket();renderOutlines();renderNumerics();
+  $('#num-btns').classList.toggle('hidden',evo&&st.numerics.length>0);
+  $('#num-note').textContent=evo?'One numerical setting for the whole search. The campaigns used 8 × 4 panels, 50 steps per cycle, 4 cycles; every elastic solve is also checked at dt/2 and dt/4.':'Every case is solved at each setting. The campaigns used 8 × 4 panels, 50 steps per cycle, 4 cycles; every elastic solve is also checked at dt/2 and dt/4.';
+  renderSearch();renderBasket();renderOutlines();renderNumerics();
 }
+function renderSearch(){
+  const q=st.search;
+  $('#objectives').innerHTML=q.objectives.map((o,i)=>{const [k,v]=Object.entries(o)[0];return `<div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 32px;gap:8px;align-items:center;margin-bottom:6px">
+    <select data-objk="${i}"><option value="torque_budget_Nm" ${k==='torque_budget_Nm'?'selected':''}>Max thrust with peak torque ≤ (N·m)</option><option value="lambda" ${k==='lambda'?'selected':''}>Trade-off λ</option></select>
+    <input type="number" data-objv="${i}" value="${esc(v)}" step="0.05" min="0"><button class="x" data-objdel="${i}" title="Remove objective">×</button></div>`}).join('')||'<p class="tiny">Add at least one objective.</p>';
+  $$('[data-objk]').forEach(el=>el.onchange=()=>{const i=+el.dataset.objk,v=Object.values(q.objectives[i])[0];q.objectives[i]={[el.value]:v};update()});
+  $$('[data-objv]').forEach(el=>el.oninput=()=>{const i=+el.dataset.objv,k=Object.keys(q.objectives[i])[0];q.objectives[i]={[k]:el.value===''?'':+el.value};update()});
+  $$('[data-objdel]').forEach(el=>el.onclick=()=>{q.objectives.splice(+el.dataset.objdel,1);renderSearch();update()});
+  const spans=[...new Set([...SPAN_CHIPS,...q.spans])].sort((a,b)=>a-b);
+  $('#seed-spans').innerHTML=spans.map(v=>`<button class="chip ${q.spans.includes(v)?'on':''}" data-span="${v}">${v}</button>`).join('');
+  $('#seed-fams').innerHTML=L.families.map(f=>`<button class="chip ${q.fams.includes(f)?'on':''}" data-fam="${f}" style="display:inline-flex;align-items:center;gap:6px"><span style="width:64px;display:inline-block">${outlineSVG(seedChords(f,q.minc),340,{w:64,h:30}).replace(/<text[^>]*>[^<]*<\/text>/,'')}</span>${f}</button>`).join('');
+  seedNote();
+  for(const [k,id] of [['solves','#f-solves'],['step','#f-step'],['minc','#f-minc']])if(document.activeElement!==$(id))$(id).value=q[k];
+  $('#f-dec').checked=!!q.dec;
+}
+function seedNote(){const q=st.search,nb=basket().length+st.outlines.length,lin=q.spans.length*q.fams.length+nb;
+  $('#seed-note').textContent=`${q.spans.length} half-span${q.spans.length===1?'':'s'} × ${q.fams.length} famil${q.fams.length===1?'y':'ies'}${nb?` + ${nb} seed wing${nb===1?'':'s'}`:''} = ${lin} lineage${lin===1?'':'s'} per search.`}
 function renderBasket(){
   const b=basket();
   $('#basket-box').innerHTML=b.length?`<div class="basket">${b.map((x,i)=>`<div class="bitem"><button class="x" data-unbasket="${i}" title="Remove">×</button><div class="t"><b>${esc(x.label||x.name)}</b><br>${x.atlas?`atlas key <code>${esc(x.key.slice(0,8))}</code>`:'copied outline'}</div>${outlineSVG(x.chords_mm,x.half_span_mm,{w:200,h:64})}</div>`).join('')}</div><p class="tiny" style="margin:6px 0 12px">${b.length} from the atlas · <a href="#" id="b-clear-basket">clear</a></p>`
@@ -337,15 +404,16 @@ function update(){
   const s=specOf();current=s;save();
   let errors=V.validate(s);
   if(EXISTING.has(s.id))errors=[`id: ${s.id} is already used by a study in the repository`,...errors];
-  const n=safeCount(s),ok=!errors.length;
+  const n=safeCount(s),ok=!errors.length,evo=s.kind==='evolutionary';
+  $('#o-cases-l').textContent=evo?'Solves (at most)':'Cases';
   $('#o-cases').textContent=n==null?'–':n.toLocaleString();
-  let est=null;try{est=estimate(s)}catch(_){}
-  $('#o-time').textContent=est==null||!isFinite(est)?'–':`${dur(est)} · ${dur(est/4)} on 4 workers`;
+  let est=null;try{if(ok)est=estimate(s)}catch(_){}
+  $('#o-time').textContent=est==null||!isFinite(est.typ)?'–':evo?`about ${dur(est.typ/4)} on 4 workers (at most ${dur(est.max/4)})`:`${dur(est.typ)} · ${dur(est.typ/4)} on 4 workers`;
   if(st.budget==null&&document.activeElement!==$('#f-budget'))$('#f-budget').value=s.budget.max_cases;
   $('#o-errors').innerHTML=errors.map(e=>`<li>${esc(e)}</li>`).join('');
   $('#o-ok').classList.toggle('hidden',!ok);
   ['#b-github','#b-download','#b-copy'].forEach(b=>$(b).disabled=!ok);
-  $('#o-json').textContent=JSON.stringify(s,null,1);
+  $('#o-json').textContent=JSON.stringify(s,null,1);seedNote();
   $('#o-cmd-run').textContent=`tools\\wingstudy.cmd run ${s.id}`;
   $('#id-note').textContent=EXISTING.has(s.id)?'That id is taken; change the title or the id.':'Date and a short name; it becomes the folder name.';
 }
@@ -359,8 +427,11 @@ $('#f-id').oninput=e=>{st.id=e.target.value.trim();st.idTouched=!!st.id;update()
 $('#f-budget').oninput=e=>{st.budget=e.target.value===''?null:+e.target.value;update()};
 for(const [k,id] of [['count','#f-sw-count'],['seed','#f-sw-seed'],['lo','#f-sw-lo'],['hi','#f-sw-hi']]){$(id).value=st.sweep[k];$(id).oninput=e=>{st.sweep[k]=e.target.value;update()}}
 document.addEventListener('click',e=>{
-  const k=e.target.closest('[data-kind]');if(k){st.kind=k.dataset.kind;if(st.kind==='matched-comparison'||st.structure==='spanwise')st.models=st.models.filter(m=>m!=='rigid');if(!st.models.length)st.models=['t0.50'];renderStatic();update();return}
-  const s=e.target.closest('[data-struct]');if(s){st.structure=s.dataset.struct;if(st.structure==='spanwise')st.models=st.models.filter(m=>m!=='rigid');renderStatic();update();return}
+  const k=e.target.closest('[data-kind]');if(k){st.kind=k.dataset.kind;if(st.kind==='evolutionary'&&st.numerics.length>1)st.numerics=st.numerics.slice(0,1);renderStatic();update();return}
+  const s=e.target.closest('[data-struct]');if(s){st.structure=s.dataset.struct;if(st.structure!=='chordwise')st.models=st.models.filter(m=>m!=='rigid');if(!st.models.length)st.models=['t0.50'];renderStatic();update();return}
+  const ao=e.target.closest('[data-addobj]');if(ao){const [kk,v]=ao.dataset.addobj.split(':');st.search.objectives.push({[kk]:+v});renderSearch();update();return}
+  const sp=e.target.closest('[data-span]');if(sp){const v=+sp.dataset.span,q=st.search;q.spans=q.spans.includes(v)?q.spans.filter(x=>x!==v):[...q.spans,v].sort((a,b)=>a-b);renderSearch();update();return}
+  const fm=e.target.closest('[data-fam]');if(fm){const f=fm.dataset.fam,q=st.search;q.fams=q.fams.includes(f)?q.fams.filter(x=>x!==f):L.families.filter(x=>x===f||q.fams.includes(x));renderSearch();update();return}
   const m=e.target.closest('[data-model]');if(m&&!m.disabled){const id=m.dataset.model;st.models=st.models.includes(id)?st.models.filter(x=>x!==id):[...st.models,id];renderStatic();update();return}
   const f=e.target.closest('[data-freq]');if(f){const v=+f.dataset.freq;st.freqs=st.freqs.includes(v)?st.freqs.filter(x=>x!==v):[...st.freqs,v].sort((a,b)=>a-b);renderStatic();update();return}
   const p=e.target.closest('[data-preset]');if(p){const [a,b,c,d]=p.dataset.preset.split(',').map(Number),n={span_panels:a,chord_panels:b,steps_per_cycle:c,cycles:d};
@@ -368,6 +439,9 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.kind)e.target.click()});
 $('#b-freq-add').onclick=()=>{const v=+$('#f-freq-add').value;if(v>0&&!st.freqs.includes(v)){st.freqs=[...st.freqs,v].sort((a,b)=>a-b);$('#f-freq-add').value='';renderStatic();update()}};
+for(const [k,id] of [['solves','#f-solves'],['step','#f-step'],['minc','#f-minc']])$(id).oninput=e=>{st.search[k]=e.target.value===''?'':+e.target.value;if(k==='minc')renderSearch();update()};
+$('#f-dec').onchange=e=>{st.search.dec=e.target.checked;update()};
+$('#b-span-add').onclick=()=>{const v=+$('#f-span-add').value;if(v>0&&!st.search.spans.includes(v)){st.search.spans=[...st.search.spans,v].sort((a,b)=>a-b);$('#f-span-add').value='';renderSearch();update()}};
 $('#b-add-outline').onclick=()=>{st.outlines.push({name:`wing ${st.outlines.length+1}`,half_span:340,chords:[...TAPER]});renderOutlines();update()};
 $('#b-num-add').onclick=()=>{st.numerics.push({...L.numerics_default,span_panels:16});renderNumerics();update()};
 $('#b-reset').onclick=()=>{if(!confirm('Clear this draft? Picked atlas designs are kept.'))return;st=fresh();save();
@@ -382,7 +456,10 @@ $('#b-github').onclick=()=>{const u=githubURL();
   window.open(u,'_blank','noopener')};
 $('#f-load').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{
   const s=JSON.parse(await file.text());
-  Object.assign(st,{title:s.title||'',question:s.question||'',author:s.author||'',notes:s.notes||'',parent:s.parent||'',kind:s.kind||'design-set',
+  const q=s.search||{};
+  Object.assign(st,{title:s.title||'',question:s.question||'',author:s.author||'',notes:s.notes||'',parent:s.parent||'',kind:KINDS[s.kind]?s.kind:'evolutionary',
+    search:s.search?{objectives:q.objectives||[],spans:q.seed_half_spans_mm||[],fams:q.seed_families||[],solves:q.solves_per_lineage??L.search_default.solves_per_lineage,
+      step:q.step_mm??L.search_default.step_mm,minc:q.min_chord_mm??L.search_default.min_chord_mm,dec:q.decreasing??true}:st.search,
     structure:s.structure||'chordwise',models:s.models||[],freqs:s.frequencies_hz||[],numerics:(s.numerics||[L.numerics_default]).map(n=>({...L.numerics_default,...n})),
     id:s.id||'',idTouched:!!s.id,budget:s.budget?s.budget.max_cases:null,
     outlines:((s.wings||{}).designs||[]).map(d=>({name:d.name||'',half_span:d.half_span_mm,chords:[...d.chords_mm]})),
