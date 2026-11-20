@@ -56,8 +56,8 @@ def landing_figure(D: dict, max_points: int = 9000) -> dict:
         if t > best:
             best = t
             frontier.append([round(q, 4), round(t, 4)])
-    # Specimen: the top performer for the hardware configuration (0.5 mm sheet + rod, 1 Hz).
-    cand = [w for w in D["winners"] if w.get("model") == "t0.50r" and w.get("freq") == 1.0 and w.get("chords")]
+    # Specimen: the 0.5 mm sheet top performer at 1 Hz, a well-proportioned, evenly tapered planform.
+    cand = [w for w in D["winners"] if w.get("model") == "t0.50" and w.get("freq") == 1.0 and w.get("chords")]
     w = max(cand, key=lambda w: w["thrust"]) if cand else max(D["winners"], key=lambda w: w["thrust"])
     model = next((m["label"] for m in D["models"] if m["id"] == w["model"]), w["model"])
     specimen = {"chords": w["chords"], "half_span": w["half_span"], "tip_twist": w.get("tip_twist") or 0,

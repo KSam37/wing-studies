@@ -37,9 +37,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:16p
 header .brand{font-weight:700;letter-spacing:.02em}
 .iconbtn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:7px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px 40px;text-align:center}
-.eyebrow{font-size:12.5px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
-h1{font-size:clamp(36px,6vw,64px);line-height:1.05;margin:0 0 14px;font-weight:750;letter-spacing:-.02em}
-.lede{max-width:640px;color:var(--text-2);font-size:17px;margin:0 auto 30px}
+h1{font-size:clamp(36px,6vw,64px);line-height:1.05;margin:0 0 34px;font-weight:750;letter-spacing:-.02em}
 .choices{display:grid;grid-template-columns:repeat(2,minmax(0,330px));gap:16px;justify-content:center;width:100%}
 @media (max-width:720px){.choices{grid-template-columns:minmax(0,420px)}}
 .choice{display:block;text-align:left;text-decoration:none;color:var(--text);background:color-mix(in srgb,var(--surface) 92%,transparent);
@@ -51,9 +49,6 @@ h1{font-size:clamp(36px,6vw,64px);line-height:1.05;margin:0 0 14px;font-weight:7
 .choice .tag{font-size:11px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:1px 8px}
 .stats{display:flex;flex-wrap:wrap;gap:10px 34px;justify-content:center;margin:34px 0 0;color:var(--text-2);font-size:13.5px}
 .stats b{display:block;font-size:24px;color:var(--text);font-variant-numeric:tabular-nums;font-weight:700}
-.types{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px 0 0}
-.types span{font-size:12.5px;border:1px solid var(--border);border-radius:99px;padding:3px 11px;background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--text-2)}
-.types i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
 footer{padding:18px 24px 22px;font-size:12.5px;color:var(--muted);text-align:center}
 footer a{color:var(--text-2)}
 </style>
@@ -64,9 +59,7 @@ footer a{color:var(--text-2)}
 <div class="wrap">
   <header><span class="brand">FAAV Wing Studies</span><button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button></header>
   <main>
-    <p class="eyebrow">Flapping-wing propulsion in water</p>
     <h1>FAAV Wing Studies</h1>
-    <p class="lede">Simulated thrust and root torque for flapping carbon-fibre wings, from rigid outlines to sheets that twist and bend. Explore every wing we have simulated, or set up a new study.</p>
     <div class="choices">
       <a class="choice" href="atlas/">
         <h2>Explore the atlas</h2>
@@ -80,11 +73,6 @@ footer a{color:var(--text-2)}
       </a>
     </div>
     <div class="stats" id="stats"></div>
-    <div class="types">
-      <span><i style="background:var(--muted)"></i>Rigid</span>
-      <span><i style="background:var(--s1)"></i>Chordwise elasticity</span>
-      <span><i style="background:var(--s2)"></i>Spanwise + chordwise elasticity</span>
-    </div>
   </main>
   <footer>
     Simulations use <a href="https://github.com/camUrban/PteraSoftware">Ptera Software</a> by Cameron Urban and contributors (unsteady vortex-lattice method, MIT licence), with project extensions for underwater operation and structural elasticity.
@@ -108,7 +96,7 @@ document.getElementById('stats').innerHTML=[
 /* ---------- background figure ----------
    A quiet plate of the data itself: verified / settled atlas wings as faint points on
    thrust-vs-torque axes, the observed frontier as one hairline, and an inset specimen,
-   the hardware top performer drawn as a hairline panel mesh. The specimen's kinematics
+   a top-performing wing pair drawn as a hairline panel mesh. The specimen's kinematics
    are illustrative (prescribed stroke, twist scaled to its solved tip-twist amplitude);
    they are not a replay of the solve. */
 const cv=document.getElementById('bg'),ctx=cv.getContext('2d');
@@ -148,30 +136,32 @@ function drawPlate(){
 // specimen inset
 const SP=S.specimen,chords=SP.chords.filter(c=>c>0).map(c=>c/1000),span=SP.half_span/1000;
 const twistAmp=Math.min(.35,Math.abs(SP.tip_twist||0)*Math.PI/180);
-function spPt(yi,xc,t){
+function spPt(sd,yi,xc,t){                          // sd = +1 right wing, -1 left wing
   const n=chords.length,s=yi/(n-1),c=chords[yi],ph=2*Math.PI*.35*t;
   const flap=(4+30*Math.sin(ph))*Math.PI/180;        // about -26° to +34°, as in the campaigns
   const tw=twistAmp*s*Math.cos(ph);
-  const r=s*span;let X=-xc*c*Math.cos(tw),Y=r*Math.cos(flap),Z=r*Math.sin(flap)-xc*c*Math.sin(tw);
-  const yaw=-.35,cy=Math.cos(yaw),sy=Math.sin(yaw);[X,Y]=[X*cy-Y*sy,X*sy+Y*cy];
-  const tilt=1.05,ct=Math.cos(tilt),st=Math.sin(tilt);return [Y,-(Z*ct-X*st)];
+  const r=s*span,X=-xc*c*Math.cos(tw),Y=sd*r*Math.cos(flap),Z=r*Math.sin(flap)-xc*c*Math.sin(tw);
+  const tilt=1.0,ct=Math.cos(tilt),st=Math.sin(tilt);return [Y,-(Z*ct-X*st)];   // seen from above and ahead
 }
 function draw(t){
   if(!plate)plate=drawPlate();
   ctx.clearRect(0,0,w0,h0);ctx.drawImage(plate.off,0,0,w0,h0);
   if(w0<720)return;                                  // no inset on small screens
-  const box=Math.min(240,w0*.19),bx=plate.R-box-8,by=plate.T+18;
+  const box=Math.min(280,w0*.21),bx=plate.R-box,by=plate.T+10;
   const text=css('--text-2'),muted=css('--muted'),dark=getComputedStyle(root).colorScheme==='dark';
-  const k=box*.8/span,ox=bx+box*.1,oy=by+box*.36;
-  const P=(i,x)=>{const [a,b]=spPt(i,x,t);return [ox+a*k,oy+b*k]};
-  ctx.save();ctx.globalAlpha=dark?.55:.6;ctx.strokeStyle=text;ctx.lineWidth=.6;
+  const k=box*.47/span,ox=bx+box/2,oy=by+box*.3;
+  ctx.save();ctx.globalAlpha=dark?.55:.6;ctx.strokeStyle=text;
   const n=chords.length,NC=4;
-  for(let i=0;i<n;i++){ctx.beginPath();for(let j=0;j<=NC;j++)ctx.lineTo(...P(i,j/NC));ctx.stroke()}
-  for(let j=0;j<=NC;j++){ctx.beginPath();for(let i=0;i<n;i++)ctx.lineTo(...P(i,j/NC));ctx.stroke()}
-  ctx.lineWidth=1.3;ctx.beginPath();for(let i=0;i<n;i++)ctx.lineTo(...P(i,0));ctx.stroke();
-  ctx.globalAlpha=dark?.5:.55;ctx.fillStyle=muted;ctx.font='11px system-ui,-apple-system,"Segoe UI",sans-serif';ctx.textAlign='right';
-  ctx.fillText('Top performer: '+SP.label,plate.R,by+box*.82);
-  ctx.fillText('illustrative stroke, −26° to +34°',plate.R,by+box*.82+15);
+  for(const sd of [1,-1]){
+    const P=(i,x)=>{const [a,b]=spPt(sd,i,x,t);return [ox+a*k,oy+b*k]};
+    ctx.lineWidth=.6;
+    for(let i=0;i<n;i++){ctx.beginPath();for(let j=0;j<=NC;j++)ctx.lineTo(...P(i,j/NC));ctx.stroke()}
+    for(let j=0;j<=NC;j++){ctx.beginPath();for(let i=0;i<n;i++)ctx.lineTo(...P(i,j/NC));ctx.stroke()}
+    ctx.lineWidth=1.3;ctx.beginPath();for(let i=0;i<n;i++)ctx.lineTo(...P(i,0));ctx.stroke();
+  }
+  ctx.globalAlpha=dark?.5:.55;ctx.fillStyle=muted;ctx.font='11px system-ui,-apple-system,"Segoe UI",sans-serif';ctx.textAlign='center';
+  ctx.fillText('Top performer: '+SP.label,ox,by+box*.56);
+  ctx.fillText('illustrative stroke, −26° to +34°',ox,by+box*.56+15);
   ctx.restore();
 }
 if(reduce)draw(.5);
