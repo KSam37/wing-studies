@@ -185,7 +185,7 @@ Each phase ends in a working state and can be paused there.
 - Add a compact replay manifest per case: exact geometry, actual dt/cycles, mesh/wake, material, motion, code identity (known issue #5).
 - **Done when** a small new study (≈4 cases) goes spec → run → PR → merged → visible on the site, end to end.
 
-**Status (2026-11-19): built; waiting on the first study PR to be merged.**
+**Status (2026-11-19): done.** The first study went spec → run → PR #1 → CI → merged → live in the atlas.
 - `wingstudy/studies/`: `spec.py` (stdlib validator and expansion; `schema/study-spec.schema.json` is kept in step by `tests/test_studies.py`), `run.py` (wraps `elastic_campaign._evaluate` and `span_atlas.evaluate` unchanged, caches by key in `outputs/study-cache/`), `atlas.py` (merges completed studies into the atlas at site build; `catalog.end` keeps the catalog range correct), `cli.py` (`new / validate / plan / run / publish / list`).
 - Kinds: `design-set`, `geometry-sweep`, `matched-comparison`. Search, evolution and replay kinds are deferred.
 - Identity: `identity.code_identity()` adds a solve-path digest (`model.py`, `elastic_campaign.py`, `span_atlas.py`, `cases.py`) and Ptera, numpy, numba, scipy and Python versions to the structural fingerprint; its digest is part of every case key (known issue #7). Each result case carries its exact solver input as `replay` (known issue #5).
