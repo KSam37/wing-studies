@@ -1,5 +1,16 @@
 """wingstudy command line: one entry point for the study tools.
 
+Planned studies (studies/<id>/spec.json -> results -> pull request):
+
+    python -m wingstudy new NAME [--kind design-set|geometry-sweep|matched-comparison]
+    python -m wingstudy validate ID... | --all
+    python -m wingstudy plan ID [--workers N]        case count, cache hits, time estimate
+    python -m wingstudy run ID [--workers N]         solve; writes results.json and status.json
+    python -m wingstudy publish ID                   study/<id> branch, push, open a PR (never merges)
+    python -m wingstudy list
+
+Campaign tools:
+
     python -m wingstudy dashboard [args]   span-flex campaign dashboard (elastic_campaign dashboard)
     python -m wingstudy campaign  [args]   elastic campaign tool: dashboard | replay | ... (elastic_campaign)
     python -m wingstudy frontier  [args]   matched chordwise/spanwise frontier rerun (span_frontier)
@@ -36,6 +47,10 @@ def main(argv=None) -> int:
         print(__doc__)
         return 0
     cmd, rest = argv[0], argv[1:]
+    from .studies.cli import COMMANDS as STUDY_COMMANDS
+    if cmd in STUDY_COMMANDS:
+        from .studies.cli import main as study_main
+        return study_main(cmd, rest)
     if cmd == "fingerprint":
         from . import identity
         print(identity.structural_fingerprint())

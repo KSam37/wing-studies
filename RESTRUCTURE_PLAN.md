@@ -185,6 +185,14 @@ Each phase ends in a working state and can be paused there.
 - Add a compact replay manifest per case: exact geometry, actual dt/cycles, mesh/wake, material, motion, code identity (known issue #5).
 - **Done when** a small new study (≈4 cases) goes spec → run → PR → merged → visible on the site, end to end.
 
+**Status (2026-11-19): built; waiting on the first study PR to be merged.**
+- `wingstudy/studies/`: `spec.py` (stdlib validator and expansion; `schema/study-spec.schema.json` is kept in step by `tests/test_studies.py`), `run.py` (wraps `elastic_campaign._evaluate` and `span_atlas.evaluate` unchanged, caches by key in `outputs/study-cache/`), `atlas.py` (merges completed studies into the atlas at site build; `catalog.end` keeps the catalog range correct), `cli.py` (`new / validate / plan / run / publish / list`).
+- Kinds: `design-set`, `geometry-sweep`, `matched-comparison`. Search, evolution and replay kinds are deferred.
+- Identity: `identity.code_identity()` adds a solve-path digest (`model.py`, `elastic_campaign.py`, `span_atlas.py`, `cases.py`) and Ptera, numpy, numba, scipy and Python versions to the structural fingerprint; its digest is part of every case key (known issue #7). Each result case carries its exact solver input as `replay` (known issue #5).
+- Not done: `span_atlas.publish()` and `elastic_atlas.py` still write the old atlas for existing campaigns. New results go through studies; retiring the old publishers waits until the campaigns' raw data is imported.
+- First study: `2026-11-19-numerics-hardware-winner`, 4 cases (the 0.5 mm + rod 1 Hz winner at 8×4 / 16×4 panels × 50 / 100 steps per cycle). Its 8×4/50 case reproduces the atlas value to 0.006% (the atlas stores chords to 0.1 mm).
+- CI runs `python -m wingstudy validate --all` and the study tests on every PR.
+
 ### Phase 4: Website study builder (3–4 days)
 - Add a form under `site/new/` with the atlas styling. It validates in the browser against the same schema and can preselect wings from the atlas (for example "rerun these selected points").
 - It can submit through GitHub's prefilled *new file* URL, which opens a PR with the spec and needs no backend and no stored tokens. It can also download the spec instead.

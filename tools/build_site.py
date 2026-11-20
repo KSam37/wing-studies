@@ -18,7 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT))
 import atlas_data  # noqa: E402
+from wingstudy.studies import atlas as study_atlas  # noqa: E402
 
 REPO_URL = "https://github.com/KSam37/wing-studies"
 TEMPLATE = ROOT / "wingstudy" / "elastic_atlas.html"
@@ -63,6 +65,10 @@ def build(out: Path) -> None:
     now = dt.datetime.now(dt.timezone.utc)
     commit = _commit()
     D = atlas_data.assemble(ROOT / "atlas" / "data")
+    atlas_data.attach_evolution(D, ROOT / "atlas" / "media")
+    planned = study_atlas.completed(ROOT / "studies")
+    if planned:
+        print(f"planned studies: {len(planned)} ({study_atlas.merge(D, planned)} map rows)")
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")
     D["build_id"] = f"{now:%Y%m%d%H%M%S}-{commit}"
 

@@ -86,6 +86,21 @@ def assemble(data: Path) -> dict:
     return {**{k: D[k] for k in first if k in D}, **{k: v for k, v in D.items() if k not in first}}
 
 
+def attach_evolution(D: dict, media: Path) -> int:
+    """Attach each search-found winner's evolution animation (media/evolution/<study>/index.json,
+    written by `python -m wingstudy.elastic_evolution CAMPAIGN --atlas-winners STUDY`)."""
+    n = 0
+    for index_path in sorted((media / "evolution").glob("*/index.json")):
+        study, index = index_path.parent.name, json.loads(index_path.read_text(encoding="utf-8"))
+        for w in D.get("winners", []):
+            e = index.get((w.get("key") or "")[:16])
+            if w.get("study") == study and e and (media / e["gif"]).exists():
+                w["evolution"] = e
+                w["media"] = {**(w.get("media") or {}), "evolution": e["gif"]}
+                n += 1
+    return n
+
+
 def check(original: dict, rebuilt: dict) -> list[str]:
     a = {k: v for k, v in original.items() if k not in VOLATILE}
     b = {k: v for k, v in rebuilt.items() if k not in VOLATILE}

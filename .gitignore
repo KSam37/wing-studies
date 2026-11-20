@@ -42,8 +42,12 @@ wingstudy/tmp*/
 !/Open Results.cmd
 !/Open Master Excel.cmd
 
-# All simulation outputs, catalogs and legacy studies stay local (never pushed).
-# Shared results will live in studies/ once the restructure lands (see RESTRUCTURE_PLAN.md).
+!/studies/
+!/schema/
+studies/*/*.tmp
+
+# All simulation outputs, catalogs and the study solve cache stay local (never pushed).
+# Shared results live in studies/<id>/ (spec, status, compact results).
 /outputs/
 
 # Temporary isolated native-case staging; removed after completion.

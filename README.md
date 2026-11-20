@@ -23,6 +23,8 @@ Wings are carbon-fibre sheets of several thicknesses, either bare or with a carb
 | `atlas/data/` | Atlas data: one file per study plus metadata, catalog and span comparisons |
 | `atlas/media/`, `atlas/files/` | Animations (recompressed to one flap cycle), plots and reports |
 | `wingstudy/` | The study engine (Python package): geometry, rigid and elastic solvers, campaigns, searches, the atlas exporter. Run tools with `python -m wingstudy <command>` |
+| `studies/` | Planned studies: spec, status and compact results, one folder each |
+| `schema/` | JSON Schema for study specs |
 | `tools/` | Setup, launchers, site build, media compression, data import |
 | `tests/` | Python tests for the package, plus the atlas UI test |
 | `docs/history/` | Earlier READMEs and results notes, kept for provenance |
@@ -39,15 +41,28 @@ Then open `_site/index.html` (landing page) or `_site/atlas/index.html` directly
 
 ## Running a new study
 
-Simulations run on your own computer. A study builder on the website is planned: it will submit a study spec to this repository for a local run to pick up. Until then:
+Simulations run on your own computer. A study is a folder `studies/<id>/` holding `spec.json` (what to solve), `status.json` and, once run, `results.json` (compact results plus an exact replay input for every case). [`schema/study-spec.schema.json`](schema/study-spec.schema.json) documents the spec.
 
-1. **Set up (Windows).** Clone the repository (`git clone --recurse-submodules https://github.com/KSam37/wing-studies.git`). Then double-click `Setup Windows.cmd`, which installs the Python dependencies and the pinned Ptera solver into `%LOCALAPPDATA%\WingStudies`. That environment is tied to the folder you set up from: after moving the folder, run `Setup Windows.cmd` again. Linux: `tools/setup_linux.sh`.
-2. **Run.**
-   - `Run Span Flex Study.cmd` opens the campaign dashboard.
-   - `Run Frontier Span Study.cmd` resumes the matched chordwise/spanwise frontier rerun.
-   - `tools\wingstudy.cmd <command>` runs any tool in the registered environment; `tools\wingstudy.cmd --help` lists the commands (`dashboard`, `frontier`, `spanfree`, `study`, `refine`, `report`, ...). The same commands are `python -m wingstudy <command>` from the repository root.
-   - [V1_5_SYSTEM_GUIDE.md](V1_5_SYSTEM_GUIDE.md) explains each workflow and its options.
-3. **Publish.** Add results to `atlas/data/` and open a pull request. When it merges, the site rebuilds automatically.
+**Set up (Windows).** Clone the repository (`git clone --recurse-submodules https://github.com/KSam37/wing-studies.git`). Then double-click `Setup Windows.cmd`, which installs the Python dependencies and the pinned Ptera solver into `%LOCALAPPDATA%\WingStudies`. That environment is tied to the folder you set up from: after moving the folder, run `Setup Windows.cmd` again. Linux: `tools/setup_linux.sh`.
+
+**Plan, run, publish.** Use `tools\wingstudy.cmd` (the registered environment) or `python -m wingstudy`:
+
+```powershell
+tools\wingstudy.cmd new my-question --kind design-set   # writes studies/<today>-my-question/spec.json
+tools\wingstudy.cmd validate 2026-11-19-my-question     # every problem, in plain words
+tools\wingstudy.cmd plan 2026-11-19-my-question --workers 4
+tools\wingstudy.cmd run 2026-11-19-my-question --workers 4
+tools\wingstudy.cmd publish 2026-11-19-my-question      # study/<id> branch, push, pull request
+```
+
+- Kinds: `design-set` (named outlines and/or atlas designs by key, each solved for every model, frequency and numerical setting), `geometry-sweep` (scrambled-Sobol outlines, the campaign rules) and `matched-comparison` (each wing solved chordwise-only and with spanwise bending).
+- Every solved case is cached in `outputs/study-cache/` under a key covering the outline, model, motion, numerics and code identity (structural and solve-path source, Ptera and library versions). Reruns and later studies reuse identical solves, and changing the code re-solves.
+- Results are immutable: once a study has run, edit nothing in its spec; start a new study and name the old one as its `parent`.
+- `publish` commits only `studies/<id>/` and opens a pull request. CI validates the spec and results and builds the site with the study merged into the atlas. A person merges it; nothing is merged automatically. After the merge the study appears in the atlas as its own study, its designs marked "found by a planned study".
+
+**Campaign tools.** `Run Span Flex Study.cmd` opens the campaign dashboard and `Run Frontier Span Study.cmd` resumes the matched frontier rerun. `tools\wingstudy.cmd --help` lists every command; [V1_5_SYSTEM_GUIDE.md](V1_5_SYSTEM_GUIDE.md) explains each workflow.
+
+**Evolution animations.** For top performers that a search found, `tools\wingstudy.cmd evolution <campaign folder> --atlas-winners rod` (or `weekend`) renders the shape's evolution from its seed into `atlas/media/evolution/`; the atlas shows it as the "Shape evolution" view, with the search's λ. This needs the campaign's `campaign.sqlite`.
 
 The launchers keep the solver's compiled-function cache in `%LOCALAPPDATA%\WingStudies\numba`. If you run Python directly, set `NUMBA_CACHE_DIR` to a short path: long Windows paths (OneDrive folders, for example) can make the cache fail.
 

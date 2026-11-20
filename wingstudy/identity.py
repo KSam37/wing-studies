@@ -29,3 +29,31 @@ def canonical_source(source: bytes) -> bytes:
 def structural_fingerprint(directory: Path = HERE) -> str:
     return hashlib.sha256(b"".join(canonical_source((directory / n).read_bytes())
                                    for n in STRUCTURAL_MODULES)).hexdigest()
+
+
+# Code that turns a study case into numbers, beyond the structural model: problem
+# construction and load metrics (model.py), the per-design solve and its verification
+# ladder (elastic_campaign.py, span_atlas.py), template cases (cases.py).
+SOLVE_MODULES = ("model.py", "elastic_campaign.py", "span_atlas.py", "cases.py")
+
+
+def code_identity() -> dict:
+    """What produced a study result: structural fingerprint, solve-path digest, and the
+    solver and numerical library versions. Its digest goes into every study case key, so
+    changing any of them re-solves instead of reusing a cached result."""
+    import json
+    import platform
+    from importlib import metadata
+
+    def version(dist):
+        try:
+            return metadata.version(dist)
+        except metadata.PackageNotFoundError:
+            return None
+
+    solve = hashlib.sha256(b"".join(canonical_source((HERE / n).read_bytes()) for n in SOLVE_MODULES)).hexdigest()
+    ident = {"structural": structural_fingerprint(), "solve_path": solve,
+             "ptera": version("pterasoftware"), "numpy": version("numpy"), "numba": version("numba"),
+             "scipy": version("scipy"), "python": platform.python_version()}
+    ident["digest"] = hashlib.sha256(json.dumps(ident, sort_keys=True).encode()).hexdigest()[:16]
+    return ident

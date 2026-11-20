@@ -28,6 +28,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Validate study specs and results
+        run: python -m wingstudy validate --all
+      - name: Study tests (standard library only)
+        run: python -m unittest discover -s tests -p "test_studies.py" -v
       - name: Build site
         run: python tools/build_site.py --out _site
       - name: Atlas UI checks (mocked DOM)
