@@ -1,0 +1,17 @@
+[project]
+name = "wingstudy"
+version = "1.5.0"
+description = "FAAV Wing Studies: flapping-wing simulation studies in water, built on Ptera Software"
+readme = "README.md"
+requires-python = ">=3.12"
+# Dependencies are pinned in tools/requirements-windows.lock and installed by Setup Windows.cmd
+# (or tools/setup_linux.sh), together with the pinned Ptera Software checkout.
+
+[project.scripts]
+wingstudy = "wingstudy.__main__:main"
+
+[tool.setuptools]
+packages = ["wingstudy"]
+
+[tool.setuptools.package-data]
+wingstudy = ["*.html", "*.xlsx", "data/template_cases/*.json"]

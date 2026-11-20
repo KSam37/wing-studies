@@ -20,7 +20,9 @@
 !/SPANWISE_ELASTICITY.md
 !/SPANWISE_FRONTIER_STUDY.md
 !/RESTRUCTURE_PLAN.md
-!/WingStudy/
+!/wingstudy/
+!/legacy/
+!/pyproject.toml
 !/PteraSoftware
 !/tests/
 !/docs/
@@ -35,7 +37,8 @@ __pycache__/
 .env
 .env.*
 *.log
-WingStudy/tmp*/
+wingstudy/tmp*/
+legacy/tmp*/
 
 !/tools/
 !/Open Results.cmd

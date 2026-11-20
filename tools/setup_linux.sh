@@ -28,4 +28,4 @@ fi
 "$VENV/bin/pip" install -q --upgrade pip
 "$VENV/bin/pip" install -q -e "$ROOT/PteraSoftware" reportlab shapely trimesh
 "$VENV/bin/python" -c "import pterasoftware, numpy, numba; print('Ready: Ptera', pterasoftware.__name__, 'numpy', numpy.__version__, 'numba', numba.__version__)"
-echo "Run studies with: $VENV/bin/python $ROOT/WingStudy/elastic_study.py --help"
+echo "Run studies with: cd $ROOT && $VENV/bin/python -m wingstudy.elastic_study --help"

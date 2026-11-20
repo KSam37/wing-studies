@@ -82,8 +82,8 @@ Double-click **Run Span Flex Study.cmd** in this version 1.5 folder. It opens a 
 From the configured Python environment:
 
 ```
-python WingStudy/elastic_campaign.py dashboard --large-deflection --variant plate --workers 4
-python WingStudy/elastic_campaign.py dashboard --large-deflection --variant rod --workers 4
+python -m wingstudy.elastic_campaign dashboard --large-deflection --variant plate --workers 4
+python -m wingstudy.elastic_campaign dashboard --large-deflection --variant rod --workers 4
 ```
 
 Use `--smoke` and a fresh `--campaign` folder for a small trial. Do not start a large bare-plate search until the desired thickness/span range passes deformation, time-step and mesh checks. `--spanwise-bending` without `--large-deflection` selects the linear alternative. To resume, supply the saved campaign folder. Asking to enable a new structural model inside a legacy campaign is rejected. Model version, material/options and resolution are included in new case identities so old torsion-only results cannot be reused as span-flex results.
@@ -94,11 +94,11 @@ The dashboard's design detail now includes a tip-deflection trace. Native plots 
 
 ## Verification artifacts
 
-`python -m unittest discover -s WingStudy -p test_spanwise_elastic.py -v` checks analytical tip-load and distributed-load deflections, first bending frequency, positive energy, static equilibrium, fixed leading-edge geometry, rod/sheet separation and distinct case identities. The existing `test_elastic.py` verifies unchanged legacy torsion behavior.
+`python -m unittest discover -s tests -p test_spanwise_elastic.py -v` checks analytical tip-load and distributed-load deflections, first bending frequency, positive energy, static equilibrium, fixed leading-edge geometry, rod/sheet separation and distinct case identities. The existing `test_elastic.py` verifies unchanged legacy torsion behavior.
 
-`python WingStudy/check_spanwise_elastic.py --animation` runs a bounded set of rigid-limit, rod, bare-sheet, stabilization and time-step checks. Outputs are under `outputs/elastic/span_validation`: full `validation.json`, a comparison PNG, and native animation/plots. These checks do not enter a campaign or either master catalog.
+`python -m wingstudy.check_spanwise_elastic --animation` runs a bounded set of rigid-limit, rod, bare-sheet, stabilization and time-step checks. Outputs are under `outputs/elastic/span_validation`: full `validation.json`, a comparison PNG, and native animation/plots. These checks do not enter a campaign or either master catalog.
 
-`python -m unittest discover -s WingStudy -p test_finite_span.py -v` additionally verifies segment lengths at 70-degree bending, the point Jacobian and virtual work, positive pose-dependent mass/added inertia, unchanged leading edge under sheet pitch, and convergence to the small-load cantilever solution. `python WingStudy/check_finite_span.py --animation` tests the 0.5 mm bare wing at different stabilization factors, time steps and mesh sizes, saving `finite_validation.json` and the associated PNG and native animations.
+`python -m unittest discover -s tests -p test_finite_span.py -v` additionally verifies segment lengths at 70-degree bending, the point Jacobian and virtual work, positive pose-dependent mass/added inertia, unchanged leading edge under sheet pitch, and convergence to the small-load cantilever solution. `python -m wingstudy.check_finite_span --animation` tests the 0.5 mm bare wing at different stabilization factors, time steps and mesh sizes, saving `finite_validation.json` and the associated PNG and native animations.
 
 ## Sources and confidence
 
@@ -113,9 +113,9 @@ Confidence is high for the tested linear structural calculations and constrained
 
 The existing exported atlas now links to **Spanwise elasticity**. The comparison page embeds its data and runs offline. Independent checkboxes show chordwise-only reruns, span-flex reruns, and optionally uncertain/unverified cases. Connections compare identical outlines. The source atlas value is kept separately from the matched rerun.
 
-`python WingStudy/span_atlas.py` reruns the four recorded category winners for **0.5 mm bare sheet** (three campaign frequencies plus the sweep winner), caching their full records under `outputs/elastic/span_atlas`. It checks both models at 8 x 4 panels, 50 steps per cycle with two stabilization settings and no automatic refinement; a targeted recheck at 100 steps per cycle is available with `--recheck`, and actual settings are recorded. Failed screening records are retained in the screening subfolder for this batch. It publishes compact results into the supplied Elastic_Wing_Atlas folder as each comparison completes. This is a focused cohort, not every thickness or rod configuration.
+`python -m wingstudy.span_atlas` reruns the four recorded category winners for **0.5 mm bare sheet** (three campaign frequencies plus the sweep winner), caching their full records under `outputs/elastic/span_atlas`. It checks both models at 8 x 4 panels, 50 steps per cycle with two stabilization settings and no automatic refinement; a targeted recheck at 100 steps per cycle is available with `--recheck`, and actual settings are recorded. Failed screening records are retained in the screening subfolder for this batch. It publishes compact results into the supplied Elastic_Wing_Atlas folder as each comparison completes. This is a focused cohort, not every thickness or rod configuration.
 
-For future GUI campaigns use **Save span-flex results to atlas**, or `python WingStudy/span_atlas.py --campaign <campaign-folder>`. This exports completed case summaries and final-cycle traces; native solver histories and animations stay in the full program folder. Campaign imports without matched baselines are clearly labeled not compared. The original all-wing map stays unchanged; span-flex points are in the dedicated comparison view.
+For future GUI campaigns use **Save span-flex results to atlas**, or `python -m wingstudy.span_atlas --campaign <campaign-folder>`. This exports completed case summaries and final-cycle traces; native solver histories and animations stay in the full program folder. Campaign imports without matched baselines are clearly labeled not compared. The original all-wing map stays unchanged; span-flex points are in the dedicated comparison view.
 
 The atlas folder remains portable. Share `span_comparison.html` alone for the small comparison (the return link needs the rest of the atlas), or the atlas folder for all previous results and media. This source distribution does not include the collaborator's original elastic campaign SQLite databases; the initial cohort therefore comes from the exported atlas's embedded winner records.
 

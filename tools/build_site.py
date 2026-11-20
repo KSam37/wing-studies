@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import atlas_data  # noqa: E402
 
 REPO_URL = "https://github.com/KSam37/wing-studies"
-TEMPLATE = ROOT / "WingStudy" / "elastic_atlas.html"
+TEMPLATE = ROOT / "wingstudy" / "elastic_atlas.html"
 
 
 def _js(obj) -> str:

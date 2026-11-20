@@ -105,10 +105,10 @@ def main(args=None):
             return
         if "--check-installation" in args[1:]:
             verify_source();verify_environment(python)
-            run([python,"-m","unittest","discover","-s",ROOT/"WingStudy","-p","test_*.py"])
+            run([python,"-m","unittest","discover","-s",ROOT/"tests","-p","test_*.py"])
             print("Installation and application checks passed.",flush=True)
             return
-        run([python,"-u",ROOT/"WingStudy/app.py",*args[1:]])
+        run([python,"-u",ROOT/"legacy/app.py",*args[1:]])
         return
     ensure_source()
     if args:

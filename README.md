@@ -19,12 +19,13 @@ Wings are carbon-fibre sheets of several thicknesses, either bare or with a carb
 | Path | Contents |
 |---|---|
 | `site/` | Landing page source |
-| `WingStudy/elastic_atlas.html` | Atlas page template (data is inserted at build time) |
+| `wingstudy/elastic_atlas.html` | Atlas page template (data is inserted at build time) |
 | `atlas/data/` | Atlas data: one file per study plus metadata, catalog and span comparisons |
 | `atlas/media/`, `atlas/files/` | Animations (recompressed to one flap cycle), plots and reports |
-| `WingStudy/` | Simulation application: geometry, rigid and elastic solvers, campaigns, searches |
+| `wingstudy/` | The study engine (Python package): geometry, rigid and elastic solvers, campaigns, searches, the atlas exporter. Run tools with `python -m wingstudy <command>` |
+| `legacy/` | The earlier rigid study app (browser editor, master catalog, lambda reviews), kept working for the rigid studies |
 | `tools/` | Setup, launchers, site build, media compression, data import |
-| `tests/` | Setup and atlas UI tests (solver tests live beside the code in `WingStudy/test_*.py`) |
+| `tests/` | Python tests for the package and the legacy app, plus the atlas UI test (the legacy app's UI tests sit beside its pages in `legacy/`) |
 | `docs/history/` | Earlier READMEs and results notes, kept for provenance |
 
 Large raw outputs (full time histories, SQLite catalogs, older rigid studies) stay on the machine that produced them and are never committed. See [RESTRUCTURE_PLAN.md](RESTRUCTURE_PLAN.md) for where the project is heading.
@@ -45,11 +46,20 @@ Simulations run on your own computer. A study builder on the website is planned:
 2. **Run.**
    - `Run Span Flex Study.cmd` opens the campaign dashboard.
    - `Run Frontier Span Study.cmd` resumes the matched chordwise/spanwise frontier rerun.
-   - `Run Wing Studies.cmd` opens the earlier rigid study editor.
+   - `Run Wing Studies.cmd` opens the earlier rigid study editor (`legacy/`).
+   - Every tool is also available from the command line in the registered environment: `python -m wingstudy --help` lists the commands (`dashboard`, `frontier`, `spanfree`, `study`, `refine`, `report`, ...). Run them from the repository root.
    - [V1_5_SYSTEM_GUIDE.md](V1_5_SYSTEM_GUIDE.md) explains each workflow and its options.
 3. **Publish.** Add results to `atlas/data/` and open a pull request. When it merges, the site rebuilds automatically.
 
 Set `NUMBA_CACHE_DIR` to a short path (for example `C:\dev\.numba`). Long Windows paths can make the solver's compiled-function cache fail.
+
+## Tests
+
+```powershell
+python -m unittest discover -s tests
+```
+
+Run this with the registered Ptera environment's Python. `Check Installation.cmd` does the same after verifying the installation.
 
 ## Credits
 

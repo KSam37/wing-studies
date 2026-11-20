@@ -33,7 +33,7 @@ Simulations still run locally. When a run finishes, its compact results go back 
 | Area | Current state | Consequence |
 |---|---|---|
 | Version control | This folder is **not a git repo** (it was copied out of the outer Ptera repo) | Nothing is tracked. Collaboration currently means copying folders |
-| Source | 44 modules + ~40 tests in one flat `WingStudy/`, from 4 generations (rigid catalog app, torque/lambda studies, elastic v1.5, spanwise) | Hard to tell what's active |
+| Source | 44 modules + ~40 tests in one flat `wingstudy/`, from 4 generations (rigid catalog app, torque/lambda studies, elastic v1.5, spanwise) | Hard to tell what's active |
 | Coupling | `elastic_runner → model → catalog ↔ adaptive → torque_study → refinement → adaptive…` (circular imports) | The elastic solver path drags in the whole legacy rigid stack. Old code can't simply be deleted |
 | Servers | Two local GUIs (`app.py`, `elastic_dashboard.py`) | Duplicated UI concepts |
 | Publishers | `span_atlas.publish()` rewrites the sibling `index.html` via a hardcoded path. `elastic_atlas.py` needs missing databases and writes elsewhere | Two inconsistent build paths |
@@ -147,7 +147,7 @@ Each phase ends in a working state and can be paused there.
 - Move `outputs/studies`, the master SQLite/xlsx catalogs and `outputs/provenance` out of the repo into a local `legacy-archive/` (outside git), and remove them from `main`.
 - Remove the vendored `PteraSoftware` submodule and pin Ptera as a dependency. Add attribution.
 - Add the atlas data and recompressed media in Phase 1, not as a raw 1.3 GB dump.
-- **Done when** both people can clone, set up and run `python WingStudy/span_frontier.py` (read-only count) from the tag.
+- **Done when** both people can clone, set up and run `python -m wingstudy.span_frontier` (read-only count) from the tag.
 
 ### Phase 1: Atlas on GitHub Pages (2–3 days). The first visible win
 - Write a one-time converter that splits the embedded atlas JSON into files. The existing campaigns become `studies/legacy-*/` (rod, plate, sweep, rigid catalog, refined/candidates, preserved spanwise frontier), each carrying provenance flags: rounded geometry, nominal fallback, "original DBs missing".
@@ -159,6 +159,16 @@ Each phase ends in a working state and can be paused there.
 - **Done when** the Pages URL shows the same atlas as the local file, plus the landing page.
 
 ### Phase 2: Package restructure (3–5 days)
+
+**Status (2026-11-19): done, with one item deferred.**
+- `WingStudy/` became the `wingstudy/` package at the repo root (not `src/`: modules locate `outputs/` as `Path(__file__).parent.parent`, so the root keeps every path unchanged). History follows the files (`git mv`).
+- The 8 modules only the rigid app uses, and its pages and JS tests, moved to `legacy/`. They import the shared engine from `wingstudy`.
+- Python tests moved to `tests/` (`python -m unittest discover -s tests`). Result: 248 tests in 28 suites pass, the same suites as before the move. The setup check also passes once the Ptera submodule is initialized.
+- `python -m wingstudy <command>` is the single CLI (`pyproject.toml` also declares a `wingstudy` script). The `.cmd` launchers run `-m wingstudy.*`.
+- Ptera was already a pinned submodule (`17a98a1…`), not vendored code. That item needed no change.
+- **Fingerprint guard.** `wingstudy/identity.py` defines the structural fingerprint over module content, mapping package-relative imports back to the flat form. It is `c13001410d04…`, equal to all 582 saved frontier records (578 preserved + 4 bare). The Phase 0 template-case fallback had been added inside `elastic_runner.py`, which changed the fingerprint. It was moved out to `wingstudy/cases.py`, and `elastic_runner.py` is again byte-identical apart from its imports. The rigid catalog's physics digest of `model.py` is unchanged too.
+- **Reproduction.** Frontier record `nominal-6213b1ab…` was re-solved with the package code. Chordwise and spanwise mean thrust, peak root torque and tip twist match the saved values exactly (relative difference 0).
+- **Deferred:** extracting the geometry and load code from `model.py`. The `catalog ↔ adaptive` and `model → catalog` cycles are all function-level (lazy) imports, so they cause no import-order failures. Splitting `model.py` is better done in Phase 3, when the engines are wrapped as study kinds.
 - Move the code into `src/wingstudy/` and break the import cycles (`catalog ↔ adaptive`, `model → catalog`). The fix is to pull the pure geometry/load code out of `model.py` so the elastic path no longer imports the legacy catalog stack.
 - Move the old rigid app and its helpers into `legacy/` unchanged in behavior.
 - Add a single `wingstudy` CLI. The `.cmd` launchers stay as thin wrappers so double-clicking still works.

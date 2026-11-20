@@ -8,7 +8,7 @@ Updated selection: one global thrust/torque frontier per frequency across all 1.
 
 The plan is outputs/elastic/frontiers/preserved-0p01/plan.json. It is prepared but blocked pending the original campaign databases: the supplied lightweight atlas omits actual per-case time step and cycle count (which can differ from nominal settings), and rounds geometry. The runner deliberately refuses to guess these values. Supply the directory containing weekend, rod and sweep campaign subfolders:
 
-    python WingStudy/span_frontier.py --scope preserved --source-root "PATH_TO_CAMPAIGNS" --run --workers 4
+    python -m wingstudy.span_frontier --scope preserved --source-root "PATH_TO_CAMPAIGNS" --run --workers 4
 
 The importer reads each original design by key, restores precise chords/span, actual dt/cycles, source mesh, material and rod from its saved plan. There is no automatic time or mesh refinement for this batch. Failed cases remain failures at the requested original settings. Both models use those same numerical settings. The new rod model fixes rod rotation while allowing sheet pitch, as requested; rod-case differences therefore include this structural boundary-condition change, not only added span bending.
 
@@ -28,7 +28,7 @@ Screening: 8 spanwise by 4 chordwise panels, 100 steps/cycle, four cycles. Two s
 
 Run from the configured Python environment:
 
-    python WingStudy/span_frontier.py --scope bare --run --workers 4
+    python -m wingstudy.span_frontier --scope bare --run --workers 4
 
 Use --scope all for the broader plan. Without --run the command only displays the plan and remaining count. --limit 4 runs a bounded four-case trial. Finished cases are saved immediately and exact matching geometry/frequency/numerics/code records are reused across both plans. Plans refuse to resume if structural code changed. Create a file named STOP inside the selected plan folder to stop scheduling new cases; active cases finish and save. Remove STOP to resume.
 

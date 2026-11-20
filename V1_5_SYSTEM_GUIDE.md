@@ -39,11 +39,11 @@ C:\Users\SamKi\OneDrive - Massachusetts Institute of Technology\Coursework\2.S98
 
 Relative to APP: `../Elastic_Wing_Atlas/Elastic_Wing_Atlas`.
 
-The enclosing Git root is the older `...\Ptera` directory, NOT APP. A live `git check-ignore -v WingStudy/span_frontier.py` from APP reported the file ignored by an enclosing rule. The imported source has an allowlist-style `.gitignore`, but that does not establish a separate repository or guarantee tracking. No commit/push of this extension is claimed. Do not change ignore rules or push large results merely to solve documentation.
+The enclosing Git root is the older `...\Ptera` directory, NOT APP. A live `git check-ignore -v wingstudy/span_frontier.py` from APP reported the file ignored by an enclosing rule. The imported source has an allowlist-style `.gitignore`, but that does not establish a separate repository or guarantee tracking. No commit/push of this extension is claimed. Do not change ignore rules or push large results merely to solve documentation.
 
 The outer repository has unrelated modified catalog/workbook/manifests and a modified solver submodule. Preserve them; do not revert as cleanup.
 
-There are many similarly named atlas/workflow/model files. Existing root README and WingStudy/README mix historical workflows and contradictory current descriptions. This guide identifies the active v1.5 elastic path without erasing history.
+There are many similarly named atlas/workflow/model files. Existing root README and wingstudy/README mix historical workflows and contradictory current descriptions. This guide identifies the active v1.5 elastic path without erasing history.
 
 ### Runtime verified on this machine
 
@@ -147,7 +147,7 @@ The extension supports straight leading edges and initially planar isolated wing
 
 Ptera solves prescribed-motion loads with selected free/prescribed wake treatment. Water properties enter the operating point. UVLM is not viscous CFD or a separated-flow model; entering viscosity does not supply complete viscous drag. Zero-forward-speed adapters were rejected earlier. Current campaigns use positive inflow, typically 0.5 m/s.
 
-### Original v1.5: `WingStudy/elastic.py`
+### Original v1.5: `wingstudy/elastic.py`
 
 The UI calls this chordwise elasticity. Its coordinate is passive sheet/strip pitch about the leading-edge/span axis. Chord sections remain straight; full chordwise camber is not resolved.
 
@@ -257,7 +257,7 @@ In the initial four-winner pilot, one failed 50-step case verified at 100 steps/
 
 Entry: ATLAS/index.html. Data/JavaScript are embedded; native media/reports remain relative files under media/ and files/.
 
-Canonical UI: `WingStudy/elastic_atlas.html`. Reuse its CSS variables, themes, navigation, chips, chart helpers, tooltips and modal. The original all-wing dataset remains intact.
+Canonical UI: `wingstudy/elastic_atlas.html`. Reuse its CSS variables, themes, navigation, chips, chart helpers, tooltips and modal. The original all-wing dataset remains intact.
 
 New comparisons are `D.span_comparisons`. Solved rows are registered into existing Wing map arrays/inspector at load. `EXTRA` identifies them; `ORIGINAL_N` preserves the old catalog boundary. Never treat every appended row as historical catalog data.
 
@@ -285,20 +285,20 @@ Animations use native camera/scalar framing; they are not phase-locked videos. D
 
 | File / folder | Responsibility |
 |---|---|
-| WingStudy/elastic.py | Original stabilized plate/torsion model and config dataclasses |
-| WingStudy/spanwise_elastic.py | Linear structure, geometry bridge, load transfer, histories |
-| WingStudy/finite_span.py | Finite rotations, centerline, Jacobians, mass/forces |
-| WingStudy/elastic_runner.py | Solver construction, metrics, verification, native output |
-| WingStudy/elastic_campaign.py | Search/map plans, coordination, SQLite, replay |
-| WingStudy/elastic_dashboard.py/html | Local campaign GUI and atlas export |
-| WingStudy/elastic_atlas.py | Original full builder requiring campaign databases |
-| WingStudy/elastic_atlas.html | Integrated atlas template |
-| WingStudy/span_atlas.py | Matched reruns, compact merge/publish, campaign import |
-| WingStudy/span_frontier.py | Frontier plan, nominal fallback, parallel runner/progress |
-| WingStudy/span_winner_media.py | Highlight replay, media and metric verification |
-| WingStudy/model.py | Existing geometry, motion and load helpers |
-| WingStudy/coordinate_search.py | Fixed-reference independent coordinate search |
-| WingStudy/catalog.py, case_identity.py | Older durable catalog/reuse identities |
+| wingstudy/elastic.py | Original stabilized plate/torsion model and config dataclasses |
+| wingstudy/spanwise_elastic.py | Linear structure, geometry bridge, load transfer, histories |
+| wingstudy/finite_span.py | Finite rotations, centerline, Jacobians, mass/forces |
+| wingstudy/elastic_runner.py | Solver construction, metrics, verification, native output |
+| wingstudy/elastic_campaign.py | Search/map plans, coordination, SQLite, replay |
+| wingstudy/elastic_dashboard.py/html | Local campaign GUI and atlas export |
+| wingstudy/elastic_atlas.py | Original full builder requiring campaign databases |
+| wingstudy/elastic_atlas.html | Integrated atlas template |
+| wingstudy/span_atlas.py | Matched reruns, compact merge/publish, campaign import |
+| wingstudy/span_frontier.py | Frontier plan, nominal fallback, parallel runner/progress |
+| wingstudy/span_winner_media.py | Highlight replay, media and metric verification |
+| wingstudy/model.py | Existing geometry, motion and load helpers |
+| wingstudy/coordinate_search.py | Fixed-reference independent coordinate search |
+| wingstudy/catalog.py, case_identity.py | Older durable catalog/reuse identities |
 | tools/launch_elastic.py | Environment discovery and launcher routing |
 | outputs/elastic/frontiers/preserved-0p01/plan.json | Selection/config/provenance snapshot |
 | .../results/*.json | Full matched records, attempts, histories, media links |
@@ -336,19 +336,19 @@ Windows entry points:
 Read-only remaining-count check:
 
 ```powershell
-python WingStudy/span_frontier.py
+python -m wingstudy.span_frontier
 ```
 
 Resume current batch (already complete at this snapshot):
 
 ```powershell
-python WingStudy/span_frontier.py --scope preserved --run --workers 4
+python -m wingstudy.span_frontier --scope preserved --run --workers 4
 ```
 
 Apply authorized nominal fallback only where missing:
 
 ```powershell
-python WingStudy/span_frontier.py --scope preserved --allow-nominal
+python -m wingstudy.span_frontier --scope preserved --allow-nominal
 ```
 
 No solving without --run. --limit 4 bounds a trial. A STOP file in the selected frontier folder prevents new scheduling; active cases finish/save. Remove STOP before resuming.
@@ -356,7 +356,7 @@ No solving without --run. --limit 4 bounds a trial. A STOP file in the selected 
 Publish saved records without solving:
 
 ```powershell
-python WingStudy/span_frontier.py --scope preserved --publish-only
+python -m wingstudy.span_frontier --scope preserved --publish-only
 ```
 
 Use this publisher for the imported atlas. The original elastic_atlas.py builder needs missing databases and defaults to a different path, outputs/elastic/atlas. Do not run it blindly over the portable artifact.
@@ -364,7 +364,7 @@ Use this publisher for the imported atlas. The original elastic_atlas.py builder
 Campaign GUI:
 
 ```powershell
-python WingStudy/elastic_campaign.py dashboard --large-deflection --variant plate --workers 4
+python -m wingstudy.elastic_campaign dashboard --large-deflection --variant plate --workers 4
 ```
 
 Changed physics requires a fresh campaign identity. GUI action Save span-flex results to atlas exports summaries. Imports without matched baselines must say so.
@@ -372,7 +372,7 @@ Changed physics requires a fresh campaign identity. GUI action Save span-flex re
 Native highlight replays:
 
 ```powershell
-python WingStudy/span_winner_media.py
+python -m wingstudy.span_winner_media
 ```
 
 This re-solves saved cases with stored config/stabilization, renders native PNG and three WebP views, and rejects a replay if thrust/torque differs beyond tight tolerance. Existing replay markers are reused. It is not an arbitrary on-demand renderer for all atlas points.
@@ -380,7 +380,7 @@ This re-solves saved cases with stored config/stabilization, renders native PNG 
 If original campaign databases arrive:
 
 ```powershell
-python WingStudy/span_frontier.py --scope preserved --source-root "PATH_TO_CAMPAIGNS"
+python -m wingstudy.span_frontier --scope preserved --source-root "PATH_TO_CAMPAIGNS"
 ```
 
 Inspect the imported plan before adding --run. Import is intended to restore exact chords/span, actual dt/cycles, source-plan mesh, material and rod. Validate identity and create a distinct study/version when replacing nominal inputs; do not overwrite completed outcomes casually.
@@ -423,10 +423,10 @@ Relevant tests:
 - test_span_frontier.py: dominance/ties, bands, no hidden ceiling, nominal material/rod preservation.
 
 ```powershell
-python -m unittest discover -s WingStudy -p test_spanwise_elastic.py -v
-python -m unittest discover -s WingStudy -p test_finite_span.py -v
-python -m unittest discover -s WingStudy -p test_elastic.py -v
-python -m unittest discover -s WingStudy -p test_span_frontier.py -v
+python -m unittest discover -s tests -p test_spanwise_elastic.py -v
+python -m unittest discover -s tests -p test_finite_span.py -v
+python -m unittest discover -s tests -p test_elastic.py -v
+python -m unittest discover -s tests -p test_span_frontier.py -v
 node outputs/elastic/test_atlas_integration.cjs
 ```
 
@@ -479,6 +479,6 @@ Recommended scientific next step: representative bare/rod cases spanning verifie
 - [Frontier study record](SPANWISE_FRONTIER_STUDY.md)
 - [Independent coordinate method](OPTIMIZATION_STRATEGY.md)
 - [General/legacy README](README.md)
-- [General/legacy app guide](WingStudy/README.md)
+- [General/legacy app guide](wingstudy/README.md)
 
 Primary background already used: Causin, Gerbeau & Nobile (2005), DOI 10.1016/j.cma.2004.12.005, on partitioned FSI added-mass effects; TU Delft's Euler–Bernoulli formulation; discrete-elastic-rod literature as geometric motivation. These support principles, not physical validation of this implementation.
