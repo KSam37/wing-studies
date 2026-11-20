@@ -61,6 +61,28 @@ def landing_figure(D: dict, max_points: int = 9000) -> dict:
     return {"scatter": sample, "frontier": frontier, "axes": [round(qmax, 3), round(tmax, 3)]}
 
 
+def study_queue() -> list[dict]:
+    """One row per study folder for the builder's queue view (valid specs only)."""
+    from wingstudy.studies import spec as S
+    rows = []
+    for folder in sorted((ROOT / "studies").glob("*/")):
+        try:
+            spec = S.read_json(folder / "spec.json")
+        except (OSError, ValueError):
+            continue
+        if S.validate(spec):
+            continue
+        status = S.read_json(folder / "status.json") if (folder / "status.json").exists() else {}
+        counts = None
+        if (folder / "results.json").exists():
+            counts = S.read_json(folder / "results.json").get("counts")
+        rows.append({"id": spec["id"], "title": spec["title"], "author": spec["author"], "kind": spec["kind"],
+                     "parent": spec.get("parent"), "cases": S.case_count(spec), "state": status.get("state", "proposed"),
+                     "done": status.get("done"), "counts": counts})
+    rows.sort(key=lambda r: r["id"], reverse=True)
+    return rows
+
+
 def build(out: Path) -> None:
     now = dt.datetime.now(dt.timezone.utc)
     commit = _commit()
@@ -93,6 +115,15 @@ def build(out: Path) -> None:
                .replace("__BUILT__", f"{D['built']} ({commit})"))
     (out / "index.html").write_text(landing, encoding="utf-8", newline="\n")
     (out / ".nojekyll").write_text("", encoding="utf-8")
+
+    # study builder and queue (site/new): validator constants come from spec.py, never a second copy
+    from wingstudy.studies import run as study_run, spec as study_spec
+    builder = {"limits": study_spec.limits(), "seconds": study_run.SECONDS, "repo": REPO_URL,
+               "studies": study_queue(), "built": D["built"]}
+    (out / "new").mkdir()
+    page = (ROOT / "site" / "new" / "index.html").read_text(encoding="utf-8").replace("/*__BUILDER_DATA__*/", _js(builder))
+    (out / "new" / "index.html").write_text(page, encoding="utf-8", newline="\n")
+    shutil.copy2(ROOT / "site" / "new" / "spec.js", out / "new" / "spec.js")
 
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file())
     print(f"built {out} ({size / 1e6:.1f} MB): {len(D['cols']['s']):,} atlas rows, build {D['build_id']}")

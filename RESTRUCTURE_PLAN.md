@@ -199,6 +199,14 @@ Each phase ends in a working state and can be paused there.
 - Add a queue view that lists `proposed / queued / running / complete` studies from `status.json`.
 - **Done when** a spec created on the website runs locally with no hand edits.
 
+**Status (2026-11-20): done.**
+- `site/new/`: builder and queue, built into `_site/new/` with the validator constants from `spec.limits()`, the run-time constants from `run.SECONDS` and the queue from `studies/*`. The page keeps its draft in localStorage.
+- `site/new/spec.js` ports `spec.validate()` message for message. `tests/builder.test.cjs` (in CI) runs about 500 specs through both, 400 of them random, and requires identical errors and case counts. A Python fuzz test checks that `validate()` never raises; it found two crashes and the null-as-present gap, all fixed.
+- Atlas: *Add to a new study* on any non-catalog design, plus a *New study (n)* link. Campaign rows go in by key (`wings.from_atlas`); matched and planned-study rows are copied as outlines. `wingstudy validate` and `import` check that atlas keys exist; rigid-catalog rows have no chord stations and are refused.
+- `wingstudy import FILE` places a downloaded spec, refusing invalid specs and never overwriting a different one.
+- Proof: a spec written in the builder (2 spanwise cases, one by atlas key and one copied outline) was saved byte for byte (SHA-256 checked), then imported, planned and run with no edits; both cases verified. The run was a local check and was not published.
+- Queue states: `proposed` (spec merged, no results) and `complete`. `running` appears only on the machine doing the run, since `status.json` is committed with the results.
+
 ### Phase 5: Agents and docs (1–2 days)
 - Merge the system guide, the READMEs and the `CLAUDE.md` files into `docs/` plus one agent entry point, with historical workflows moved to `docs/history/`.
 - Document an agent recipe: write spec → `validate` → `plan` → open PR. Agents never run large batches unattended and never merge.

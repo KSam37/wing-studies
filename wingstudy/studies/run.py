@@ -28,8 +28,9 @@ SPANWISE_OPTIONS = {"spanwise_bending": True, "large_deflection": True, "max_ben
                     "max_tip_deflection_fraction": 0.95}
 # Rough wall-clock seconds per case at 8x4 panels, 50 steps/cycle, 4 cycles, one case per worker,
 # including the verification ladder (dt, dt/2, dt/4). Calibrated on the first planned study:
-# t0.50r at 8x4/50 took 35 s, 16x4/100 took 81 s with four workers busy.
-SECONDS = {"rigid": 5.0, "chordwise": 35.0, "spanwise": 120.0, "matched": 150.0}
+# t0.50r at 8x4/50 took 35 s, 16x4/100 took 81 s with four workers busy; spanwise t0.50r at 8x4/50
+# took 31-34 s with two workers. Matched solves both models (two ladders).
+SECONDS = {"rigid": 5.0, "chordwise": 35.0, "spanwise": 40.0, "matched": 80.0}
 BIG_KEYS = ("history", "span_history", "strips", "elastic")
 
 

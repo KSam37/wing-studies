@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New study · FAAV Wing Studies</title>
+<meta name="description" content="Set up a flapping-wing simulation study: choose wings, plate models, frequencies and numerics, then submit the spec for a local run.">
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f3f2ee; --text:#0b0b0b; --text-2:#52514e; --muted:#898781;
+  --border:rgba(11,11,11,.10); --accent:#2a78d6; --hover:rgba(11,11,11,.05);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --grid:#e1e0d9; --good:#1a7f4b; --warn:#a86400; --bad:#c2372e;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232321; --text:#f0efec; --text-2:#c3c2b7; --muted:#898781;
+    --border:rgba(255,255,255,.10); --accent:#3987e5; --hover:rgba(255,255,255,.06);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --grid:#2c2c2a; --good:#3fbf7f; --warn:#e0a040; --bad:#ef6a5f;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232321; --text:#f0efec; --text-2:#c3c2b7; --muted:#898781;
+  --border:rgba(255,255,255,.10); --accent:#3987e5; --hover:rgba(255,255,255,.06);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --grid:#2c2c2a; --good:#3fbf7f; --warn:#e0a040; --bad:#ef6a5f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--page);color:var(--text);font:14.5px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--accent)}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:10px 22px;background:color-mix(in srgb,var(--page) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+header .brand{font-weight:700;letter-spacing:.02em;color:var(--text);text-decoration:none}
+nav{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav a,nav button{border:0;background:none;color:var(--text-2);font:inherit;padding:6px 11px;border-radius:7px;cursor:pointer;text-decoration:none}
+nav a:hover,nav button:hover{background:var(--hover)}
+nav .on{background:var(--surface-2);color:var(--text);font-weight:600}
+.iconbtn,.btn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:7px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
+.iconbtn:hover,.btn:hover{border-color:var(--accent);color:var(--text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:8px 14px;font-size:14px}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+main{max-width:1180px;margin:0 auto;padding:22px 22px 60px}
+h1{font-size:28px;margin:4px 0 6px;letter-spacing:-.01em}
+.lede{color:var(--text-2);max-width:760px;margin:0 0 20px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 4px}
+.card .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+label.f{display:block;font-size:12.5px;font-weight:600;color:var(--text-2);margin:10px 0 4px}
+input[type=text],input[type=number],textarea,select{width:100%;font:inherit;color:var(--text);background:var(--page);border:1px solid var(--border);border-radius:7px;padding:7px 9px}
+textarea{min-height:68px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:0;border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.row2{grid-template-columns:1fr}}
+.kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.kinds{grid-template-columns:1fr}}
+.kind{border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--page)}
+.kind b{display:block;margin-bottom:2px}
+.kind span{font-size:12.5px;color:var(--text-2)}
+.kind.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--border);background:var(--page);color:var(--text-2);border-radius:99px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer}
+.chip.on{background:color-mix(in srgb,var(--accent) 14%,var(--page));border-color:var(--accent);color:var(--text);font-weight:600}
+.chip:disabled{opacity:.4;cursor:not-allowed}
+.wingrow{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;border-top:1px solid var(--border);padding:12px 0}
+.wingrow:first-of-type{border-top:0}
+@media (max-width:700px){.wingrow{grid-template-columns:1fr}}
+.chords{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.chords input{padding:5px 4px;text-align:center;font-size:13px}
+.tiny{font-size:12px;color:var(--muted)}
+.small{font-size:13px}
+.muted{color:var(--muted)}
+.numrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 32px;gap:8px;align-items:end;margin-bottom:6px}
+.numrow label{font-size:11.5px;color:var(--muted);display:block}
+.x{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px}
+.x:hover{background:var(--hover);color:var(--bad)}
+aside{position:sticky;top:64px}
+.stat{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--border)}
+.stat b{font-variant-numeric:tabular-nums}
+.errors{margin:10px 0 0;padding:0;list-style:none}
+.errors li{font-size:12.5px;color:var(--bad);padding:3px 0 3px 16px;position:relative}
+.errors li:before{content:"!";position:absolute;left:3px;font-weight:700}
+.ok{color:var(--good);font-weight:600;font-size:13px;margin-top:10px}
+.actions{display:grid;gap:8px;margin-top:14px}
+.actions .pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+pre{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11.5px;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+code{font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+details summary{cursor:pointer;color:var(--text-2);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;border:1px solid var(--border)}
+.pill.proposed{color:var(--text-2)}
+.pill.running{color:var(--warn);border-color:var(--warn)}
+.pill.complete{color:var(--good);border-color:var(--good)}
+.pill.failed{color:var(--bad);border-color:var(--bad)}
+.note{border-left:3px solid var(--accent);background:var(--surface-2);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;margin-top:12px}
+.hidden{display:none!important}
+svg.outline{width:100%;height:auto;display:block}
+.basket{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.bitem{border:1px solid var(--border);border-radius:9px;padding:8px 10px;background:var(--page);position:relative}
+.bitem .x{position:absolute;top:2px;right:2px}
+.bitem .t{font-size:12.5px;color:var(--text-2);padding-right:18px}
+header .brand,nav a,nav button{white-space:nowrap}
+@media (max-width:760px){
+  header{padding:8px 12px;gap:6px 8px;flex-wrap:wrap;justify-content:space-between}
+  nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto}
+  main{padding:14px 12px 50px}
+  table{display:block;overflow-x:auto}
+  th,td{white-space:nowrap}
+}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../">FAAV Wing Studies</a>
+  <nav><a href="../atlas/">Atlas</a><button id="tab-new" class="on">New study</button><button id="tab-queue">Queue</button></nav>
+  <button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button>
+</header>
+<main>
+<section id="p-new">
+  <h1>Set up a new study</h1>
+  <p class="lede">Choose wings, plate models, frequencies and numerics. The page checks the spec with the same rules as the study tools. Submit it on GitHub, where it becomes a pull request, or download it. Studies are solved on a contributor's own computer, and their results appear in the atlas once the results pull request is merged.</p>
+  <div class="layout">
+  <div>
+    <div class="card">
+      <h2>About the study</h2>
+      <label class="f" for="f-title">Title</label>
+      <input type="text" id="f-title" maxlength="120" placeholder="Mesh sensitivity of the 0.75 Hz rod winner">
+      <label class="f" for="f-question">Question it should answer</label>
+      <textarea id="f-question" maxlength="600" placeholder="Does the winner keep its thrust when the mesh is refined?"></textarea>
+      <div class="row2">
+        <div><label class="f" for="f-author">Author (GitHub username or name)</label><input type="text" id="f-author" maxlength="60"></div>
+        <div><label class="f" for="f-parent">Follows from (optional)</label><select id="f-parent"><option value="">None</option></select></div>
+      </div>
+      <label class="f" for="f-notes">Notes (optional)</label>
+      <textarea id="f-notes" style="min-height:44px"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Kind of study</h2>
+      <p class="sub">Each kind runs an existing solver path unchanged.</p>
+      <div class="kinds" id="kinds"></div>
+    </div>
+
+    <div class="card">
+      <h2>Structure, plate models and frequencies</h2>
+      <div id="struct-box">
+        <label class="f">Structural model</label>
+        <div class="chips" id="structs"></div>
+      </div>
+      <label class="f">Plate models</label>
+      <div class="chips" id="models"></div>
+      <p class="tiny" style="margin:6px 0 0">Plain-weave carbon sheets; "+ rod" adds the 5/3 mm carbon tube along the leading edge (the hardware).</p>
+      <label class="f">Flapping frequencies (Hz)</label>
+      <div class="chips" id="freqs"></div>
+      <div style="display:flex;gap:6px;margin-top:6px;max-width:260px"><input type="number" id="f-freq-add" step="0.05" min="0.25" max="3" placeholder="Other, e.g. 0.9"><button class="btn" id="b-freq-add">Add</button></div>
+    </div>
+
+    <div class="card" id="wings-card">
+      <h2>Wings</h2>
+      <div id="wings-designs">
+        <p class="sub">Atlas designs you picked (use "Add to a new study" on any design in the <a href="../atlas/">atlas</a>), plus outlines you enter. Chords are 8 equally spaced stations from root to tip; zeros may only end the wing.</p>
+        <div id="basket-box"></div>
+        <div id="outlines"></div>
+        <button class="btn" id="b-add-outline">+ Add an outline</button>
+      </div>
+      <div id="wings-sweep" class="hidden">
+        <p class="sub">Scrambled-Sobol outlines with the campaign rules: 200 mm root, each station 30–100% of the previous one, chords under 10 mm end the wing.</p>
+        <div class="row2">
+          <div><label class="f" for="f-sw-count">Number of outlines</label><input type="number" id="f-sw-count" min="1" max="4096" step="1" value="16"></div>
+          <div><label class="f" for="f-sw-seed">Random seed</label><input type="number" id="f-sw-seed" min="0" step="1" value="1"></div>
+          <div><label class="f" for="f-sw-lo">Half-span from (mm)</label><input type="number" id="f-sw-lo" min="100" max="800" value="280"></div>
+          <div><label class="f" for="f-sw-hi">to (mm)</label><input type="number" id="f-sw-hi" min="100" max="800" value="400"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Numerics</h2>
+      <p class="sub">Every case is solved at each setting. The campaigns used 8 × 4 panels, 50 steps per cycle, 4 cycles; every elastic solve is also checked at dt/2 and dt/4.</p>
+      <div id="numerics"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+        <button class="btn" id="b-num-add">+ Add a setting</button>
+        <button class="btn" data-preset="8,4,50,4">Campaign 8 × 4, 50</button>
+        <button class="btn" data-preset="16,4,100,4">Fine 16 × 4, 100</button>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="card">
+      <h2>Spec</h2>
+      <label class="f" for="f-id">Study id</label>
+      <input type="text" id="f-id" spellcheck="false">
+      <p class="tiny" id="id-note" style="margin:4px 0 8px">Date and a short name; it becomes the folder name.</p>
+      <div class="stat"><span>Cases</span><b id="o-cases">–</b></div>
+      <div class="stat"><span>Estimated run time</span><b id="o-time">–</b></div>
+      <div class="stat"><span>Case limit</span><span><input type="number" id="f-budget" min="1" step="1" style="width:90px;padding:3px 6px"></span></div>
+      <ul class="errors" id="o-errors"></ul>
+      <div class="ok hidden" id="o-ok">✓ Valid spec</div>
+      <div class="actions">
+        <button class="btn primary" id="b-github">Submit on GitHub</button>
+        <div class="pair"><button class="btn" id="b-download">Download spec.json</button><button class="btn" id="b-copy">Copy JSON</button></div>
+        <div class="pair"><label class="btn" style="text-align:center">Load a spec…<input type="file" id="f-load" accept=".json,application/json" hidden></label><button class="btn" id="b-reset">Start over</button></div>
+      </div>
+      <div class="note" id="o-next">
+        <b>After submitting.</b> GitHub opens with <code>studies/&lt;id&gt;/spec.json</code> filled in: choose <i>Propose changes</i> (or <i>Create a new branch</i>) to open a pull request. Once it is merged, anyone with the solver installed runs
+        <code id="o-cmd-run">tools\wingstudy.cmd run &lt;id&gt;</code> and then <code>publish</code>. A downloaded spec is added with <code>tools\wingstudy.cmd import spec.json</code>.
+      </div>
+      <details style="margin-top:12px"><summary>Show the spec JSON</summary><pre id="o-json"></pre></details>
+    </div>
+  </aside>
+  </div>
+</section>
+
+<section id="p-queue" class="hidden">
+  <h1>Study queue</h1>
+  <p class="lede">Every study in the repository, from its <code>status.json</code>. A study is <i>proposed</i> once its spec is merged and nobody has published results yet; <i>complete</i> studies are in the atlas. Specs still under review are open <a id="q-prs" href="#">pull requests</a>.</p>
+  <div class="card" style="overflow:auto"><table><thead><tr><th>Study</th><th>Author</th><th>Kind</th><th>Cases</th><th>State</th><th>Files</th></tr></thead><tbody id="q-body"></tbody></table></div>
+</section>
+</main>
+<script type="application/json" id="builder-data">/*__BUILDER_DATA__*/</script>
+<script src="spec.js"></script>
+<script>
+"use strict";
+const B=JSON.parse(document.getElementById('builder-data').textContent), L=B.limits, V=WingSpec.make(L);
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const root=document.documentElement;
+const saved=localStorage.getItem('atlas-theme');if(saved)root.dataset.theme=saved;
+$('#theme').onclick=()=>{const dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;root.dataset.theme=dark?'light':'dark';localStorage.setItem('atlas-theme',root.dataset.theme)};
+
+const KINDS={'design-set':['Design set','Named outlines and atlas designs, each solved for every model, frequency and numerical setting.'],
+  'geometry-sweep':['Geometry sweep','Many generated outlines over a half-span range, no climbing. Good for maps.'],
+  'matched-comparison':['Matched comparison','Each wing solved with chordwise elasticity only and with spanwise bending added, everything else equal.']};
+const STRUCTS={chordwise:'Chordwise elasticity',spanwise:'Spanwise + chordwise elasticity'};
+const FREQ_CHIPS=[0.75,1,1.25];
+const TAPER=[200,150,110,80,55,35,20,10];
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const slug=s=>s.toLowerCase().normalize('NFKD').replace(/[^\w\s-]/g,'').replace(/[_\s]+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,48).replace(/-$/,'');
+const EXISTING=new Set(B.studies.map(s=>s.id));
+
+/* ---------- state (kept as a draft in localStorage, so a trip to the atlas keeps it) ---------- */
+const BASKET_KEY='wingstudy-basket', DRAFT_KEY='wingstudy-draft';
+const fresh=()=>({title:'',question:'',author:'',parent:'',notes:'',kind:'design-set',structure:'chordwise',models:['t0.50r'],freqs:[1],
+  outlines:[],sweep:{count:16,seed:1,lo:280,hi:400},numerics:[{...L.numerics_default}],id:'',idTouched:false,budget:null});
+let st=Object.assign(fresh(),JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}'));
+const basket=()=>JSON.parse(localStorage.getItem(BASKET_KEY)||'[]');
+const setBasket=b=>{localStorage.setItem(BASKET_KEY,JSON.stringify(b))};
+const save=()=>localStorage.setItem(DRAFT_KEY,JSON.stringify(st));
+
+/* ---------- spec from state ---------- */
+function specOf(){
+  const s={schema:L.spec_schema,id:st.id,title:st.title.trim(),author:st.author.trim(),question:st.question.trim(),kind:st.kind};
+  if(st.kind!=='matched-comparison')s.structure=st.structure;
+  s.models=[...st.models];s.frequencies_hz=[...st.freqs];
+  s.numerics=st.numerics.map(n=>({span_panels:+n.span_panels,chord_panels:+n.chord_panels,steps_per_cycle:+n.steps_per_cycle,cycles:+n.cycles}));
+  if(st.kind==='geometry-sweep')s.sweep={count:+st.sweep.count,half_span_mm:[+st.sweep.lo,+st.sweep.hi],seed:+st.sweep.seed};
+  else{const b=basket(),w={};
+    const designs=[...st.outlines.map(o=>({name:o.name.trim(),chords_mm:o.chords.map(Number),half_span_mm:+o.half_span})),
+                   ...b.filter(x=>!x.atlas).map(x=>({name:x.name,chords_mm:x.chords_mm,half_span_mm:x.half_span_mm}))];
+    const keys=b.filter(x=>x.atlas).map(x=>x.key);
+    if(designs.length)w.designs=designs;if(keys.length)w.from_atlas=keys;s.wings=w}
+  const n=safeCount(s);s.budget={max_cases:st.budget!=null?+st.budget:Math.max(1,n||1)};
+  if(st.parent)s.parent=st.parent;if(st.notes.trim())s.notes=st.notes.trim();
+  return s;
+}
+function safeCount(s){try{return V.caseCount(s)}catch(_){return null}}
+function estimate(s){
+  const n=s.numerics,wn=s.kind==='geometry-sweep'?s.sweep.count:((s.wings.designs||[]).length+(s.wings.from_atlas||[]).length);let t=0;
+  for(const m of s.models)for(const _ of s.frequencies_hz)for(const x of n){
+    const kind=m==='rigid'?'rigid':(s.kind==='matched-comparison'?'matched':(s.structure||'chordwise'));
+    t+=B.seconds[kind]*Math.pow(x.steps_per_cycle/50,.6)*Math.pow(x.span_panels*x.chord_panels/32,.6)*(x.cycles/4)*wn}
+  return t;
+}
+const dur=s=>s<90?Math.round(s)+' s':s<5400?Math.round(s/60)+' min':(s/3600).toFixed(1)+' h';
+
+/* ---------- outline drawing ---------- */
+function outlineSVG(chords,hs,{w=230,h=78}={}){
+  const n=chords.length,pts=[];chords.forEach((c,j)=>{if(c>0)pts.push([hs*j/(n-1),c])});
+  if(pts.length<2||!(hs>0))return `<svg class="outline" viewBox="0 0 ${w} ${h}"><text x="${w/2}" y="${h/2}" text-anchor="middle" font-size="11" fill="var(--muted)">no outline yet</text></svg>`;
+  const S=Math.min((w-10)/Math.max(400,hs),(h-8)/Math.max(200,...pts.map(p=>p[1])));
+  const P=[[0,0],...pts.map(([x])=>[x,0]).slice(1),...pts.slice().reverse()].map(([x,y])=>`${(5+x*S).toFixed(1)},${(4+y*S).toFixed(1)}`).join(' ');
+  return `<svg class="outline" viewBox="0 0 ${w} ${h}"><polygon points="${P}" fill="color-mix(in srgb,var(--accent) 22%,transparent)" stroke="var(--accent)" stroke-width="1.3"/><text x="${w-4}" y="${h-3}" text-anchor="end" font-size="10" fill="var(--muted)">${Math.round(hs)} mm</text></svg>`;
+}
+
+/* ---------- render the form from state ---------- */
+function renderStatic(){
+  $('#kinds').innerHTML=Object.entries(KINDS).map(([k,[t,d]])=>`<div class="kind ${st.kind===k?'on':''}" data-kind="${k}" role="button" tabindex="0"><b>${t}</b><span>${d}</span></div>`).join('');
+  $('#structs').innerHTML=Object.entries(STRUCTS).map(([k,t])=>`<button class="chip ${st.structure===k?'on':''}" data-struct="${k}">${t}</button>`).join('');
+  const noRigid=st.kind==='matched-comparison'||st.structure==='spanwise';
+  $('#models').innerHTML=Object.entries(L.models).map(([k,m])=>`<button class="chip ${st.models.includes(k)?'on':''}" data-model="${k}" ${k==='rigid'&&noRigid?'disabled title="Rigid wings have no structure to bend"':''}>${esc(m.label)}</button>`).join('');
+  const fs=[...new Set([...FREQ_CHIPS,...st.freqs])].sort((a,b)=>a-b);
+  $('#freqs').innerHTML=fs.map(f=>`<button class="chip ${st.freqs.includes(f)?'on':''}" data-freq="${f}">${f} Hz</button>`).join('');
+  $('#struct-box').classList.toggle('hidden',st.kind==='matched-comparison');
+  $('#wings-designs').classList.toggle('hidden',st.kind==='geometry-sweep');
+  $('#wings-sweep').classList.toggle('hidden',st.kind!=='geometry-sweep');
+  renderBasket();renderOutlines();renderNumerics();
+}
+function renderBasket(){
+  const b=basket();
+  $('#basket-box').innerHTML=b.length?`<div class="basket">${b.map((x,i)=>`<div class="bitem"><button class="x" data-unbasket="${i}" title="Remove">×</button><div class="t"><b>${esc(x.label||x.name)}</b><br>${x.atlas?`atlas key <code>${esc(x.key.slice(0,8))}</code>`:'copied outline'}</div>${outlineSVG(x.chords_mm,x.half_span_mm,{w:200,h:64})}</div>`).join('')}</div><p class="tiny" style="margin:6px 0 12px">${b.length} from the atlas · <a href="#" id="b-clear-basket">clear</a></p>`
+    :`<p class="tiny" style="margin:0 0 10px">No atlas designs picked. In the <a href="../atlas/">atlas</a>, click a design and choose <i>Add to a new study</i>.</p>`;
+  $('#basket-box').querySelectorAll('[data-unbasket]').forEach(el=>el.onclick=()=>{const b=basket();b.splice(+el.dataset.unbasket,1);setBasket(b);renderBasket();update()});
+  const c=$('#b-clear-basket');if(c)c.onclick=e=>{e.preventDefault();setBasket([]);renderBasket();update()};
+}
+function renderOutlines(){
+  $('#outlines').innerHTML=st.outlines.map((o,i)=>`<div class="wingrow" data-o="${i}"><div>
+    <div style="display:grid;grid-template-columns:1fr 130px 32px;gap:8px;align-items:end">
+      <div><label class="f" style="margin-top:0">Name</label><input type="text" data-f="name" value="${esc(o.name)}" maxlength="60"></div>
+      <div><label class="f" style="margin-top:0">Half-span (mm)</label><input type="number" data-f="half_span" value="${esc(o.half_span)}" min="100" max="800"></div>
+      <button class="x" data-del="${i}" title="Remove outline">×</button></div>
+    <label class="f">Chords, root → tip (mm)</label>
+    <div class="chords">${o.chords.map((c,j)=>`<input type="number" data-c="${j}" value="${esc(c)}" min="0" max="400" aria-label="Chord ${j+1}">`).join('')}</div></div>
+    <div class="ov">${outlineSVG(o.chords.map(Number),+o.half_span)}</div></div>`).join('');
+  $$('#outlines .wingrow').forEach(row=>{const i=+row.dataset.o,o=st.outlines[i];
+    row.querySelectorAll('input').forEach(inp=>inp.oninput=()=>{if(inp.dataset.f)o[inp.dataset.f]=inp.value;else o.chords[+inp.dataset.c]=inp.value;
+      row.querySelector('.ov').innerHTML=outlineSVG(o.chords.map(Number),+o.half_span);update()});
+    row.querySelector('[data-del]').onclick=()=>{st.outlines.splice(i,1);renderOutlines();update()}});
+}
+function renderNumerics(){
+  const names={span_panels:'Span panels',chord_panels:'Chord panels',steps_per_cycle:'Steps / cycle',cycles:'Cycles'};
+  $('#numerics').innerHTML=st.numerics.map((n,i)=>`<div class="numrow" data-n="${i}">${Object.keys(names).map(k=>`<div><label>${names[k]}</label><input type="number" data-k="${k}" value="${esc(n[k])}" min="${L.numerics_ranges[k][0]}" max="${L.numerics_ranges[k][1]}" step="1"></div>`).join('')}<button class="x" data-del="${i}" title="Remove setting" ${st.numerics.length<2?'disabled':''}>×</button></div>`).join('');
+  $$('#numerics .numrow').forEach(row=>{const i=+row.dataset.n;
+    row.querySelectorAll('input').forEach(inp=>inp.oninput=()=>{st.numerics[i][inp.dataset.k]=inp.value===''?'':+inp.value;update()});
+    row.querySelector('[data-del]').onclick=()=>{st.numerics.splice(i,1);renderNumerics();update()}});
+}
+
+/* ---------- live check ---------- */
+let current=null;
+function update(){
+  if(!st.idTouched)st.id=`${today()}-${slug(st.title)||'my-study'}`;
+  if($('#f-id').value!==st.id)$('#f-id').value=st.id;
+  const s=specOf();current=s;save();
+  let errors=V.validate(s);
+  if(EXISTING.has(s.id))errors=[`id: ${s.id} is already used by a study in the repository`,...errors];
+  const n=safeCount(s),ok=!errors.length;
+  $('#o-cases').textContent=n==null?'–':n.toLocaleString();
+  let est=null;try{est=estimate(s)}catch(_){}
+  $('#o-time').textContent=est==null||!isFinite(est)?'–':`${dur(est)} · ${dur(est/4)} on 4 workers`;
+  if(st.budget==null&&document.activeElement!==$('#f-budget'))$('#f-budget').value=s.budget.max_cases;
+  $('#o-errors').innerHTML=errors.map(e=>`<li>${esc(e)}</li>`).join('');
+  $('#o-ok').classList.toggle('hidden',!ok);
+  ['#b-github','#b-download','#b-copy'].forEach(b=>$(b).disabled=!ok);
+  $('#o-json').textContent=JSON.stringify(s,null,1);
+  $('#o-cmd-run').textContent=`tools\\wingstudy.cmd run ${s.id}`;
+  $('#id-note').textContent=EXISTING.has(s.id)?'That id is taken; change the title or the id.':'Date and a short name; it becomes the folder name.';
+}
+
+/* ---------- events ---------- */
+const bind=(sel,key)=>{const el=$(sel);el.value=st[key]||'';el.oninput=()=>{st[key]=el.value;update()}};
+bind('#f-title','title');bind('#f-question','question');bind('#f-author','author');bind('#f-notes','notes');
+$('#f-parent').innerHTML='<option value="">None</option>'+B.studies.map(s=>`<option value="${esc(s.id)}">${esc(s.id)}</option>`).join('');
+$('#f-parent').value=st.parent||'';$('#f-parent').onchange=e=>{st.parent=e.target.value;update()};
+$('#f-id').oninput=e=>{st.id=e.target.value.trim();st.idTouched=!!st.id;update()};
+$('#f-budget').oninput=e=>{st.budget=e.target.value===''?null:+e.target.value;update()};
+for(const [k,id] of [['count','#f-sw-count'],['seed','#f-sw-seed'],['lo','#f-sw-lo'],['hi','#f-sw-hi']]){$(id).value=st.sweep[k];$(id).oninput=e=>{st.sweep[k]=e.target.value;update()}}
+document.addEventListener('click',e=>{
+  const k=e.target.closest('[data-kind]');if(k){st.kind=k.dataset.kind;if(st.kind==='matched-comparison'||st.structure==='spanwise')st.models=st.models.filter(m=>m!=='rigid');if(!st.models.length)st.models=['t0.50'];renderStatic();update();return}
+  const s=e.target.closest('[data-struct]');if(s){st.structure=s.dataset.struct;if(st.structure==='spanwise')st.models=st.models.filter(m=>m!=='rigid');renderStatic();update();return}
+  const m=e.target.closest('[data-model]');if(m&&!m.disabled){const id=m.dataset.model;st.models=st.models.includes(id)?st.models.filter(x=>x!==id):[...st.models,id];renderStatic();update();return}
+  const f=e.target.closest('[data-freq]');if(f){const v=+f.dataset.freq;st.freqs=st.freqs.includes(v)?st.freqs.filter(x=>x!==v):[...st.freqs,v].sort((a,b)=>a-b);renderStatic();update();return}
+  const p=e.target.closest('[data-preset]');if(p){const [a,b,c,d]=p.dataset.preset.split(',').map(Number),n={span_panels:a,chord_panels:b,steps_per_cycle:c,cycles:d};
+    if(!st.numerics.some(x=>JSON.stringify(x)===JSON.stringify(n)))st.numerics.push(n);renderNumerics();update()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.kind)e.target.click()});
+$('#b-freq-add').onclick=()=>{const v=+$('#f-freq-add').value;if(v>0&&!st.freqs.includes(v)){st.freqs=[...st.freqs,v].sort((a,b)=>a-b);$('#f-freq-add').value='';renderStatic();update()}};
+$('#b-add-outline').onclick=()=>{st.outlines.push({name:`wing ${st.outlines.length+1}`,half_span:340,chords:[...TAPER]});renderOutlines();update()};
+$('#b-num-add').onclick=()=>{st.numerics.push({...L.numerics_default,span_panels:16});renderNumerics();update()};
+$('#b-reset').onclick=()=>{if(!confirm('Clear this draft? Picked atlas designs are kept.'))return;st=fresh();save();
+  for(const k of ['title','question','author','notes'])$('#f-'+k).value='';$('#f-parent').value='';renderStatic();update()};
+
+const json=()=>JSON.stringify(current,null,1)+'\n';
+$('#b-download').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([json()],{type:'application/json'}));a.download='spec.json';a.click();URL.revokeObjectURL(a.href)};
+$('#b-copy').onclick=async()=>{try{await navigator.clipboard.writeText(json());$('#b-copy').textContent='Copied';setTimeout(()=>$('#b-copy').textContent='Copy JSON',1500)}catch(_){alert('Copy failed; use "Show the spec JSON" instead.')}};
+function githubURL(){return `${B.repo}/new/main/studies/${encodeURIComponent(current.id)}?filename=spec.json&value=${encodeURIComponent(json())}`}
+$('#b-github').onclick=()=>{const u=githubURL();
+  if(u.length>7500&&confirm('This spec is long for a link and GitHub may cut it off. Download it instead, then upload it on GitHub as studies/'+current.id+'/spec.json? (Cancel to try the link anyway.)')){$('#b-download').click();return}
+  window.open(u,'_blank','noopener')};
+$('#f-load').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{
+  const s=JSON.parse(await file.text());
+  Object.assign(st,{title:s.title||'',question:s.question||'',author:s.author||'',notes:s.notes||'',parent:s.parent||'',kind:s.kind||'design-set',
+    structure:s.structure||'chordwise',models:s.models||[],freqs:s.frequencies_hz||[],numerics:(s.numerics||[L.numerics_default]).map(n=>({...L.numerics_default,...n})),
+    id:s.id||'',idTouched:!!s.id,budget:s.budget?s.budget.max_cases:null,
+    outlines:((s.wings||{}).designs||[]).map(d=>({name:d.name||'',half_span:d.half_span_mm,chords:[...d.chords_mm]})),
+    sweep:s.sweep?{count:s.sweep.count,seed:s.sweep.seed??0,lo:s.sweep.half_span_mm[0],hi:s.sweep.half_span_mm[1]}:st.sweep});
+  const keys=(s.wings||{}).from_atlas||[];if(keys.length){const b=basket().filter(x=>!x.atlas);setBasket([...b,...keys.map(k=>({key:k,atlas:true,label:'atlas '+k.slice(0,8),chords_mm:[],half_span_mm:0}))])}
+  for(const k of ['title','question','author','notes'])$('#f-'+k).value=st[k];$('#f-parent').value=st.parent;
+  for(const [k,id] of [['count','#f-sw-count'],['seed','#f-sw-seed'],['lo','#f-sw-lo'],['hi','#f-sw-hi']])$(id).value=st.sweep[k];
+  renderStatic();update()}catch(err){alert('Not a spec file: '+err.message)}e.target.value=''};
+addEventListener('storage',ev=>{if(ev.key===BASKET_KEY){renderBasket();update()}});   // atlas open in another tab
+
+/* ---------- queue ---------- */
+function renderQueue(){
+  $('#q-prs').href=`${B.repo}/pulls`;
+  $('#q-body').innerHTML=B.studies.length?B.studies.map(s=>`<tr><td><b>${esc(s.title)}</b><br><span class="tiny">${esc(s.id)}</span>${s.parent?`<br><span class="tiny">follows ${esc(s.parent)}</span>`:''}</td><td>${esc(s.author)}</td><td>${esc((KINDS[s.kind]||[s.kind])[0])}</td><td>${s.done!=null&&s.state!=='complete'?`${s.done} / `:''}${s.cases.toLocaleString()}</td><td><span class="pill ${esc(s.state)}">${esc(s.state)}</span>${s.counts?`<br><span class="tiny">${Object.entries(s.counts).map(([k,v])=>v+' '+k).join(', ')}</span>`:''}</td><td><a href="${B.repo}/tree/main/studies/${encodeURIComponent(s.id)}">spec${s.state==='complete'?' and results':''}</a>${s.state==='complete'?` · <a href="../atlas/#map">atlas</a>`:''}</td></tr>`).join('')
+    :'<tr><td colspan="6" class="muted">No studies yet.</td></tr>';
+  $('#tab-queue').textContent=`Queue (${B.studies.length})`;
+}
+function tab(name){$('#p-new').classList.toggle('hidden',name!=='new');$('#p-queue').classList.toggle('hidden',name!=='queue');
+  $('#tab-new').classList.toggle('on',name==='new');$('#tab-queue').classList.toggle('on',name==='queue');history.replaceState(null,'',name==='queue'?'#queue':'#')}
+$('#tab-new').onclick=()=>tab('new');$('#tab-queue').onclick=()=>tab('queue');
+
+renderQueue();renderStatic();update();
+if(location.hash==='#queue')tab('queue');
+</script>
+</body>
+</html>

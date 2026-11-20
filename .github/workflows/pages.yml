@@ -32,6 +32,8 @@ jobs:
         run: python -m wingstudy validate --all
       - name: Study tests (standard library only)
         run: python -m unittest discover -s tests -p "test_studies.py" -v
+      - name: Study builder validator matches Python
+        run: node tests/builder.test.cjs
       - name: Build site
         run: python tools/build_site.py --out _site
       - name: Atlas UI checks (mocked DOM)

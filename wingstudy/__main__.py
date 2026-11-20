@@ -3,6 +3,7 @@
 Planned studies (studies/<id>/spec.json -> results -> pull request):
 
     python -m wingstudy new NAME [--kind design-set|geometry-sweep|matched-comparison]
+    python -m wingstudy import FILE                  a spec.json downloaded from the website's study builder
     python -m wingstudy validate ID... | --all
     python -m wingstudy plan ID [--workers N]        case count, cache hits, time estimate
     python -m wingstudy run ID [--workers N]         solve; writes results.json and status.json

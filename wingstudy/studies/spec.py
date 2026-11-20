@@ -110,12 +110,12 @@ def validate(spec: dict) -> list[str]:
     """Every problem with a spec, as readable 'field: message' strings (empty = valid)."""
     if not isinstance(spec, dict):
         return ["spec: must be a JSON object"]
-    e = [f"{k}: required" for k in REQUIRED if k not in spec]
+    e = [f"{k}: required" for k in REQUIRED if spec.get(k) is None]      # null counts as missing
     e += [f"{k}: unknown field" for k in spec if k not in TOP_KEYS]
     if spec.get("schema") not in (None, SPEC_SCHEMA):
         e.append(f"schema: must be {SPEC_SCHEMA!r}")
     sid = spec.get("id")
-    if sid is not None and (not isinstance(sid, str) or not ID_RE.match(sid) or len(sid) > 80):
+    if sid is not None and (not isinstance(sid, str) or not ID_RE.fullmatch(sid) or len(sid) > 80):
         e.append("id: YYYY-MM-DD-short-name, lower case letters, digits and hyphens, at most 80 characters")
     for k, lo, hi in (("title", 3, 120), ("author", 1, 60), ("question", 3, 600)):
         v = spec.get(k)
@@ -132,7 +132,7 @@ def validate(spec: dict) -> list[str]:
         if not isinstance(models, list) or not models or len(set(map(str, models))) != len(models):
             e.append("models: a non-empty list without repeats")
         else:
-            bad = [m for m in models if m not in MODELS]
+            bad = [m for m in models if not isinstance(m, str) or m not in MODELS]
             if bad:
                 e.append(f"models: unknown {bad}; choose from {', '.join(MODELS)}")
             if "rigid" in models and (kind == "matched-comparison" or structure == "spanwise"):
@@ -171,7 +171,11 @@ def validate(spec: dict) -> list[str]:
                 if k not in ("designs", "from_atlas"):
                     e.append(f"wings.{k}: unknown field")
             names = set()
-            for j, w in enumerate(wings.get("designs") or []):
+            designs = wings.get("designs") or []
+            if not isinstance(designs, list):
+                e.append("wings.designs: a list of outlines")
+                designs = []
+            for j, w in enumerate(designs):
                 where = f"wings.designs[{j}]"
                 if not isinstance(w, dict):
                     e.append(f"{where}: an object"); continue
@@ -181,13 +185,14 @@ def validate(spec: dict) -> list[str]:
                 name = w.get("name", f"wing {j + 1}")
                 if not isinstance(name, str) or not 1 <= len(name) <= 60 or name in names:
                     e.append(f"{where}.name: unique text, 1-60 characters")
-                names.add(name)
+                if isinstance(name, str):
+                    names.add(name)
                 e += validate_chords(w.get("chords_mm"), f"{where}.chords_mm")
                 hs = w.get("half_span_mm")
                 if not _num(hs) or not HALF_SPAN_RANGE[0] <= hs <= HALF_SPAN_RANGE[1]:
                     e.append(f"{where}.half_span_mm: {HALF_SPAN_RANGE[0]:g}-{HALF_SPAN_RANGE[1]:g} mm")
             keys = wings.get("from_atlas") or []
-            if not isinstance(keys, list) or not all(isinstance(k, str) and KEY_RE.match(k) for k in keys):
+            if not isinstance(keys, list) or not all(isinstance(k, str) and KEY_RE.fullmatch(k) for k in keys):
                 e.append("wings.from_atlas: a list of 24-character atlas design keys")
             elif len(set(keys)) != len(keys):
                 e.append("wings.from_atlas: keys repeat")
@@ -212,7 +217,7 @@ def validate(spec: dict) -> list[str]:
     if budget is not None:
         if not isinstance(budget, dict) or set(budget) - {"max_cases"} or not _int(budget.get("max_cases")) or budget["max_cases"] < 1:
             e.append("budget: {\"max_cases\": whole number >= 1}")
-    if "parent" in spec and (not isinstance(spec["parent"], str) or not ID_RE.match(spec["parent"])):
+    if "parent" in spec and (not isinstance(spec["parent"], str) or not ID_RE.fullmatch(spec["parent"])):
         e.append("parent: the id of the study this one follows from")
     if "notes" in spec and not isinstance(spec["notes"], str):
         e.append("notes: text")
@@ -239,12 +244,12 @@ def atlas_wings(keys: list[str], data_dir: Path | None = None) -> list[dict]:
     for p in sorted((data_dir / "rows").glob("*.json")):
         cols = read_json(p)["cols"]
         for r, k in enumerate(cols["k"]):
-            if k in want and k not in found:
+            if k in want and k not in found and cols["C"][8 * r] > 0:   # catalog rows carry no chord stations
                 found[k] = {"name": f"atlas {k[:8]}", "chords_mm": cols["C"][8 * r:8 * r + 8],
                             "half_span_mm": cols["H"][r], "atlas_key": k}
     missing = [k for k in keys if k not in found]
     if missing:
-        raise KeyError(f"atlas keys not found: {', '.join(missing)}")
+        raise KeyError(f"atlas keys not found (or rigid-catalog wings, which have no chord stations): {', '.join(missing)}")
     return [found[k] for k in keys]
 
 
@@ -307,6 +312,17 @@ def expand(spec: dict, wings: list[dict] | None = None) -> list[dict]:
 
 # ----------------------------------------------------------------------------- templates
 PLACEHOLDERS = {"title": "Describe the study in a short title", "question": "What should this study answer?"}
+
+
+def limits() -> dict:
+    """Every constant the validator uses, for the browser port (site/new/spec.js)."""
+    return {"spec_schema": SPEC_SCHEMA, "kinds": list(KINDS), "structures": list(STRUCTURES),
+            "models": MODELS, "nodes": NODES, "numerics_default": NUMERICS_DEFAULT,
+            "numerics_ranges": {k: list(v) for k, v in NUMERICS_RANGES.items()},
+            "freq_range": list(FREQ_RANGE), "half_span_range": list(HALF_SPAN_RANGE),
+            "chord_range": list(CHORD_RANGE), "sweep_count": list(SWEEP_COUNT),
+            "id_re": ID_RE.pattern, "key_re": KEY_RE.pattern, "top_keys": sorted(TOP_KEYS),
+            "required": list(REQUIRED), "placeholders": PLACEHOLDERS}
 
 
 def template(study_id: str, kind: str = "design-set", author: str = "") -> dict:

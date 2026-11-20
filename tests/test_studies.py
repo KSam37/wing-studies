@@ -59,6 +59,64 @@ class Validation(unittest.TestCase):
         self.assertEqual(S.validate(s), [])
 
 
+class Robustness(unittest.TestCase):
+    def test_validate_never_raises(self):
+        """The website and CI feed validate() arbitrary JSON; it must report, never crash."""
+        import random
+        rnd = random.Random(7)
+        atoms = [None, True, 0, -1, 1.5, "", "x", "t0.50r", "2026-11-20-x", [], {}, [1], {"a": 1}, [[1]], "ab" * 12]
+        def junk(depth=0):
+            r = rnd.random()
+            if depth > 2 or r < 0.5:
+                return rnd.choice(atoms)
+            if r < 0.75:
+                return [junk(depth + 1) for _ in range(rnd.randint(0, 9))]
+            return {rnd.choice(sorted(S.TOP_KEYS | {"designs", "from_atlas", "count", "name", "chords_mm"})): junk(depth + 1)
+                    for _ in range(rnd.randint(0, 4))}
+        for _ in range(3000):
+            s = design_spec()
+            s[rnd.choice(sorted(S.TOP_KEYS))] = junk()
+            self.assertIsInstance(S.validate(s), list)
+            self.assertIsInstance(S.validate(junk()), list)
+
+    def test_limits_are_json(self):
+        L = json.loads(json.dumps(S.limits()))
+        self.assertEqual(L["models"], S.MODELS)
+        self.assertEqual(L["id_re"], S.ID_RE.pattern)
+
+
+class AtlasKeys(unittest.TestCase):
+    def test_campaign_keys_resolve_and_catalog_keys_do_not(self):
+        rows = ROOT / "atlas" / "data" / "rows"
+        rod = json.loads((rows / "rod.json").read_text(encoding="utf-8"))["cols"]["k"][0]
+        cat = json.loads((rows / "catalog.json").read_text(encoding="utf-8"))["cols"]["k"][0]
+        w = S.atlas_wings([rod])[0]
+        self.assertEqual((len(w["chords_mm"]), w["atlas_key"]), (S.NODES, rod))
+        with self.assertRaises(KeyError):
+            S.atlas_wings([cat])
+
+
+class Import(unittest.TestCase):
+    def test_import_places_a_downloaded_spec(self):
+        from wingstudy.studies import cli
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(S, "STUDIES", Path(tmp) / "studies"):
+            src = Path(tmp) / "spec.json"
+            spec = design_spec()
+            src.write_text(json.dumps(spec), encoding="utf-8")
+            args = mock.Mock(file=str(src))
+            with mock.patch("sys.stdout"):
+                self.assertEqual(cli.cmd_import(args), 0)
+                self.assertEqual(S.load(spec["id"]), spec)
+                self.assertEqual(cli.cmd_import(args), 0)                     # same content again: fine
+            src.write_text(json.dumps(dict(spec, title="Something else")), encoding="utf-8")
+            with mock.patch("sys.stderr"):
+                self.assertEqual(cli.cmd_import(args), 1)                     # never overwrites a different spec
+                src.write_text(json.dumps(dict(spec, models=["rigid"], structure="spanwise")), encoding="utf-8")
+                self.assertEqual(cli.cmd_import(args), 1)
+                src.write_text(json.dumps(dict(spec, wings={"from_atlas": ["0" * 24]})), encoding="utf-8")
+                self.assertEqual(cli.cmd_import(args), 1)                     # unknown atlas key
+
+
 class Expansion(unittest.TestCase):
     def test_count_and_order(self):
         s = design_spec(models=["t0.50r", "t0.25r"], frequencies_hz=[0.75, 1.0],

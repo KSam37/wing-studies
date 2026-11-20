@@ -1,4 +1,4 @@
-"""Commands for planned studies: new, validate, plan, run, publish, list."""
+"""Commands for planned studies: new, import, validate, plan, run, publish, list."""
 from __future__ import annotations
 
 import argparse
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import spec as S
 
-COMMANDS = ("new", "validate", "plan", "run", "publish", "list")
+COMMANDS = ("new", "import", "validate", "plan", "run", "publish", "list")
 
 
 def _id(arg: str) -> str:
@@ -23,7 +23,7 @@ def _id(arg: str) -> str:
 
 
 def cmd_new(a) -> int:
-    sid = a.id if S.ID_RE.match(a.id) else f"{dt.date.today():%Y-%m-%d}-{a.id}"
+    sid = a.id if S.ID_RE.fullmatch(a.id) else f"{dt.date.today():%Y-%m-%d}-{a.id}"
     folder = S.study_dir(sid)
     if (folder / "spec.json").exists():
         print(f"{folder / 'spec.json'} already exists", file=sys.stderr)
@@ -45,10 +45,43 @@ def _validate_one(sid: str) -> list[str]:
     e = S.validate(spec)
     if not e and spec["id"] != folder.name:
         e.append(f"id: {spec['id']!r} must match the folder name {folder.name!r}")
+    e += _atlas_key_errors(spec) if not e else []
     if not e and (folder / "results.json").exists():
         from .run import results_errors
         e += results_errors(S.read_json(folder / "results.json"), spec)
     return e
+
+
+def _atlas_key_errors(spec: dict) -> list[str]:
+    keys = (spec.get("wings") or {}).get("from_atlas") or []
+    if not keys or not (S.ROOT / "atlas" / "data" / "rows").exists():
+        return []
+    try:
+        S.atlas_wings(keys)
+    except KeyError as exc:
+        return [f"wings.from_atlas: {exc.args[0]}"]
+    return []
+
+
+def cmd_import(a) -> int:
+    """Put a spec downloaded from the website builder where the study tools expect it."""
+    src = Path(a.file)
+    try:
+        spec = json.loads(src.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"cannot read {src}: {exc}", file=sys.stderr)
+        return 1
+    e = S.validate(spec) or _atlas_key_errors(spec)
+    if e:
+        print("not a valid study spec:\n  " + "\n  ".join(e), file=sys.stderr)
+        return 1
+    dest = S.study_dir(spec["id"]) / "spec.json"
+    if dest.exists() and S.read_json(dest) != spec:
+        print(f"{dest} already exists with different content; choose another id", file=sys.stderr)
+        return 1
+    S.write_json(dest, spec)
+    print(f"imported {spec['id']} ({S.case_count(spec)} cases)\nnext: python -m wingstudy plan {spec['id']}")
+    return 0
 
 
 def cmd_validate(a) -> int:
@@ -174,6 +207,8 @@ def main(cmd: str, argv: list[str]) -> int:
         ap.add_argument("id", help="YYYY-MM-DD-name, or just a name (today's date is added)")
         ap.add_argument("--kind", choices=S.KINDS, default="design-set")
         ap.add_argument("--author", default="")
+    elif cmd == "import":
+        ap.add_argument("file", help="a spec.json downloaded from the website's study builder")
     elif cmd == "validate":
         ap.add_argument("ids", nargs="*")
         ap.add_argument("--all", action="store_true", help="every study in studies/")
@@ -191,5 +226,5 @@ def main(cmd: str, argv: list[str]) -> int:
     a = ap.parse_args(argv)
     if cmd == "validate" and not a.all and not a.ids:
         ap.error("give study ids or --all")
-    return {"new": cmd_new, "validate": cmd_validate, "plan": cmd_plan, "run": cmd_run,
+    return {"new": cmd_new, "import": cmd_import, "validate": cmd_validate, "plan": cmd_plan, "run": cmd_run,
             "publish": cmd_publish, "list": cmd_list}[cmd](a)

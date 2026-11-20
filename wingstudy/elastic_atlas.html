@@ -162,6 +162,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
     <button data-t="stiff">Stiffness effects</button>
     <button data-t="span">Spanwise elasticity</button>
   </nav>
+  <a class="iconbtn" id="newstudy" href="../new/" title="Set up a study with the wings you picked">New study</a>
   <button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button>
 </div></header>
 <main>
@@ -619,6 +620,21 @@ $('#zbudget').onclick=()=>{if(M.x!=='torque'){M.x='torque';M.y='thrust';$('#ax-x
 new ResizeObserver(()=>{if($('#t-map').classList.contains('on'))requestDraw()}).observe(cv);
 
 function mediaForRow(i){const w=WIN_ROWS.get(i);if(w&&w.media&&w.media.poster)return w.media;const k=C.k[i].slice(0,16);return D.media[k]||null}
+/* ---------- study basket: designs picked here prefill the study builder (../new/) ---------- */
+const BASKET_KEY='wingstudy-basket';
+const basket=()=>{try{return JSON.parse(localStorage.getItem(BASKET_KEY)||'[]')}catch(_){return []}};
+// Campaign rows are referenced by key (the builder writes wings.from_atlas); matched and planned-study
+// rows are copied as outlines, since only atlas/data/rows can be looked up by key.
+const basketEntry=i=>{const m=D.models[C.m[i]],byKey=i<CAT0&&/^[0-9a-f]{24}$/.test(C.k[i]);
+  return {key:C.k[i],atlas:byKey,name:`${m.id} ${D.freqs[C.f[i]]} Hz ${C.k[i].replace(/^nominal-/,'').slice(0,8)}`,
+    label:`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,
+    chords_mm:chordsOf(i).map(c=>Math.round(c*10)/10),half_span_mm:Math.round(C.H[i]*10)/10}};
+const inBasket=i=>basket().some(x=>x.key===C.k[i]);
+function toggleBasket(i){let b=basket();b=inBasket(i)?b.filter(x=>x.key!==C.k[i]):[...b,basketEntry(i)];
+  localStorage.setItem(BASKET_KEY,JSON.stringify(b));basketUI();const el=$('#basket-btn');if(el)el.outerHTML=basketButton(i)}
+const basketButton=i=>isCat(i)?'':`<button class="iconbtn" id="basket-btn" onclick="toggleBasket(${i})">${inBasket(i)?'✓ In your new study (remove)':'+ Add to a new study'}</button>`;
+function basketUI(){const n=basket().length,a=$('#newstudy');if(a)a.textContent=n?`New study (${n})`:'New study'}
+if(typeof addEventListener==='function')addEventListener('storage',e=>{if(e.key===BASKET_KEY)basketUI()});   // builder open in another tab
 function selectDesign(i){
   M.sel=i;requestDraw();
   if(isCat(i)){const r=i-CAT0,w=WIN_ROWS.get(i),co=CAT.cohorts[CAT.cohort[r]],media=mediaForRow(i);
@@ -647,9 +663,10 @@ function selectDesign(i){
     ${lambdaRow(i,w)}${evoRow(w)}
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
-  if(EXTRA[i]){const e=EXTRA[i],em=e.result.media;$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}<div style="margin:10px 0">${em&&em.poster?posterButton(em,`${e.kind==='spanwise'?'Spanwise + chordwise':'Chordwise only'} · ${esc(e.pair.source.material_label||'')} · ${D.freqs[C.f[i]]} Hz`,info)+` <button class="iconbtn" data-span-pair="${esc(e.pair.source.key)}">▶ Compare both models side by side</button>`:'<p class="tiny muted">No animation rendered for this matched pair.</p>'}</div>${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button>`;return}
+  if(EXTRA[i]){const e=EXTRA[i],em=e.result.media;$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}<div style="margin:10px 0">${em&&em.poster?posterButton(em,`${e.kind==='spanwise'?'Spanwise + chordwise':'Chordwise only'} · ${esc(e.pair.source.material_label||'')} · ${D.freqs[C.f[i]]} Hz`,info)+` <button class="iconbtn" data-span-pair="${esc(e.pair.source.key)}">▶ Compare both models side by side</button>`:'<p class="tiny muted">No animation rendered for this matched pair.</p>'}</div>${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button> ${basketButton(i)}`;return}
   $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
+    <div style="margin:8px 0 0">${basketButton(i)}</div>
     <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
 }
 function downloadCSV(){
@@ -873,6 +890,7 @@ function go(t){$$('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t
 $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
 {const ft=$('#f-toggle');if(ft)ft.onclick=()=>{const c=ft.closest('.filters'),o=c.classList.toggle('open');ft.setAttribute('aria-expanded',o);ft.textContent=o?'Hide filters':'Filters'}}
 function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt})[t]()}}
+basketUI();
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
   document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
 try{const t=localStorage.getItem('atlas-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}

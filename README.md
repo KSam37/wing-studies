@@ -18,7 +18,7 @@ Wings are carbon-fibre sheets of several thicknesses, either bare or with a carb
 
 | Path | Contents |
 |---|---|
-| `site/` | Landing page source |
+| `site/` | Landing page and study builder (`site/new/`) source |
 | `wingstudy/elastic_atlas.html` | Atlas page template (data is inserted at build time) |
 | `atlas/data/` | Atlas data: one file per study plus metadata, catalog and span comparisons |
 | `atlas/media/`, `atlas/files/` | Animations (recompressed to one flap cycle), plots and reports |
@@ -44,6 +44,8 @@ Then open `_site/index.html` (landing page) or `_site/atlas/index.html` directly
 Simulations run on your own computer. A study is a folder `studies/<id>/` holding `spec.json` (what to solve), `status.json` and, once run, `results.json` (compact results plus an exact replay input for every case). [`schema/study-spec.schema.json`](schema/study-spec.schema.json) documents the spec.
 
 **Set up (Windows).** Clone the repository (`git clone --recurse-submodules https://github.com/KSam37/wing-studies.git`). Then double-click `Setup Windows.cmd`, which installs the Python dependencies and the pinned Ptera solver into `%LOCALAPPDATA%\WingStudies`. That environment is tied to the folder you set up from: after moving the folder, run `Setup Windows.cmd` again. Linux: `tools/setup_linux.sh`.
+
+**Write the spec on the website.** The [study builder](https://samkir.com/wing-studies/new/) checks a spec with the same rules as the tools (`site/new/spec.js` is a port of `wingstudy/studies/spec.py`; `tests/builder.test.cjs` keeps them identical). Pick wings in the atlas with *Add to a new study*, or type outlines in. *Submit on GitHub* opens a prefilled `studies/<id>/spec.json` that becomes a pull request; *Download spec.json* saves it instead, and `tools\wingstudy.cmd import spec.json` puts it in place. The builder's *Queue* tab lists every study and its state.
 
 **Plan, run, publish.** Use `tools\wingstudy.cmd` (the registered environment) or `python -m wingstudy`:
 
