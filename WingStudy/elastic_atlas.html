@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Elastic Wing Atlas</title>
+<title>FAAV Wing Atlas</title>
 <style>
 :root{
   color-scheme:light;
@@ -35,6 +35,7 @@ a{color:var(--accent)}
 header{position:sticky;top:0;z-index:20;background:var(--page);border-bottom:1px solid var(--border)}
 .bar{max-width:1320px;margin:0 auto;padding:10px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .bar h1{font-size:17px;margin:0;font-weight:650;white-space:nowrap}
+.bar h1 a.home{color:var(--accent);text-decoration:none}.bar h1 a.home:hover{text-decoration:underline}
 nav{display:flex;gap:2px;flex-wrap:wrap;flex:1}
 nav button{border:0;background:none;color:var(--text-2);font:inherit;padding:7px 11px;border-radius:7px;cursor:pointer}
 nav button:hover{background:var(--hover)}
@@ -70,7 +71,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .ctl label{font-size:12.5px;color:var(--text-2)}
 .filters .viewbar{padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:12px}
 .fh{font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.fgrid{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px}
+.fgrid{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:12px}
 @media (max-width:1180px){.fgrid{grid-template-columns:1fr 1fr}}
 @media (max-width:760px){.fgrid{grid-template-columns:1fr}}
 fieldset.fg{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:8px 12px 10px;margin:0;min-width:0}
@@ -128,14 +129,14 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
 </head>
 <body>
 <header><div class="bar">
-  <h1>Elastic wing atlas</h1>
+  <h1><a href="../" class="home" title="FAAV Wing Studies home">FAAV</a> Wing Atlas</h1>
   <nav id="nav">
     <button data-t="overview" class="on">Overview</button>
     <button data-t="map">Wing map</button>
-    <button data-t="span">Spanwise elasticity</button>
-    <button data-t="winners">Winners</button>
-    <button data-t="stiff">Stiffness effects</button>
+    <button data-t="winners">Top performing wings</button>
     <button data-t="opt">Optimized shapes</button>
+    <button data-t="stiff">Stiffness effects</button>
+    <button data-t="span">Spanwise elasticity</button>
   </nav>
   <button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button>
 </div></header>
@@ -149,12 +150,18 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
       <span class="fh">View</span>
       <label>X <select id="ax-x"></select></label>
       <label>Y <select id="ax-y"></select></label>
-      <label>Colour by <select id="colorby"><option value="study">study</option><option value="model">material</option><option value="struct">structural model</option><option value="freq">frequency</option></select></label>
+      <label>Colour by <select id="colorby"><option value="study">study</option><option value="struct">analysis type</option><option value="constr">construction</option><option value="thk">sheet thickness</option><option value="model">material (thickness + rod)</option><option value="freq">frequency</option></select></label>
       <span style="flex:1"></span>
       <button class="iconbtn" id="f-reset" style="width:auto;padding:0 10px">Reset filters</button>
       <button class="iconbtn" id="csv" style="width:auto;padding:0 10px">Download visible as CSV</button>
     </div>
     <div class="fgrid">
+      <fieldset class="fg"><legend>Analysis &amp; material</legend>
+        <div class="frow"><span class="fl">Analysis type</span><div class="chips" id="f-struct"></div></div>
+        <div class="frow"><span class="fl">Construction</span><div class="chips" id="f-constr"></div></div>
+        <div class="frow"><span class="fl">Sheet thickness</span><div class="chips" id="f-thk"></div></div>
+        <p class="tiny muted" style="margin:2px 0 0">Analysis type is the physics a wing was simulated with. Rigid wings have no material, so construction and thickness apply to the elastic analyses only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge.</p>
+      </fieldset>
       <fieldset class="fg"><legend>Data source</legend>
         <div class="frow"><span class="fl">Study</span><div class="chips" id="f-study"></div></div>
         <div class="frow"><span class="fl">Searches</span><div class="chips" id="f-obj-search"></div></div>
@@ -165,21 +172,16 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
           <label>Study <select id="cat-study" style="max-width:230px"></select></label>
           <label><input type="checkbox" id="cat-root"> 200 mm root only</label></div></div>
       </fieldset>
-      <fieldset class="fg"><legend>Wing</legend>
-        <div class="frow"><span class="fl">Material</span><div class="chips" id="f-model"></div></div>
-        <div class="frow"><span class="fl">Structural model</span><div class="chips" id="f-struct"></div></div>
+      <fieldset class="fg"><legend>Geometry, conditions &amp; quality</legend>
         <div class="frow"><span class="fl">Half-span</span><div class="chips">
           <input type="number" id="sp-lo" step="5" style="width:64px" aria-label="Minimum half-span (mm)">
           <span class="span2"><input type="range" id="sp-lo-r" step="1" aria-label="Minimum half-span"><input type="range" id="sp-hi-r" step="1" aria-label="Maximum half-span"></span>
           <input type="number" id="sp-hi" step="5" style="width:64px" aria-label="Maximum half-span (mm)"><span class="tiny muted">mm</span>
           <button class="chip" id="sp-all">All spans</button></div></div>
-        <p class="tiny muted" style="margin:2px 0 0">Effective half-span: root to the last non-zero chord. Structural model is the physics used to simulate the wing, not what it is made of.</p>
-      </fieldset>
-      <fieldset class="fg"><legend>Conditions &amp; quality</legend>
         <div class="frow"><span class="fl">Frequency</span><div class="chips" id="f-freq"></div></div>
         <div class="frow"><span class="fl">Root torque</span><div class="chips" id="f-lim"></div></div>
         <div class="frow"><span class="fl">Result quality</span><div class="chips" id="f-quality"></div></div>
-        <p class="tiny muted" style="margin:2px 0 0">Verified = two stabilization settings agree; settled = rigid solve converged over cycles. Neither is experimental validation.</p>
+        <p class="tiny muted" style="margin:2px 0 0">Half-span runs from the root to the last non-zero chord. Verified = two stabilization settings agree; settled = rigid solve converged over cycles. Neither is experimental validation.</p>
       </fieldset>
     </div>
   </div>
@@ -346,7 +348,7 @@ function renderOverview(){
   const counts=D.studies.map((s,i)=>C.s.filter(x=>x===i).length);
   const best125=W('rod',1.25,'t0.50r');
   const tile=(k,v,s)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-  let h=`<h2>Carbon-fibre flapping wings in water: what the elastic studies found</h2>
+  let h=`<h2>Carbon-fibre flapping wings in water: what the studies found</h2>
   <p class="lede">One wing of the swimming robot, simulated with Ptera's unsteady vortex-lattice method plus a stabilized plate-torsion model. Every result is per wing, at 0.5 m/s forward speed and a 30° stroke, under a peak root torque budget of ${LIM} N·m. The root chord is always exactly 200 mm and the leading edge is straight and perpendicular to the flow.</p>
   <div class="tiles">
    ${RS['t0.50r']?tile('Optimized from sweep winner · 0.5 mm + rod · 1 Hz',fmt(RS['t0.50r'].final.thrust)+' N',`at ${fmt(RS['t0.50r'].final.torque)} N·m · ${Math.round(RS['t0.50r'].final.half_span)} mm · fine mesh; outer chords at the 10 mm floor`):''}
@@ -399,8 +401,15 @@ const BASE_OF=D.models.map(m=>m.id.includes(':')?m.id.split(':')[1]:m.id);
 const MAT_OF=BASE_OF.map(b=>MODEL[b]?MODEL[b].i:0);
 const STRUCT_OF=D.models.map((m,i)=>m.id.startsWith('span-flex')?2:BASE_OF[i]==='rigid'?0:1);
 const MATS=D.models.map((m,i)=>i).filter(i=>!D.models[i].id.includes(':'));
-const STRUCTS=[[0,'Rigid'],[1,'Chordwise twist'],[2,'Span + chord bending']], STRUCT_VAR=['--neutral','--s1','--s2'];
+const STRUCTS=[[0,'Rigid'],[1,'Chordwise elasticity'],[2,'Spanwise + chordwise elasticity']], STRUCT_VAR=['--neutral','--s1','--s2'];
 const structColor=k=>css(STRUCT_VAR[k]);
+// Construction and sheet thickness come from the base material; rigid wings have neither (null).
+const ROD_OF=D.models.map((m,i)=>BASE_OF[i]==='rigid'?null:(MODEL[BASE_OF[i]]?.rod?1:0));
+const THKS=[...new Set(D.models.map((m,i)=>BASE_OF[i]==='rigid'?null:MODEL[BASE_OF[i]]?.thickness).filter(t=>t!=null))].sort((a,b)=>b-a);
+const THK_OF=D.models.map((m,i)=>{const t=BASE_OF[i]==='rigid'?null:MODEL[BASE_OF[i]]?.thickness;return t==null?null:THKS.indexOf(t)});
+const CONSTRS=[[1,'Rod + sheet'],[0,'Sheet only']], CONSTR_VAR=['--s3','--s1'], THK_VAR=['--s7','--s3','--s4','--s5','--s8','--s6'];
+const constrColor=k=>css(CONSTR_VAR[k]), thkColor=k=>css(THK_VAR[k%THK_VAR.length]);
+const matLabel=mi=>BASE_OF[mi]==='rigid'?'none (rigid analysis)':`${MODEL[BASE_OF[mi]].thickness} mm carbon sheet${ROD_OF[mi]?' + leading-edge rod':''}`;
 const QUAL_OF=st=>GOOD.has(st)?0:st==='uncertain'?1:2;
 const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / unresolved']];
 const OBJ_GROUPS={'f-obj-search':[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[128,'Earlier rigid searches']],
@@ -408,7 +417,7 @@ const OBJ_GROUPS={'f-obj-search':[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0
   'f-obj-rerun':[[512,'Matched elasticity comparisons']]};
 const ALL_OBJS=Object.values(OBJ_GROUPS).flat().map(x=>x[0]);
 const mapDefaults=()=>({objs:new Set(ALL_OBJS),lim:new Set([0,1]),quality:new Set([0]),catCohort:-1,catStudy:-1,catRoot:false,
-  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2])});
+  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),thk:new Set(THKS.map((_,k)=>k))});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];
@@ -448,8 +457,9 @@ function chipRow(el,items,set,colorFn){
 function renderChips(){
   chipRow($('#f-study'),D.studies.map((s,i)=>[i,s.label]),M.studies,M.color==='study'?studyColor:null);
   for(const [id,items] of Object.entries(OBJ_GROUPS))chipRow($('#'+id),items,M.objs,null);
-  chipRow($('#f-model'),MATS.map(i=>[i,D.models[i].label]),M.models,M.color==='model'?(i=>modelColor(D.models[i].id)):null);
   chipRow($('#f-struct'),STRUCTS,M.struct,M.color==='struct'?structColor:null);
+  chipRow($('#f-constr'),CONSTRS,M.constr,M.color==='constr'?constrColor:null);
+  chipRow($('#f-thk'),THKS.map((t,k)=>[k,t+' mm']),M.thk,M.color==='thk'?thkColor:null);
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
   chipRow($('#f-lim'),[[0,`≤ ${LIM} N·m`],[1,`> ${LIM} N·m`]],M.lim,null);
   chipRow($('#f-quality'),QUALS,M.quality,null);
@@ -460,6 +470,7 @@ function filtered(){
   for(let i=0;i<N;i++){
     const m=C.m[i];
     if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m]))continue;
+    if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
     if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
     if(!(C.obj[i]&objMask))continue;
     if(isCat(i)){const r=i-CAT0;if(M.catCohort>=0&&CAT.cohort[r]!==M.catCohort)continue;if(M.catStudy>=0&&CAT.study[r]!==M.catStudy)continue;if(M.catRoot&&!(Math.abs(ROOT[i]-200)<0.5))continue}
@@ -472,7 +483,8 @@ function filtered(){
   const order=[0,1,2,3,4,6,5],rank=i=>(order[MAT_OF[C.m[i]]]??9)*4+STRUCT_OF[C.m[i]]; out.sort((a,b)=>rank(a)-rank(b));
   return out;
 }
-function colorOf(i){return M.color==='model'?modelColor(BASE_OF[C.m[i]]):M.color==='struct'?structColor(STRUCT_OF[C.m[i]]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
+function colorOf(i){const m=C.m[i];if(M.color==='constr'||M.color==='thk'){const k=M.color==='constr'?ROD_OF[m]:THK_OF[m];return k==null?css('--neutral'):M.color==='constr'?constrColor(k):thkColor(k)}
+  return M.color==='model'?modelColor(BASE_OF[m]):M.color==='struct'?structColor(STRUCT_OF[m]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
 const PAD={l:62,r:16,t:14,b:46};
 function fitView(){
   const gx=AXES[M.x].get,gy=AXES[M.y].get;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
@@ -530,14 +542,14 @@ function paint(){
 function star(x,y,R,fill,ring){ctx.beginPath();for(let j=0;j<10;j++){const a=-Math.PI/2+j*Math.PI/5,rr=j%2?R*.45:R;ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}ctx.closePath();
   ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=ring;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=css('--text');ctx.stroke()}
 function updateCounts(){
-  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
-  const key=i=>M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
+  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
+  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
   const cnt={};for(const i of VIS){const k=key(i);cnt[k]=(cnt[k]||0)+1}
-  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ category winner (≤ ${LIM} N·m)</span>`;
+  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span>`;
   const catOn=STUDY.catalog&&M.studies.has(STUDY.catalog.i);
   $('#cat-ctl').style.opacity=catOn?1:.4;$$('#cat-ctl select,#cat-ctl input').forEach(e=>e.disabled=!catOn);
   const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
-  $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} winners). Shift-click a chip to show only that one. Hollow = uncertain.`;
+  $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} top performers). Shift-click a chip to show only that one. Hollow = uncertain.`;
 }
 function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
 const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75'],[512,'matched elasticity comparison']];
@@ -595,7 +607,7 @@ function selectDesign(i){
   const st=STATUS[C.S[i]],w=WIN_ROWS.get(i),m=D.models[C.m[i]],col=modelColor(m.id),rg=D.ranges[i];
   const others=[];for(let j=0;j<N;j++)if(j!==i&&C.k[j]===C.k[i])others.push(D.studies[C.s[j]].short);
   const info=`<div class="kv"><div>Study</div><div>${D.studies[C.s[i]].label}${others.length?` (also in ${others.join(', ')})`:''}</div>
-    <div>Plate</div><div>${m.label}</div><div>Frequency</div><div>${D.freqs[C.f[i]]} Hz</div>
+    <div>Analysis</div><div>${STRUCTS[STRUCT_OF[C.m[i]]][1]}</div><div>Material</div><div>${matLabel(C.m[i])}</div><div>Frequency</div><div>${D.freqs[C.f[i]]} Hz</div>
     <div>Thrust</div><div><b>${fmt(C.T[i],3)} N</b>${rg?` <span class="muted">(${fmt(rg[0],3)}–${fmt(rg[1],3)})</span>`:''}</div>
     <div>Peak torque</div><div><b>${fmt(C.Q[i],3)} N·m</b>${rg?` <span class="muted">(${fmt(rg[2],3)}–${fmt(rg[3],3)})</span>`:''}</div>
     <div>Tip twist</div><div>${C.W[i]==null?'– (rigid)':'±'+fmt(C.W[i],1)+'°'}</div>
@@ -608,7 +620,7 @@ function selectDesign(i){
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
   if(EXTRA[i]){const e=EXTRA[i];$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button>`;return}
-  $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Winner: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
+  $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python WingStudy/elastic_campaign.py replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>'}</div>${info}`;
 }
@@ -622,13 +634,13 @@ function downloadCSV(){
    Winners
    ====================================================================================== */
 const effSpan=w=>{const o=activeOutline(w.chords,w.half_span);return o[o.length-1][0]};
-function winnerInfo(w){const m=MODEL[w.model];return `<div class="kv"><div>Study</div><div>${STUDY[w.study].label}</div><div>Plate</div><div>${m.label}</div><div>Frequency</div><div>${w.freq} Hz</div>
+function winnerInfo(w){const m=MODEL[w.model];return `<div class="kv"><div>Study</div><div>${STUDY[w.study].label}</div><div>Material</div><div>${m.label}</div><div>Frequency</div><div>${w.freq} Hz</div>
   <div>Thrust</div><div><b>${fmt(w.thrust,3)} N</b></div><div>Peak torque</div><div><b>${fmt(w.torque,3)} N·m</b></div>
   <div>Tip twist</div><div>${w.tip_twist==null?'– (rigid)':'±'+fmt(w.tip_twist,1)+'°'}</div><div>Half-span</div><div>${Math.round(effSpan(w))} mm effective</div>
   <div>Chords</div><div class="small">${w.chords.map(Math.round).join(' · ')} mm</div><div>Quality</div><div>${statusPill(w.status)}</div>
   <div>Evaluated</div><div>${w.evaluated.toLocaleString()} designs in this category</div><div>Key</div><div><code>${w.key}</code></div></div>`}
 function renderWinners(){
-  let h=`<h2>Winners of each category</h2><p class="lede">Best verified (elastic) or settled (rigid) design with peak root torque ≤ ${LIM} N·m, for every study, frequency and plate model, whether a search or the shape map found it. Outlines are all drawn at the same scale. Click any card for its Ptera animation (side, front and top views). The highlighted card is the best in its study.</p>`;
+  let h=`<h2>Top performing wings</h2><p class="lede">Best verified (elastic) or settled (rigid) design with peak root torque ≤ ${LIM} N·m, for every study, frequency and plate model, whether a search or the shape map found it. Outlines are all drawn at the same scale. Click any card for its Ptera animation (side, front and top views). The highlighted card is the best in its study.</p>`;
   for(const st of D.studies){
     if(st.id==='catalog'){
       const ws=D.winners.filter(w=>w.study==='catalog');if(!ws.length)continue;
@@ -656,7 +668,7 @@ function renderWinners(){
   }
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);M.quality.add(QUAL_OF(STATUS[C.S[i]]));for(const b of ALL_OBJS)if(C.obj[i]&b)M.objs.add(b);M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));for(const b of ALL_OBJS)if(C.obj[i]&b)M.objs.add(b);M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Stiffness effects

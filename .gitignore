@@ -25,6 +25,9 @@
 !/tests/
 !/docs/
 !/examples/
+!/atlas/
+!/site/
+!/.github/
 __pycache__/
 *.py[cod]
 *.nbc
@@ -44,3 +47,6 @@ WingStudy/tmp*/
 
 # Temporary isolated native-case staging; removed after completion.
 .parallel-*/
+
+# Built website (CI builds and deploys it)
+/_site/
