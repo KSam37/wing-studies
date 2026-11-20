@@ -159,8 +159,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
     <button data-t="map">Wing map</button>
     <button data-t="winners">Top performing wings</button>
     <button data-t="opt">Optimized shapes</button>
-    <button data-t="stiff">Stiffness effects</button>
-    <button data-t="span">Spanwise elasticity</button>
+    <button data-t="elastic">Elasticity effects</button>
   </nav>
   <a class="iconbtn" id="newstudy" href="../new/" title="Set up a study with the wings you picked">New study</a>
   <button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button>
@@ -215,9 +214,14 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
     <div class="card" id="detail"><h3>Design details</h3><p class="muted small">Click a dot to see its outline, loads, numerics and animation here.</p></div>
   </div>
 </section>
-<section class="tab" id="t-span"></section>
 <section class="tab" id="t-winners"></section>
-<section class="tab" id="t-stiff"></section>
+<section class="tab" id="t-elastic">
+  <h2>How elasticity modelling changes the results</h2>
+  <p class="lede">The same wings solved with progressively more structure. <b>Chordwise elasticity</b> lets the sheet twist passively about the leading edge and is compared against the same outline as a rigid plate. <b>Spanwise + chordwise elasticity</b> also lets the sheet bend along the span and is compared against the same wing with chordwise elasticity only. Every comparison holds the outline, motion and numerics fixed, so the difference is the structural model alone.</p>
+  <div class="seg" style="margin-bottom:14px"><button onclick="document.getElementById('el-chord').scrollIntoView({behavior:'smooth'})">Rigid → chordwise</button><button onclick="document.getElementById('el-span').scrollIntoView({behavior:'smooth'})">Chordwise → spanwise + chordwise</button></div>
+  <div id="el-chord" style="scroll-margin-top:64px"></div>
+  <div id="el-span" style="margin-top:28px;scroll-margin-top:64px"></div>
+</section>
 <section class="tab" id="t-opt"></section>
 </main>
 <div class="tip" id="tip"></div>
@@ -727,13 +731,13 @@ function renderWinners(){
 function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
-   Stiffness effects
+   Elasticity effects, part 1: rigid → chordwise
    ====================================================================================== */
 const SHEETS=['Rigid','1.0mm','0.5mm','0.25mm','0.2mm'];
 const SHEET_LABEL={'Rigid':'Rigid','1.0mm':'1.0','0.5mm':'0.5','0.25mm':'0.25','0.2mm':'0.2'};
 const CAND_VAR=['--s1','--s2','--s3'];
 function renderStiff(){
-  let h=`<h2>Stiffness effects</h2><p class="lede">How the carbon sheet changes thrust, torque and twist: first on the three wings that were manufactured, then across thousands of identical outlines solved at every stiffness, then for the best design of each sheet across frequency.</p>`;
+  let h=`<h2>1 · Rigid → chordwise elasticity</h2><p class="lede">How sheet stiffness, through passive twist, changes thrust, torque and twist: first on the three wings that were manufactured, then across thousands of identical outlines solved at every stiffness, then for the best design of each sheet across frequency.</p>`;
   // A. candidates
   const cs=D.candidates, ser=(key,rk)=>cs.map((c,k)=>({name:c.label,color:css(CAND_VAR[k]),points:SHEETS.map((s,i)=>{const l=c.levels.find(x=>x.level===s);return l?{x:i,y:l[key],range:l[rk]&&l[rk][0]!=null?l[rk]:null,tip:`<b>${c.label}</b>, ${s}: ${fmt(l[key],key==='twist'?0:2)}${key==='twist'?'°':key==='torque'?' N·m':' N'} ${statusPill(l.status)}`}:{x:i,y:null}})}));
   h+=`<div class="card"><h3>A · The three manufactured wings across sheets (1 Hz, no rod)</h3>${legend(cs.map((c,k)=>[css(CAND_VAR[k]),c.label]))}
@@ -753,7 +757,7 @@ function renderStiff(){
    <div class="ctl"><label>Study <select id="eff-study">${D.studies.filter(s=>s.id!=='catalog').map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}</select></label><label>Frequency <select id="eff-freq"></select></label></div><div id="eff-out"></div></div>`;
   // C. frequency
   h+=`<div class="card"><h3>C · Best design per sheet across frequency (≤ ${LIM} N·m)</h3><div class="grid2" id="freq-out"></div></div>`;
-  $('#t-stiff').innerHTML=h;
+  $('#el-chord').innerHTML=h;
   $('#eff-study').value=D.studies.some(s=>s.id==='sweep')?'sweep':D.studies[0].id;
   const fsel=()=>{const st=STUDY[$('#eff-study').value];const fs=[...new Set(C.f.filter((f,i)=>C.s[i]===st.i))].sort();$('#eff-freq').innerHTML=fs.map(f=>`<option value="${f}" ${D.freqs[f]===1?'selected':''}>${D.freqs[f]} Hz</option>`).join('');renderEffect()};
   $('#eff-study').onchange=fsel;$('#eff-freq').onchange=renderEffect;fsel();
@@ -876,26 +880,27 @@ function renderSpan(){
     const r=p[kind];series.push({name:kind,color:css(kind==='baseline'?'--s1':'--s2'),points:[{x:r.peak_abs_root_torque_Nm,y:r.mean_thrust_N,pairKey:p.source.key,tip:spanPointDetails(p,kind)}]});
   }});
   const delta=(a,b)=>a?`${fmt(100*(b/a-1),1)}%`:'—';
-  $('#t-span').innerHTML=`<h2>How much does spanwise elasticity change the result?</h2><p class="lede">Highest mean-thrust performer under each model, selected separately at each frequency from wings with verified results in both models. Each selected wing is shown in both models so the difference is a matched comparison. No torque ceiling is applied.</p>
+  $('#el-span').innerHTML=`<h2>2 · Chordwise → spanwise + chordwise elasticity</h2><p class="lede">How much adding span bending changes the result. Highest mean-thrust performer under each model, selected separately at each frequency from wings with verified results in both models. Each selected wing is shown in both models so the difference is a matched comparison. No torque ceiling is applied.</p>
   <div class="card"><div class="ctl"><label>Show <select onchange="window.spanModels.mode=this.value;renderSpan()"><option value="top" ${enabled.mode!=='all'?'selected':''}>Top performers</option><option value="all" ${enabled.mode==='all'?'selected':''}>All verified matched comparisons</option></select></label><label>Frequency <select onchange="window.spanModels.frequency=this.value;renderSpan()"><option value="all">All frequencies</option>${[...new Set(matched.map(p=>p.source.freq))].sort().map(f=>`<option value="${f}" ${+enabled.frequency===f?'selected':''}>${f} Hz</option>`).join('')}</select></label>${[['baseline','Chordwise only'],['spanwise','Span + chord']].map(([k,l])=>`<label><input type="checkbox" ${enabled[k]?'checked':''} onchange="window.spanModels['${k}']=this.checked;renderSpan()"> ${l}</label>`).join('')}</div>
   ${legend([[css('--s1'),'Chordwise only'],[css('--s2'),'Span + chord']])}${series.length?lineChart({series,links:enabled.baseline&&enabled.spanwise?rows.map(p=>['baseline','spanwise'].map(k=>({x:p[k].peak_abs_root_torque_Nm,y:p[k].mean_thrust_N}))):[],xlabel:'Peak fluid root torque (N·m)',ylabel:'Mean thrust (N)',w:1000,h:350,xfmt:x=>fmt(x,2)}):'<p class="muted">No verified pairs match these selections.</p>'}<p class="small muted">Dashed links connect the same wing under both models. Hover for the outline and full details. Click a point or comparison row to open both models’ animations. ${rows.length} designs shown; ${matched.length} verified pairs out of ${all.length} attempted. The unresolved cases limit what this comparison can establish, especially for thin bare sheets.</p></div>
   <div class="card" style="overflow:auto"><h3>Matched performance changes</h3><table><thead><tr><th>Wing</th><th>Chordwise: thrust / torque</th><th>Span + chord: thrust / torque</th><th>Thrust change</th><th>Torque change</th><th>Span deflection</th><th>Animation</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${outlineSVG(activeOutline(p.source.chords,p.source.half_span),{w:150,h:65})}${esc(p.source.material_label)} · ${p.source.freq} Hz</td><td>${fmt(p.baseline.mean_thrust_N,3)} N / ${fmt(p.baseline.peak_abs_root_torque_Nm,3)} N·m</td><td>${fmt(p.spanwise.mean_thrust_N,3)} N / ${fmt(p.spanwise.peak_abs_root_torque_Nm,3)} N·m</td><td>${delta(p.baseline.mean_thrust_N,p.spanwise.mean_thrust_N)}</td><td>${delta(p.baseline.peak_abs_root_torque_Nm,p.spanwise.peak_abs_root_torque_Nm)}</td><td>±${fmt(1000*p.spanwise.tip_bend_amplitude_m,1)} mm</td><td><button class="iconbtn" data-span-pair="${esc(p.source.key)}">${p.baseline.media&&p.spanwise.media?'▶ Compare animations':'Open comparison'}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
+function renderElastic(){renderStiff();renderSpan()}
 const RENDERED={};
 function go(t){$$('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t===t);if(b.dataset.t===t&&b.scrollIntoView&&matchMedia('(max-width:760px)').matches)b.scrollIntoView({block:'nearest',inline:'nearest'})});$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   try{history.replaceState(null,'','#'+t)}catch(e){}
-  if(!RENDERED[t]){RENDERED[t]=1;({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
+  if(!RENDERED[t]){RENDERED[t]=1;({elastic:renderElastic,overview:renderOverview,winners:renderWinners,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
   else if(t==='map')requestDraw()}
 $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
 {const ft=$('#f-toggle');if(ft)ft.onclick=()=>{const c=ft.closest('.filters'),o=c.classList.toggle('open');ft.setAttribute('aria-expanded',o);ft.textContent=o?'Hide filters':'Filters'}}
-function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({span:renderSpan,overview:renderOverview,winners:renderWinners,stiff:renderStiff,opt:renderOpt})[t]()}}
+function rerenderAll(){for(const t of Object.keys(RENDERED)){if(t==='map'){renderChips();updateCounts();requestDraw()}else({elastic:renderElastic,overview:renderOverview,winners:renderWinners,opt:renderOpt})[t]()}}
 basketUI();
 $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
   document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
 try{const t=localStorage.getItem('atlas-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',rerenderAll);
-{const t=location.hash.slice(1).replace(/[^a-z]/g,'');go(t in{span:1,overview:1,map:1,winners:1,stiff:1,opt:1}?t:'overview')}
+{const t=location.hash.slice(1).replace(/[^a-z]/g,''),old={stiff:'elastic',span:'elastic'};go(old[t]||(t in{elastic:1,overview:1,map:1,winners:1,opt:1}?t:'overview'));if(t==='span'){const j=()=>{const e=document.getElementById('el-span');e&&e.scrollIntoView&&e.scrollIntoView()};setTimeout(j,0);window.addEventListener('load',j)}}
 </script>
 </body>
 </html>
