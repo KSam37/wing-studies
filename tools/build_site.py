@@ -36,6 +36,35 @@ def _commit() -> str:
         return "local"
 
 
+def landing_figure(D: dict, max_points: int = 9000) -> dict:
+    """Data for the landing page's background figure: a sample of the atlas's thrust-torque
+    points (verified / settled only), the observed frontier, and one labelled specimen wing."""
+    C = D["cols"]
+    good = {i for i, s in enumerate(D["statuses"]) if s in ("verified", "ok")}
+    # The elastic campaigns share one root chord, stroke and speed; the older rigid catalog
+    # spans much larger wings and would squash the figure, so it is left out of this plate.
+    campaign = {i for i, st in enumerate(D["studies"]) if st["id"] != "catalog"}
+    pts = [(q, t) for q, t, s, st in zip(C["Q"], C["T"], C["S"], C["s"])
+           if s in good and st in campaign and q is not None and t is not None and q > 0 and t > 0]
+    qs, ts = sorted(p[0] for p in pts), sorted(p[1] for p in pts)
+    qmax, tmax = qs[int(.99 * (len(qs) - 1))], ts[int(.99 * (len(ts) - 1))]
+    inside = [p for p in pts if p[0] <= qmax and p[1] <= tmax]
+    step = max(1, len(inside) // max_points)
+    sample = [[round(q, 4), round(t, 4)] for q, t in inside[::step]]
+    frontier, best = [], -1.0
+    for q, t in sorted(inside):
+        if t > best:
+            best = t
+            frontier.append([round(q, 4), round(t, 4)])
+    # Specimen: the top performer for the hardware configuration (0.5 mm sheet + rod, 1 Hz).
+    cand = [w for w in D["winners"] if w.get("model") == "t0.50r" and w.get("freq") == 1.0 and w.get("chords")]
+    w = max(cand, key=lambda w: w["thrust"]) if cand else max(D["winners"], key=lambda w: w["thrust"])
+    model = next((m["label"] for m in D["models"] if m["id"] == w["model"]), w["model"])
+    specimen = {"chords": w["chords"], "half_span": w["half_span"], "tip_twist": w.get("tip_twist") or 0,
+                "label": f"{model} · {w['freq']:g} Hz · {w['thrust']:.2f} N at {w['torque']:.2f} N·m"}
+    return {"scatter": sample, "frontier": frontier, "axes": [round(qmax, 3), round(tmax, 3)], "specimen": specimen}
+
+
 def build(out: Path) -> None:
     now = dt.datetime.now(dt.timezone.utc)
     commit = _commit()
@@ -54,20 +83,11 @@ def build(out: Path) -> None:
         if src.exists():
             shutil.copytree(src, out / "atlas" / sub)
 
-    # Landing page: headline numbers and a few real top-performing outlines for the background.
-    winners = [w for w in D["winners"] if w.get("chords") and w.get("half_span")]
-    rigid = {m["id"]: m["thickness"] is None for m in D["models"]}
-    bg = []
-    for w in sorted(winners, key=lambda w: -w["thrust"]):
-        key = tuple(round(c) for c in w["chords"])
-        if any(tuple(round(c) for c in b["chords"]) == key for b in bg):
-            continue
-        bg.append({"chords": w["chords"], "half_span": w["half_span"], "flex": not rigid.get(w["model"], False)})
     site = {"wings": len(D["cols"]["s"]) + sum(1 for p in D.get("span_comparisons", [])
                                                for k in ("baseline", "spanwise") if isinstance(p.get(k), dict)
                                                and p[k].get("mean_thrust_N") is not None),
             "studies": len(D["studies"]), "top": len(D["winners"]),
-            "span_pairs": len(D.get("span_comparisons", [])), "wings_bg": bg[:12]}
+            "span_pairs": len(D.get("span_comparisons", [])), **landing_figure(D)}
     landing = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
     landing = (landing.replace("/*__SITE_DATA__*/", _js(site)).replace("__REPO__", REPO_URL)
                .replace("__BUILT__", f"{D['built']} ({commit})"))
