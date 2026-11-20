@@ -68,6 +68,20 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .chip .c{font-variant-numeric:tabular-nums;color:var(--muted);margin-left:6px}
 .ctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:10px}
 .ctl label{font-size:12.5px;color:var(--text-2)}
+.filters .viewbar{padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.fh{font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.fgrid{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px}
+@media (max-width:1180px){.fgrid{grid-template-columns:1fr 1fr}}
+@media (max-width:760px){.fgrid{grid-template-columns:1fr}}
+fieldset.fg{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:8px 12px 10px;margin:0;min-width:0}
+fieldset.fg legend{font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:0 6px}
+.frow{display:grid;grid-template-columns:88px 1fr;gap:8px;align-items:start;margin:6px 0}
+.frow .fl{font-size:12.5px;color:var(--text-2);padding-top:4px}
+.frow.sub{transition:opacity .15s}
+.frow label{font-size:12.5px;color:var(--text-2)}
+.span2{position:relative;display:inline-block;width:150px;height:18px}
+.span2 input{position:absolute;left:0;top:0;width:100%;margin:0;pointer-events:none;background:none}
+.span2 input::-webkit-slider-thumb{pointer-events:auto}.span2 input::-moz-range-thumb{pointer-events:auto}
 select{font:inherit;font-size:13px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:3px 6px}
 .mapwrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px}
 @media (max-width:980px){.mapwrap{grid-template-columns:1fr}}
@@ -130,32 +144,44 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
 <section class="tab" id="t-map">
   <h2>Every simulated wing</h2>
   <p class="lede">Each dot is one design from one study. Scroll to zoom at the cursor, drag to pan, double-click to reset. Hover to see the outline; click for details and, where one was rendered, the Ptera animation. Stars mark the winners of each category.</p>
-  <div class="card">
-    <div class="ctl">
+  <div class="card filters">
+    <div class="ctl viewbar">
+      <span class="fh">View</span>
       <label>X <select id="ax-x"></select></label>
       <label>Y <select id="ax-y"></select></label>
-      <label>Colour by <select id="colorby"><option value="model">plate model</option><option value="study">study</option><option value="freq">frequency</option></select></label>
-      <label><input type="checkbox" id="only-lim"> only ≤ 1 N·m</label>
-      <label>Source <select id="source"><option value="all">all</option><option value="1">searches</option><option value="2">shape map / sweep</option></select></label>
-      <label>Quality <select id="quality"><option value="good">verified / settled</option><option value="unc">+ uncertain (hollow)</option><option value="all">everything</option></select></label>
-      <button class="iconbtn" id="csv">Download visible as CSV</button>
+      <label>Colour by <select id="colorby"><option value="study">study</option><option value="model">material</option><option value="struct">structural model</option><option value="freq">frequency</option></select></label>
+      <span style="flex:1"></span>
+      <button class="iconbtn" id="f-reset" style="width:auto;padding:0 10px">Reset filters</button>
+      <button class="iconbtn" id="csv" style="width:auto;padding:0 10px">Download visible as CSV</button>
     </div>
-    <div class="ctl"><span class="small muted" style="min-width:64px">Study</span><div class="chips" id="f-study"></div></div>
-    <div class="ctl"><span class="small muted" style="min-width:64px">Frequency</span><div class="chips" id="f-freq"></div></div>
-    <div class="ctl"><span class="small muted" style="min-width:64px">Plate</span><div class="chips" id="f-model"></div></div>
-    <div class="ctl"><span class="small muted" style="min-width:64px">Spanwise elasticity</span><div class="chips" id="f-elasticity"></div></div>
-    <div class="ctl"><span class="small muted" style="min-width:64px">Objective</span><div class="chips" id="f-obj"></div></div>
-    <div class="ctl"><span class="small muted" style="min-width:64px">Half-span</span>
-      <label>from <input type="number" id="sp-lo" step="5" style="width:76px"> mm</label>
-      <input type="range" id="sp-lo-r" step="1" style="width:150px" aria-label="Minimum half-span">
-      <input type="range" id="sp-hi-r" step="1" style="width:150px" aria-label="Maximum half-span">
-      <label>to <input type="number" id="sp-hi" step="5" style="width:76px"> mm</label>
-      <button class="iconbtn" id="sp-all" style="width:auto;padding:0 8px">All spans</button>
-      <span class="tiny muted">effective half-span: root to the last non-zero chord</span></div>
-    <div class="ctl" id="cat-ctl" style="margin-bottom:0"><span class="small muted" style="min-width:64px">Rigid catalog</span>
-      <label>Conditions <select id="cat-cohort"></select></label>
-      <label>Study <select id="cat-study" style="max-width:340px"></select></label>
-      <label><input type="checkbox" id="cat-root"> 200 mm root only</label></div>
+    <div class="fgrid">
+      <fieldset class="fg"><legend>Data source</legend>
+        <div class="frow"><span class="fl">Study</span><div class="chips" id="f-study"></div></div>
+        <div class="frow"><span class="fl">Searches</span><div class="chips" id="f-obj-search"></div></div>
+        <div class="frow"><span class="fl">Sampling</span><div class="chips" id="f-obj-sample"></div></div>
+        <div class="frow"><span class="fl">Reruns</span><div class="chips" id="f-obj-rerun"></div></div>
+        <div class="frow sub" id="cat-ctl"><span class="fl">Rigid catalog</span><div class="chips">
+          <label>Conditions <select id="cat-cohort" style="max-width:230px"></select></label>
+          <label>Study <select id="cat-study" style="max-width:230px"></select></label>
+          <label><input type="checkbox" id="cat-root"> 200 mm root only</label></div></div>
+      </fieldset>
+      <fieldset class="fg"><legend>Wing</legend>
+        <div class="frow"><span class="fl">Material</span><div class="chips" id="f-model"></div></div>
+        <div class="frow"><span class="fl">Structural model</span><div class="chips" id="f-struct"></div></div>
+        <div class="frow"><span class="fl">Half-span</span><div class="chips">
+          <input type="number" id="sp-lo" step="5" style="width:64px" aria-label="Minimum half-span (mm)">
+          <span class="span2"><input type="range" id="sp-lo-r" step="1" aria-label="Minimum half-span"><input type="range" id="sp-hi-r" step="1" aria-label="Maximum half-span"></span>
+          <input type="number" id="sp-hi" step="5" style="width:64px" aria-label="Maximum half-span (mm)"><span class="tiny muted">mm</span>
+          <button class="chip" id="sp-all">All spans</button></div></div>
+        <p class="tiny muted" style="margin:2px 0 0">Effective half-span: root to the last non-zero chord. Structural model is the physics used to simulate the wing, not what it is made of.</p>
+      </fieldset>
+      <fieldset class="fg"><legend>Conditions &amp; quality</legend>
+        <div class="frow"><span class="fl">Frequency</span><div class="chips" id="f-freq"></div></div>
+        <div class="frow"><span class="fl">Root torque</span><div class="chips" id="f-lim"></div></div>
+        <div class="frow"><span class="fl">Result quality</span><div class="chips" id="f-quality"></div></div>
+        <p class="tiny muted" style="margin:2px 0 0">Verified = two stabilization settings agree; settled = rigid solve converged over cycles. Neither is experimental validation.</p>
+      </fieldset>
+    </div>
   </div>
   <div class="mapwrap">
     <div>
@@ -367,8 +393,23 @@ function renderOverview(){
 /* ======================================================================================
    Wing map (canvas)
    ====================================================================================== */
-const M={x:'torque',y:'thrust',color:'study',elasticity:new Set([0,1]),objs:new Set([1,2,4,8,32,64,128,256,512]),onlyLim:false,source:'all',quality:'good',catCohort:-1,catStudy:-1,catRoot:false,
-  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([1]),models:new Set(D.models.map((_,i)=>i)),view:null,sel:null};
+// Facets. A map row's model id is either a base material ("t0.50r") or a rerun of one ("span-flex:t0.50r").
+// Material = what the wing is made of; structural model = the physics it was simulated with.
+const BASE_OF=D.models.map(m=>m.id.includes(':')?m.id.split(':')[1]:m.id);
+const MAT_OF=BASE_OF.map(b=>MODEL[b]?MODEL[b].i:0);
+const STRUCT_OF=D.models.map((m,i)=>m.id.startsWith('span-flex')?2:BASE_OF[i]==='rigid'?0:1);
+const MATS=D.models.map((m,i)=>i).filter(i=>!D.models[i].id.includes(':'));
+const STRUCTS=[[0,'Rigid'],[1,'Chordwise twist'],[2,'Span + chord bending']], STRUCT_VAR=['--neutral','--s1','--s2'];
+const structColor=k=>css(STRUCT_VAR[k]);
+const QUAL_OF=st=>GOOD.has(st)?0:st==='uncertain'?1:2;
+const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / unresolved']];
+const OBJ_GROUPS={'f-obj-search':[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[128,'Earlier rigid searches']],
+  'f-obj-sample':[[32,'Shape map (campaigns)'],[64,'Geometric sweep'],[256,'Earlier rigid sweeps']],
+  'f-obj-rerun':[[512,'Matched elasticity comparisons']]};
+const ALL_OBJS=Object.values(OBJ_GROUPS).flat().map(x=>x[0]);
+const mapDefaults=()=>({objs:new Set(ALL_OBJS),lim:new Set([0,1]),quality:new Set([0]),catCohort:-1,catStudy:-1,catRoot:false,
+  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2])});
+const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];
 const WIN_ROWS=new Map(); D.winners.forEach(w=>{if(w.row!=null)WIN_ROWS.set(w.row,w)});
@@ -380,10 +421,9 @@ function initMapControls(){
   $('#ax-x').onchange=e=>{M.x=e.target.value;M.view=null;drawMap()};
   $('#ax-y').onchange=e=>{M.y=e.target.value;M.view=null;drawMap()};
   $('#colorby').onchange=e=>{M.color=e.target.value;drawMap()};
-  $('#only-lim').onchange=e=>{M.onlyLim=e.target.checked;M.view=null;drawMap()};
-  $('#source').onchange=e=>{M.source=e.target.value;M.view=null;drawMap()};
-  $('#quality').onchange=e=>{M.quality=e.target.value;M.view=null;drawMap()};
   $('#csv').onclick=downloadCSV;
+  $('#f-reset').onclick=()=>{Object.assign(M,mapDefaults(),{spLo:SPAN_LIM[0],spHi:SPAN_LIM[1],view:null});spSync();
+    if(CAT){$('#cat-cohort').value=-1;$('#cat-study').value=-1;$('#cat-root').checked=false}drawMap()};
   const spSync=()=>{$('#sp-lo').value=M.spLo;$('#sp-hi').value=M.spHi;$('#sp-lo-r').value=M.spLo;$('#sp-hi-r').value=M.spHi};
   for(const id of ['sp-lo','sp-hi','sp-lo-r','sp-hi-r']){const el=$('#'+id);el.min=SPAN_LIM[0];el.max=SPAN_LIM[1];
     el.oninput=()=>{let v=+el.value;if(!isFinite(v))return;v=Math.max(SPAN_LIM[0],Math.min(SPAN_LIM[1],v));
@@ -406,34 +446,33 @@ function chipRow(el,items,set,colorFn){
     chipRow(el,items,set,colorFn);M.view=null;drawMap()});
 }
 function renderChips(){
-  chipRow($('#f-elasticity'),[[0,'Off · rigid / chordwise'],[1,'On · span + chord']],M.elasticity,null);
   chipRow($('#f-study'),D.studies.map((s,i)=>[i,s.label]),M.studies,M.color==='study'?studyColor:null);
+  for(const [id,items] of Object.entries(OBJ_GROUPS))chipRow($('#'+id),items,M.objs,null);
+  chipRow($('#f-model'),MATS.map(i=>[i,D.models[i].label]),M.models,M.color==='model'?(i=>modelColor(D.models[i].id)):null);
+  chipRow($('#f-struct'),STRUCTS,M.struct,M.color==='struct'?structColor:null);
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
-  chipRow($('#f-obj'),[[1,'Max thrust, torque ≤ 1 N·m'],[2,'λ = 0.75'],[4,'λ = 1.25'],[8,'λ = 1.75'],[32,'Shape map (campaigns)'],[64,'Geometric sweep'],[128,'Earlier rigid studies: objective searches'],[256,'Earlier rigid studies: geometry sweeps'],[512,'Elasticity comparisons']],M.objs,null);
-  chipRow($('#f-model'),D.models.map((m,i)=>[i,m.label]),M.models,M.color==='model'?(i=>modelColor(D.models[i].id)):null);
+  chipRow($('#f-lim'),[[0,`≤ ${LIM} N·m`],[1,`> ${LIM} N·m`]],M.lim,null);
+  chipRow($('#f-quality'),QUALS,M.quality,null);
 }
 function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   let objMask=0;for(const b of M.objs)objMask|=b;
   for(let i=0;i<N;i++){
-    if(!M.elasticity.has(EXTRA[i]?.kind==='spanwise'?1:0))continue;
-    if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(C.m[i]))continue;
-    const st=STATUS[C.S[i]];
-    if(M.quality==='good'&&!GOOD.has(st))continue;
-    if(M.quality==='unc'&&!(GOOD.has(st)||st==='uncertain'))continue;
-    if(M.source!=='all'&&!(C.src[i]&+M.source))continue;
+    const m=C.m[i];
+    if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m]))continue;
+    if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
     if(!(C.obj[i]&objMask))continue;
     if(isCat(i)){const r=i-CAT0;if(M.catCohort>=0&&CAT.cohort[r]!==M.catCohort)continue;if(M.catStudy>=0&&CAT.study[r]!==M.catStudy)continue;if(M.catRoot&&!(Math.abs(ROOT[i]-200)<0.5))continue}
-    if(M.onlyLim&&C.Q[i]>LIM)continue;
+    if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
     if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
     const x=gx(i),y=gy(i); if(x==null||y==null||!isFinite(x)||!isFinite(y))continue;
     out.push(i);
   }
-  // stiff / rigid first so the soft and rod sheets draw on top
-  const order=[0,1,2,3,4,6,5]; out.sort((a,b)=>order[C.m[a]]-order[C.m[b]]);
+  // stiff / rigid first so the soft and rod sheets draw on top; reruns over their source campaign
+  const order=[0,1,2,3,4,6,5],rank=i=>(order[MAT_OF[C.m[i]]]??9)*4+STRUCT_OF[C.m[i]]; out.sort((a,b)=>rank(a)-rank(b));
   return out;
 }
-function colorOf(i){return M.color==='model'?modelColor(D.models[C.m[i]].id):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
+function colorOf(i){return M.color==='model'?modelColor(BASE_OF[C.m[i]]):M.color==='struct'?structColor(STRUCT_OF[C.m[i]]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
 const PAD={l:62,r:16,t:14,b:46};
 function fitView(){
   const gx=AXES[M.x].get,gy=AXES[M.y].get;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
@@ -491,10 +530,12 @@ function paint(){
 function star(x,y,R,fill,ring){ctx.beginPath();for(let j=0;j<10;j++){const a=-Math.PI/2+j*Math.PI/5,rr=j%2?R*.45:R;ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}ctx.closePath();
   ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=ring;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=css('--text');ctx.stroke()}
 function updateCounts(){
-  const lab=M.color==='model'?D.models.map((m,i)=>[modelColor(m.id),m.label,i,'m']):M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i,'s']):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i,'f']);
-  const cnt={};for(const i of VIS){const k=M.color==='model'?C.m[i]:M.color==='study'?C.s[i]:C.f[i];cnt[k]=(cnt[k]||0)+1}
+  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
+  const key=i=>M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
+  const cnt={};for(const i of VIS){const k=key(i);cnt[k]=(cnt[k]||0)+1}
   $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ category winner (≤ ${LIM} N·m)</span>`;
-  $('#cat-ctl').style.opacity=M.studies.has(D.studies.length-1)?1:.45;
+  const catOn=STUDY.catalog&&M.studies.has(STUDY.catalog.i);
+  $('#cat-ctl').style.opacity=catOn?1:.4;$$('#cat-ctl select,#cat-ctl input').forEach(e=>e.disabled=!catOn);
   const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
   $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} winners). Shift-click a chip to show only that one. Hollow = uncertain.`;
 }
@@ -615,7 +656,7 @@ function renderWinners(){
   }
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.elasticity.add(EXTRA[i]?.kind==='spanwise'?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(D.models.map((_,k)=>k));M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);M.quality.add(QUAL_OF(STATUS[C.S[i]]));for(const b of ALL_OBJS)if(C.obj[i]&b)M.objs.add(b);M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Stiffness effects
@@ -784,7 +825,7 @@ $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matc
   document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
 try{const t=localStorage.getItem('atlas-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',rerenderAll);
-go((location.hash||'#overview').slice(1).replace(/[^a-z]/g,'')in{span:1,overview:1,map:1,winners:1,stiff:1,opt:1}?location.hash.slice(1):'overview');
+{const t=location.hash.slice(1).replace(/[^a-z]/g,'');go(t in{span:1,overview:1,map:1,winners:1,stiff:1,opt:1}?t:'overview')}
 </script>
 </body>
 </html>
