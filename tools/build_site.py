@@ -38,7 +38,7 @@ def _commit() -> str:
 
 def landing_figure(D: dict, max_points: int = 9000) -> dict:
     """Data for the landing page's background figure: a sample of the atlas's thrust-torque
-    points (verified / settled only), the observed frontier, and one labelled specimen wing."""
+    points (verified / settled only) and the observed frontier."""
     C = D["cols"]
     good = {i for i, s in enumerate(D["statuses"]) if s in ("verified", "ok")}
     # The elastic campaigns share one root chord, stroke and speed; the older rigid catalog
@@ -56,13 +56,7 @@ def landing_figure(D: dict, max_points: int = 9000) -> dict:
         if t > best:
             best = t
             frontier.append([round(q, 4), round(t, 4)])
-    # Specimen: the 0.5 mm sheet top performer at 1 Hz, a well-proportioned, evenly tapered planform.
-    cand = [w for w in D["winners"] if w.get("model") == "t0.50" and w.get("freq") == 1.0 and w.get("chords")]
-    w = max(cand, key=lambda w: w["thrust"]) if cand else max(D["winners"], key=lambda w: w["thrust"])
-    model = next((m["label"] for m in D["models"] if m["id"] == w["model"]), w["model"])
-    specimen = {"chords": w["chords"], "half_span": w["half_span"], "tip_twist": w.get("tip_twist") or 0,
-                "label": f"{model} · {w['freq']:g} Hz · {w['thrust']:.2f} N at {w['torque']:.2f} N·m"}
-    return {"scatter": sample, "frontier": frontier, "axes": [round(qmax, 3), round(tmax, 3)], "specimen": specimen}
+    return {"scatter": sample, "frontier": frontier, "axes": [round(qmax, 3), round(tmax, 3)]}
 
 
 def build(out: Path) -> None:

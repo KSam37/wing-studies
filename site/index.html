@@ -94,19 +94,15 @@ document.getElementById('stats').innerHTML=[
   .map(([v,l])=>`<div><b>${v}</b>${l}</div>`).join('');
 
 /* ---------- background figure ----------
-   A quiet plate of the data itself: verified / settled atlas wings as faint points on
-   thrust-vs-torque axes, the observed frontier as one hairline, and an inset specimen,
-   a top-performing wing pair drawn as a hairline panel mesh. The specimen's kinematics
-   are illustrative (prescribed stroke, twist scaled to its solved tip-twist amplitude);
-   they are not a replay of the solve. */
+   A quiet, static plate of the data itself: verified / settled campaign wings as faint
+   points on thrust-vs-torque axes, and the observed frontier as one hairline. */
 const cv=document.getElementById('bg'),ctx=cv.getContext('2d');
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const css=v=>getComputedStyle(root).getPropertyValue(v).trim();
 let w0=0,h0=0,plate=null;
-function resize(){const d=devicePixelRatio||1;w0=cv.clientWidth;h0=cv.clientHeight;cv.width=w0*d;cv.height=h0*d;ctx.setTransform(d,0,0,d,0,0);plate=null}
+function resize(){const d=devicePixelRatio||1;w0=cv.clientWidth;h0=cv.clientHeight;cv.width=w0*d;cv.height=h0*d;ctx.setTransform(d,0,0,d,0,0);plate=null;if(typeof draw==='function')draw()}
 addEventListener('resize',resize);resize();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>plate=null);
-new MutationObserver(()=>plate=null).observe(root,{attributes:true,attributeFilter:['data-theme']});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{plate=null;draw()});
+new MutationObserver(()=>{plate=null;draw()}).observe(root,{attributes:true,attributeFilter:['data-theme']});
 
 function ticks(max,n){const raw=max/n,p=10**Math.floor(Math.log10(raw)),s=[1,2,2.5,5,10].find(m=>m*p>=raw)*p;const t=[];for(let v=0;v<=max+1e-9;v+=s)t.push(+v.toFixed(6));return t}
 function drawPlate(){
@@ -133,39 +129,8 @@ function drawPlate(){
   g.globalAlpha=1;
   return {off,L,R,T,B};
 }
-// specimen inset
-const SP=S.specimen,chords=SP.chords.filter(c=>c>0).map(c=>c/1000),span=SP.half_span/1000;
-const twistAmp=Math.min(.35,Math.abs(SP.tip_twist||0)*Math.PI/180);
-function spPt(sd,yi,xc,t){                          // sd = +1 right wing, -1 left wing
-  const n=chords.length,s=yi/(n-1),c=chords[yi],ph=2*Math.PI*.35*t;
-  const flap=(4+30*Math.sin(ph))*Math.PI/180;        // about -26° to +34°, as in the campaigns
-  const tw=twistAmp*s*Math.cos(ph);
-  const r=s*span,X=-xc*c*Math.cos(tw),Y=sd*r*Math.cos(flap),Z=r*Math.sin(flap)-xc*c*Math.sin(tw);
-  const tilt=1.0,ct=Math.cos(tilt),st=Math.sin(tilt);return [Y,-(Z*ct-X*st)];   // seen from above and ahead
-}
-function draw(t){
-  if(!plate)plate=drawPlate();
-  ctx.clearRect(0,0,w0,h0);ctx.drawImage(plate.off,0,0,w0,h0);
-  if(w0<720)return;                                  // no inset on small screens
-  const box=Math.min(280,w0*.21),bx=plate.R-box,by=plate.T+10;
-  const text=css('--text-2'),muted=css('--muted'),dark=getComputedStyle(root).colorScheme==='dark';
-  const k=box*.47/span,ox=bx+box/2,oy=by+box*.3;
-  ctx.save();ctx.globalAlpha=dark?.55:.6;ctx.strokeStyle=text;
-  const n=chords.length,NC=4;
-  for(const sd of [1,-1]){
-    const P=(i,x)=>{const [a,b]=spPt(sd,i,x,t);return [ox+a*k,oy+b*k]};
-    ctx.lineWidth=.6;
-    for(let i=0;i<n;i++){ctx.beginPath();for(let j=0;j<=NC;j++)ctx.lineTo(...P(i,j/NC));ctx.stroke()}
-    for(let j=0;j<=NC;j++){ctx.beginPath();for(let i=0;i<n;i++)ctx.lineTo(...P(i,j/NC));ctx.stroke()}
-    ctx.lineWidth=1.3;ctx.beginPath();for(let i=0;i<n;i++)ctx.lineTo(...P(i,0));ctx.stroke();
-  }
-  ctx.globalAlpha=dark?.5:.55;ctx.fillStyle=muted;ctx.font='11px system-ui,-apple-system,"Segoe UI",sans-serif';ctx.textAlign='center';
-  ctx.fillText('Top performer: '+SP.label,ox,by+box*.56);
-  ctx.fillText('illustrative stroke, −26° to +34°',ox,by+box*.56+15);
-  ctx.restore();
-}
-if(reduce)draw(.5);
-else{const t0=performance.now();(function loop(now){draw((now-t0)/1000);requestAnimationFrame(loop)})(t0)}
+function draw(){if(!plate)plate=drawPlate();ctx.clearRect(0,0,w0,h0);ctx.drawImage(plate.off,0,0,w0,h0)}
+draw();
 </script>
 </body>
 </html>
