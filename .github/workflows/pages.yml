@@ -22,12 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # a pull request's merge commit plus its base (HEAD^1)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Pull-request rules (one study per PR, immutable results)
+        if: github.event_name == 'pull_request'
+        run: python tools/check_pr.py HEAD^1
       - name: Validate study specs and results
         run: python -m wingstudy validate --all
       - name: Study tests (standard library only)

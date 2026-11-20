@@ -329,5 +329,76 @@ class RunAndMerge(unittest.TestCase):
         self.assertEqual(D["span_comparisons"][0]["source"]["study"], spec["id"])
 
 
+def _check_pr():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("check_pr", ROOT / "tools" / "check_pr.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+class PullRequestRules(unittest.TestCase):
+    """tools/check_pr.py: one study per PR, immutable results (CONTRIBUTING.md)."""
+    def setUp(self):
+        self.P = _check_pr().problems
+        self.run_done = lambda sid: sid == "2026-11-19-done"
+
+    def test_new_study_alone_passes(self):
+        e, n = self.P([("A", "studies/2026-11-20-new/spec.json"), ("A", "studies/2026-11-20-new/results.json")], self.run_done)
+        self.assertEqual((e, n), ([], []))
+
+    def test_code_only_passes_and_generated_data_gets_a_notice(self):
+        e, n = self.P([("M", "wingstudy/model.py"), ("M", "atlas/data/meta.json")], self.run_done)
+        self.assertEqual(e, [])
+        self.assertEqual(len(n), 1)
+
+    def test_two_studies_or_study_plus_code_fail(self):
+        e, _ = self.P([("A", "studies/2026-11-20-a/spec.json"), ("A", "studies/2026-11-20-b/spec.json")], self.run_done)
+        self.assertTrue(any("one study per pull request" in x for x in e))
+        e, _ = self.P([("A", "studies/2026-11-20-a/spec.json"), ("M", "README.md")], self.run_done)
+        self.assertTrue(any("README.md" in x for x in e))
+
+    def test_run_study_is_frozen(self):
+        for st in ("M", "D"):
+            for f in ("spec.json", "results.json", "status.json"):
+                e, _ = self.P([(st, f"studies/2026-11-19-done/{f}")], self.run_done)
+                self.assertTrue(any("immutable" in x for x in e), (st, f))
+        e, _ = self.P([("R100", "studies/2026-11-19-done/results.json", "studies/2026-11-19-done/old.json")], self.run_done)
+        self.assertTrue(any("renames" in x for x in e))
+        e, _ = self.P([("A", "studies/2026-11-19-done/notes.md")], self.run_done)
+        self.assertEqual(e, [])
+
+    def test_proposed_study_spec_can_still_change(self):
+        e, _ = self.P([("M", "studies/2026-11-20-new/spec.json")], self.run_done)
+        self.assertEqual(e, [])
+
+
+class RunGoAhead(unittest.TestCase):
+    """`run` needs a person's go-ahead for studies estimated over LARGE_MINUTES."""
+    def _run(self, minutes, tty, answer="", yes=False):
+        from wingstudy.studies import cli
+        import argparse
+        a = argparse.Namespace(id="x", workers=1, force=False, yes=yes)
+        plan = {"to_solve": 9, "estimated_minutes": minutes, "estimated_minutes_max": minutes}
+        out = {"counts": {}}
+        with mock.patch("wingstudy.studies.run.plan", return_value=plan), \
+             mock.patch("wingstudy.studies.run.run", return_value=out) as run, \
+             mock.patch("sys.stdin") as stdin, mock.patch("builtins.input", return_value=answer), \
+             mock.patch("builtins.print"):
+            stdin.isatty.return_value = tty
+            return cli.cmd_run(a), run.called
+
+    def test_small_study_starts_unattended(self):
+        self.assertEqual(self._run(5, tty=False), (0, True))
+
+    def test_large_unattended_study_is_refused(self):
+        self.assertEqual(self._run(90, tty=False), (3, False))
+        self.assertEqual(self._run(90, tty=False, yes=True), (0, True))
+
+    def test_large_study_asks_at_a_terminal(self):
+        self.assertEqual(self._run(90, tty=True, answer="n"), (1, False))
+        self.assertEqual(self._run(90, tty=True, answer="y"), (0, True))
+
+
 if __name__ == "__main__":
     unittest.main()

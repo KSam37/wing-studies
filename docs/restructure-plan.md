@@ -1,10 +1,10 @@
 # Wing Studies restructuring plan
 
-*Drafted 19 Nov 2026. Status: decisions taken, not yet started.*
+*Drafted 19 Nov 2026. Status: Phases 0–5 done by 20 Nov 2026 (see each phase).*
 
 ## Decisions taken (19 Nov 2026)
 
-- **One repo: `KSam37/wing-studies`** (currently private, default branch `main`, collaborator `mattfern902`). We write to `main`.
+- **One repo: `KSam37/wing-studies`** (public since Phase 1, default branch `main`, collaborator `mattfern902`). We write to `main`.
 - **Aim:** take the prototype to a polished research tool that can be shared with the community.
 - **Data that matters:** the ~60k wings in the atlas (55,170 unique catalog wings plus campaign, refined and spanwise rows). The old rigid studies in `outputs/studies` (3.7 GB) and the master SQLite/Excel catalogs are **legacy**. They stay local, isolated in an archive folder, and are not pushed again.
 - **Animations:** recompress or shorten. If they still don't fit, the site goes without animations and they stay local. A test gave about **14× reduction** (see Media below), so they should fit.
@@ -208,7 +208,10 @@ Each phase ends in a working state and can be paused there.
 - Study kinds, revised 2026-11-20: the builder offers *Evolutionary search* (`evolutionary`, new: `studies/evolve.py` drives `coordinate_search.climb` unchanged through the study cache, lineages in parallel waves; objective, seeds, solves per lineage and mutation rules are set in the spec), *Geometric sweep* and *Re-solve chosen wings* (`design-set`). Matched comparison is now a structure choice (`structure: "matched"`) available to every kind. Planned search winners get a *Shape evolution* player in the atlas, drawn from their lineage's accepted outlines, so they need no campaign database.
 - Queue states: `proposed` (spec merged, no results) and `complete`. `running` appears only on the machine doing the run, since `status.json` is committed with the results.
 
-### Phase 5: Agents and docs (1–2 days)
+### Phase 5: Agents and docs (1–2 days) — done 2026-11-20
+
+Done: root docs moved into `docs/` (refreshed `system-guide.md`, new `studies.md`, index `docs/README.md`), the 19 November handoff and frontier notes in `docs/history/`; `AGENTS.md` is the one agent entry point (`CLAUDE.md` imports it) with the spec → validate → plan → PR recipe; `CONTRIBUTING.md` and a PR template carry the rules; `tools/check_pr.py` enforces one study per PR and immutable results in CI; `publish --spec-only` opens a proposal PR; `run` asks before (and, unattended, refuses) studies estimated over 30 minutes.
+
 - Merge the system guide, the READMEs and the `CLAUDE.md` files into `docs/` plus one agent entry point, with historical workflows moved to `docs/history/`.
 - Document an agent recipe: write spec → `validate` → `plan` → open PR. Agents never run large batches unattended and never merge.
 - Write contributor rules: one PR per study, results immutable, no hand edits to generated data.

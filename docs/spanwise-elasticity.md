@@ -1,5 +1,7 @@
 # Span bending and independent sheet flex
 
+> `wingstudy/spanwise_elastic.py` still refers to this file by its old name, SPANWISE_ELASTICITY.md. The module's bytes are part of the structural fingerprint, so its docstring is left unchanged.
+
 This is an **opt-in reduced structural model**, coupled to Ptera's existing aeroelastic UVLM. It adds span deflection to version 1.5; it is not a native Ptera feature and does not modify the installed Ptera source. Historical atlas results remain torsion-only and are not relabeled or recomputed. The current focus is **0.5 mm carbon sheet without a rod**, including finite rotations.
 
 ## Finite-rotation mode (recommended for the bare 0.5 mm sheet)
@@ -110,6 +112,8 @@ Confidence is high for the tested linear structural calculations and constrained
 
 
 ## Lightweight atlas workflow
+
+> Historical (17 November 2026): the separate atlas folder, `span_comparison.html` and the ZIP described here were replaced by the atlas on the website (`atlas/data/`, *Elasticity effects* tab). Kept for provenance.
 
 The existing exported atlas now links to **Spanwise elasticity**. The comparison page embeds its data and runs offline. Independent checkboxes show chordwise-only reruns, span-flex reruns, and optionally uncertain/unverified cases. Connections compare identical outlines. The source atlas value is kept separately from the matched rerun.
 

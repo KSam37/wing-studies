@@ -1,5 +1,7 @@
 # Independent wing coordinate optimization
 
+> Written for the campaign GUI. Planned *evolutionary* studies ([studies.md](studies.md)) drive the same climb (`wingstudy/coordinate_search.py`) through the study cache; their objectives, seeds, step, smallest chord and solve budget come from the spec's `search` block, and a torque-budget objective is available beside λ.
+
 Goal: evolve each shape/span seed independently using one editable torque weight,
 then compare the measured thrust–torque tradeoffs. Native Ptera physics is unchanged.
 

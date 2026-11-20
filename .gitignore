@@ -5,7 +5,8 @@
 !/.gitmodules
 !/README.md
 !/RESULTS.md
-!/OPTIMIZATION_STRATEGY.md
+!/AGENTS.md
+!/CONTRIBUTING.md
 !/requirements-windows.lock
 !/ptera-source.json
 !/setup_windows.py
@@ -16,10 +17,6 @@
 !/Run Frontier Span Study.cmd
 !/Run Span Flex Study.cmd
 !/CLAUDE.md
-!/V1_5_SYSTEM_GUIDE.md
-!/SPANWISE_ELASTICITY.md
-!/SPANWISE_FRONTIER_STUDY.md
-!/RESTRUCTURE_PLAN.md
 !/wingstudy/
 !/pyproject.toml
 !/PteraSoftware

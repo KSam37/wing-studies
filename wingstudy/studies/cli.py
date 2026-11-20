@@ -13,6 +13,10 @@ from . import spec as S
 
 COMMANDS = ("new", "import", "validate", "plan", "run", "publish", "list")
 
+# Studies estimated above this many minutes (the maximum, for searches) need a person's go-ahead:
+# `run` asks at a terminal and refuses when no one is there, unless --yes is given.
+LARGE_MINUTES = 30
+
 
 def _id(arg: str) -> str:
     """Accept a study id or a path to its folder or spec.json."""
@@ -123,7 +127,18 @@ def cmd_run(a) -> int:
     if not a.yes:
         from .run import plan
         p = plan(sid, workers=a.workers)
-        print(f"{p['to_solve']} cases to solve, about {p['estimated_minutes']} min. Starting.")
+        most = p.get("estimated_minutes_max", p["estimated_minutes"])
+        print(f"{p['to_solve']} cases to solve, about {p['estimated_minutes']} min"
+              + (f" (at most {most})" if most != p["estimated_minutes"] else "") + ".")
+        if most > LARGE_MINUTES:
+            if not sys.stdin.isatty():
+                print(f"Not starting: this study may take more than {LARGE_MINUTES} min and no one is at the terminal. "
+                      "Rerun with --yes once a person has approved it.", file=sys.stderr)
+                return 3
+            if input("Start it? [y/N] ").strip().lower() not in ("y", "yes"):
+                print("not started")
+                return 1
+        print("Starting.")
     out = run(sid, workers=a.workers, force=a.force)
     failed = out["counts"].get("failed", 0)
     print(f"results: {S.study_dir(sid) / 'results.json'}" + (f"  ({failed} failed)" if failed else ""))
@@ -141,14 +156,16 @@ def cmd_publish(a) -> int:
     sid = _id(a.id)
     e = _validate_one(sid)
     folder = S.study_dir(sid)
-    if not (folder / "results.json").exists():
-        e.append("results.json: missing; run the study first")
+    if not a.spec_only and not (folder / "results.json").exists():
+        e.append("results.json: missing; run the study first, or use --spec-only to propose it")
     if e:
         print("cannot publish:\n  " + "\n  ".join(e), file=sys.stderr)
         return 1
-    spec, results = S.load(sid), S.read_json(folder / "results.json")
+    spec = S.load(sid)
+    results = None if a.spec_only else S.read_json(folder / "results.json")
     branch = f"study/{sid}"
     rel = folder.relative_to(S.ROOT).as_posix()
+    add = f"{rel}/spec.json" if a.spec_only else rel
     start = _git("rev-parse", "--abbrev-ref", "HEAD", capture=True).stdout.strip()
     import tempfile
     keep = Path(tempfile.mkdtemp(prefix="wingstudy-publish-")) / sid
@@ -160,10 +177,18 @@ def cmd_publish(a) -> int:
     try:
         _git("fetch", "origin", "main")
         _git("checkout", "-B", branch, "origin/main")
-        _git("add", "--", rel)
-        counts = ", ".join(f"{v} {k}" for k, v in sorted(results["counts"].items()))
-        msg = (f"Study {sid}: {spec['title']}\n\n{spec['question']}\n\n"
-               f"{len(results['cases'])} cases ({counts}); code identity {results['code']['digest']}.\n")
+        _git("add", "--", add)
+        if a.spec_only:
+            from .run import plan
+            p = plan(sid, workers=4)
+            size = (f"at most {p['cases']} solves (typically about {p['to_solve']}), about {p['estimated_minutes']} min "
+                    f"(at most {p['estimated_minutes_max']}) on 4 workers" if spec["kind"] == "evolutionary" else
+                    f"{p['cases']} cases, about {p['estimated_minutes']} min on 4 workers")
+            msg = f"Propose study {sid}: {spec['title']}\n\n{spec['question']}\n\nPlan: {size}; code identity {p['code']}.\n"
+        else:
+            counts = ", ".join(f"{v} {k}" for k, v in sorted(results["counts"].items()))
+            msg = (f"Study {sid}: {spec['title']}\n\n{spec['question']}\n\n"
+                   f"{len(results['cases'])} cases ({counts}); code identity {results['code']['digest']}.\n")
         _git("commit", "-m", msg)
         if a.no_push:
             print(f"committed on {branch}; not pushed (--no-push)")
@@ -172,14 +197,21 @@ def cmd_publish(a) -> int:
         if shutil.which("gh") is None:
             print(f"pushed {branch}. Install the GitHub CLI (gh) or open the pull request on GitHub.")
             return 0
-        body = (f"**Question.** {spec['question']}\n\n**Author.** {spec['author']} · **Kind.** {spec['kind']} · "
-                f"**Cases.** {len(results['cases'])} ({counts})\n\n"
-                f"Code identity `{results['code']['digest']}` (structural `{results['code']['structural'][:12]}`, "
-                f"Ptera {results['code'].get('ptera')}).\n\n"
-                "CI validates the spec and results and builds the site with this study merged into the atlas. "
-                "A person merges this pull request; it is never merged automatically.\n")
+        if a.spec_only:
+            body = (f"**Proposed study.** {spec['question']}\n\n**Author.** {spec['author']} · **Kind.** {spec['kind']} · "
+                    f"**Plan.** {size}\n\nCode identity `{p['code']}`. No results yet: merging records the proposal; "
+                    "a person decides when it runs.\n")
+            title = f"Propose study {sid}: {spec['title']}"
+        else:
+            body = (f"**Question.** {spec['question']}\n\n**Author.** {spec['author']} · **Kind.** {spec['kind']} · "
+                    f"**Cases.** {len(results['cases'])} ({counts})\n\n"
+                    f"Code identity `{results['code']['digest']}` (structural `{results['code']['structural'][:12]}`, "
+                    f"Ptera {results['code'].get('ptera')}).\n\n"
+                    "CI validates the spec and results and builds the site with this study merged into the atlas. "
+                    "A person merges this pull request; it is never merged automatically.\n")
+            title = f"Study {sid}: {spec['title']}"
         r = subprocess.run(["gh", "pr", "create", "--base", "main", "--head", branch, "--title",
-                            f"Study {sid}: {spec['title']}", "--body", body], cwd=S.ROOT, text=True)
+                            title, "--body", body], cwd=S.ROOT, text=True)
         return r.returncode
     finally:
         _git("checkout", start, check=False)
@@ -225,10 +257,12 @@ def main(cmd: str, argv: list[str]) -> int:
             ap.add_argument("--json", action="store_true")
         else:
             ap.add_argument("--force", action="store_true", help="overwrite results made from a different spec")
-            ap.add_argument("--yes", action="store_true", help="skip the estimate")
+            ap.add_argument("--yes", action="store_true",
+                            help=f"skip the estimate and the go-ahead question for studies over {LARGE_MINUTES} min")
     elif cmd == "publish":
         ap.add_argument("id")
         ap.add_argument("--no-push", action="store_true", help="commit on the study branch only")
+        ap.add_argument("--spec-only", action="store_true", help="propose the study: commit only spec.json, no results needed")
     a = ap.parse_args(argv)
     if cmd == "validate" and not a.all and not a.ids:
         ap.error("give study ids or --all")
