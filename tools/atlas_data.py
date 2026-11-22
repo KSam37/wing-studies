@@ -27,6 +27,28 @@ CHORDS_PER_ROW = 8
 VOLATILE = ("built", "build_id")  # set by each site build
 
 
+# When the imported studies were run, for the atlas timeline. The campaign databases are not in
+# the repository, so their dates come from what is recorded elsewhere: the atlas that first held
+# them was built 2026-11-15 (a Sunday, the end of the weekend campaign) and the last rigid study
+# before them is dated 2026-11-09. Correct these if a better record turns up. Rigid-catalog rows
+# carry their own study timestamps (catalog.json); planned studies use results.json "completed".
+RUN_DATES = {
+    "rod": ("2026-11-15T12:00:00", "on or before 15 Nov 2026; exact date not recorded"),
+    "weekend": ("2026-11-15T12:00:00", "weekend of 14-15 Nov 2026; exact date not recorded"),
+    "sweep": ("2026-11-15T12:00:00", "on or before 15 Nov 2026; exact date not recorded"),
+    "spanfree": ("2026-11-15T12:00:00", "on or before 15 Nov 2026; exact date not recorded"),
+}
+SPAN_COMPARISON_DATE = ("2026-11-18T12:00:00", "matched spanwise reruns, 17-18 Nov 2026")
+
+
+def attach_run_dates(D: dict) -> None:
+    """Give each imported study a run_date (ISO, local time) for the atlas timeline."""
+    for st in D["studies"]:
+        if st["id"] in RUN_DATES and "run_date" not in st:
+            st["run_date"], st["run_date_note"] = RUN_DATES[st["id"]]
+    D["span_comparison_date"] = list(SPAN_COMPARISON_DATE)
+
+
 def read_embedded(html_path: Path) -> dict:
     text = html_path.read_text(encoding="utf-8")
     m = re.search(r'<script[^>]*id="atlas-data"[^>]*>(.*?)</script>', text, re.S)

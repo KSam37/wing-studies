@@ -108,7 +108,8 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
         D["studies"].append({"id": spec["id"], "label": spec["title"], "short": spec["title"][:28],
                              "about": f"{spec['question']} Planned study by {spec['author']}; "
                                       f"{len(results['cases'])} cases, code {results['code']['digest']}.",
-                             "planned": True, "kind": spec["kind"]})
+                             "planned": True, "kind": spec["kind"],
+                             **({"run_date": results["completed"]} if results.get("completed") else {})})
         roles = _search_roles(results) if spec["kind"] == "evolutionary" else {}
         rows_of = {}
         for c in results["cases"]:
