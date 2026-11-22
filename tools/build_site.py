@@ -88,6 +88,7 @@ def build(out: Path) -> None:
     commit = _commit()
     D = atlas_data.assemble(ROOT / "atlas" / "data")
     atlas_data.attach_evolution(D, ROOT / "atlas" / "media")
+    atlas_data.attach_run_dates(D)
     planned = study_atlas.completed(ROOT / "studies")
     if planned:
         print(f"planned studies: {len(planned)} ({study_atlas.merge(D, planned)} map rows)")

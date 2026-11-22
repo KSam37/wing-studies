@@ -262,6 +262,12 @@ Every wing carries a **leading-edge boundary condition** tag, derived from its a
 
 No current model has a sheet hinged freely on a rod that also bends along the span.
 
+**Timeline.** A slider above the Wing map shows only the wings run up to a chosen point; *Play* steps through the studies in order while the axes stay fixed. Each wing's run time comes from:
+- **Rigid-catalog rows:** their source study's timestamp (the `YYYYMMDD-HHMMSS` prefix of its id in `catalog.json`).
+- **Planned studies:** `results.json` `completed`.
+- **Matched spanwise reruns:** `SPAN_COMPARISON_DATE`.
+- **Rod, plate, sweep and span-free campaigns:** `RUN_DATES` in `tools/atlas_data.py`. Their databases are missing, so these dates are approximate ("on or before 15 Nov 2026") and the timeline says so. Correct them there if a better record turns up.
+
 Wing map: independent Spanwise elasticity chips (Off = rigid/chordwise, On = span+chord); other study/material/frequency/quality filters still apply; inspecting a result enables its elasticity category.
 
 Elasticity effects, part 2: default is the union of maximum-thrust designs under each model at each frequency, among verified pairs (six highlights, no torque ceiling); the alternative shows all 149 verified pairs. Blue/orange identify the model; dashed links join the SAME wing, not an interpolated optimum. Clicking a highlight opens paired native animations with side/front/top controls. Only the six highlights have new replays.

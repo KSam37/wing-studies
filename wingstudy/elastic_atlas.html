@@ -72,6 +72,13 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .filters .viewbar{padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:12px}
 .fh{font-size:12px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .fgrid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}
+.timeline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.timeline .tl-track{position:relative;flex:1 1 320px;min-width:220px;padding-bottom:8px}
+.timeline input[type=range]{width:100%;margin:0}
+.timeline .tl-ticks{position:absolute;left:8px;right:8px;bottom:0;height:6px}
+.timeline .tl-ticks span{position:absolute;bottom:0;width:2px;margin-left:-1px;border-radius:1px;background:var(--axis)}
+.timeline .tl-ticks span.on{background:var(--text-2)}
+.timeline .tl-out{flex:1 1 300px;min-width:240px}
 @media (max-width:1180px){.fgrid{grid-template-columns:1fr}}
 @media (max-width:760px){.fgrid{grid-template-columns:1fr}}
 fieldset.fg{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:8px 12px 10px;margin:0;min-width:0}
@@ -212,6 +219,12 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
   </div>
   <div class="mapwrap">
     <div>
+      <div class="timeline card" style="padding:8px 12px" id="timeline">
+      <span class="fh">Timeline</span>
+      <button class="iconbtn" id="tl-play" style="width:auto;padding:0 10px" aria-label="Play the timeline">▶ Play</button>
+      <div class="tl-track"><input type="range" id="tl-r" min="0" step="1" aria-label="Show wings run up to this point"><div class="tl-ticks" id="tl-ticks" aria-hidden="true"></div></div>
+      <div class="tl-out small" id="tl-out" aria-live="polite"></div>
+    </div>
       <div class="plotbox"><canvas id="map" tabindex="0" aria-label="Scatter plot of all designs"></canvas>
         <div class="zoom"><button class="iconbtn" id="zin" title="Zoom in">+</button><button class="iconbtn" id="zout" title="Zoom out">−</button><button class="iconbtn" id="zbudget" title="Zoom to the torque budget" style="width:auto;padding:0 8px">≤ 1 N·m</button><button class="iconbtn" id="zreset" title="Reset view" style="width:auto;padding:0 8px">Reset</button></div>
       </div>
@@ -278,6 +291,22 @@ const AREA=new Float32Array(N), SPAN=new Float32Array(N), ROOT=new Float32Array(
 for(let i=0;i<N;i++){
   if(isCat(i)){AREA[i]=CAT.area[i-CAT0]??NaN;SPAN[i]=C.H[i];ROOT[i]=CAT.root[i-CAT0]??NaN;continue}
   const o=activeOutline(chordsOf(i),C.H[i]);let a=0;for(let j=1;j<o.length;j++)a+=(o[j][0]-o[j-1][0])*(o[j][1]+o[j-1][1])/2;AREA[i]=a/100;SPAN[i]=o.length?o[o.length-1][0]:0;ROOT[i]=chordsOf(i)[0]}
+// When each wing was run (ms). Rigid-catalog rows: their source study's timestamp (its id starts
+// YYYYMMDD-HHMMSS). Matched spanwise reruns: their own date. Everything else: its study's run_date.
+const tsOf=id=>{const m=/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)/.exec(id||'');return m?new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]).getTime():NaN};
+const STUDY_T=D.studies.map(s=>s.run_date?Date.parse(s.run_date):NaN), CAT_T=CAT?CAT.studies.map(s=>tsOf(s.id)):[];
+const PAIR_T=D.span_comparison_date?Date.parse(D.span_comparison_date[0]):NaN;
+const TIME=new Float64Array(N);
+for(let i=0;i<N;i++)TIME[i]=isCat(i)?CAT_T[CAT.study[i-CAT0]]:EXTRA[i]?PAIR_T:STUDY_T[C.s[i]];
+// One timeline step per distinct run time; each step names what it added. Undated rows always show.
+const TL=(()=>{const by=new Map();
+  for(let i=0;i<N;i++){const t=TIME[i];if(!isFinite(t))continue;let e=by.get(t);if(!e)by.set(t,e={t,n:0,what:new Map(),note:''});e.n++;
+    const name=isCat(i)?CAT.studies[CAT.study[i-CAT0]].name.replace(/^Old — \d{4}-\d\d-\d\d — /,'').replace(/ — \d+ (successful cases|evaluated designs).*$/,'')+' (rigid catalog)'
+      :EXTRA[i]?'Matched spanwise reruns':D.studies[C.s[i]].label;
+    e.what.set(name,(e.what.get(name)||0)+1);
+    if(!isCat(i)&&!EXTRA[i]&&D.studies[C.s[i]].run_date_note)e.note=D.studies[C.s[i]].run_date_note;
+    if(EXTRA[i]&&D.span_comparison_date)e.note=D.span_comparison_date[1]}
+  return [...by.values()].sort((a,b)=>a.t-b.t)})();
 // polygon [[spanwise mm, chordwise mm]...] for any row
 function polyOf(i){if(isCat(i)){const f=CAT.poly[i-CAT0],p=[];for(let k=0;k<f.length;k+=2)p.push([f[k],f[k+1]]);return p}
   const o=designOutline(i);return [...o.map(p=>[p[0],0]),...o.slice().reverse().map(p=>[p[0],p[1]])]}
@@ -414,7 +443,7 @@ function coverageCard(){
   h+=`<tr><td><b>Total</b></td>${colTot.map(n=>`<td class="n"><b>${n.toLocaleString()}</b></td>`).join('')}<td class="n"><b>${N.toLocaleString()}</b></td></tr></table></div></div>`;
   return h;
 }
-function coverageGo(mi,k){Object.assign(M,mapDefaults(),{view:null});M.models=new Set([mi]);M.struct=new Set([k]);
+function coverageGo(mi,k){Object.assign(M,mapDefaults(),{view:null,until:TL.length-1});M.models=new Set([mi]);M.struct=new Set([k]);
   M.freqs=new Set(D.freqs.map((_,i)=>i));M.quality=new Set(QUALS.map(q=>q[0]));go('map');drawMap()}
 function renderOverview(){
   const R=Object.fromEntries(D.refined.filter(r=>(r.set||'campaign')==='campaign').map(r=>[r.model,r]));
@@ -506,7 +535,7 @@ const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new
   studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k))});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
-M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];
+M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];M.until=TL.length-1;
 const WIN_ROWS=new Map(); D.winners.forEach(w=>{if(w.row!=null)WIN_ROWS.set(w.row,w)});
 let VIS=[], SX=null, SY=null, HOVER=null;
 const cv=$('#map'), ctx=cv.getContext('2d');
@@ -517,8 +546,9 @@ function initMapControls(){
   $('#ax-y').onchange=e=>{M.y=e.target.value;M.view=null;drawMap()};
   $('#colorby').onchange=e=>{M.color=e.target.value;drawMap()};
   $('#csv').onclick=downloadCSV;
-  $('#f-reset').onclick=()=>{Object.assign(M,mapDefaults(),{spLo:SPAN_LIM[0],spHi:SPAN_LIM[1],view:null});spSync();
+  $('#f-reset').onclick=()=>{tlStop();Object.assign(M,mapDefaults(),{spLo:SPAN_LIM[0],spHi:SPAN_LIM[1],until:TL.length-1,view:null});spSync();
     drawMap()};
+  initTimeline();
   const spSync=()=>{$('#sp-lo').value=M.spLo;$('#sp-hi').value=M.spHi;$('#sp-lo-r').value=M.spLo;$('#sp-hi-r').value=M.spHi};
   for(const id of ['sp-lo','sp-hi','sp-lo-r','sp-hi-r']){const el=$('#'+id);el.min=SPAN_LIM[0];el.max=SPAN_LIM[1];
     el.oninput=()=>{let v=+el.value;if(!isFinite(v))return;v=Math.max(SPAN_LIM[0],Math.min(SPAN_LIM[1],v));
@@ -526,6 +556,30 @@ function initMapControls(){
       spSync();M.view=null;drawMap()}}
   $('#sp-all').onclick=()=>{M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];spSync();M.view=null;drawMap()};
   spSync();
+}
+// Timeline: show only the wings run up to the chosen step. Moving it keeps the current view, so
+// the map fills in in place; Play steps from the first study to the last.
+const fmtWhen=t=>{const d=new Date(t);return d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})+(d.getHours()===12&&d.getMinutes()===0?'':' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))};
+let tlTimer=null;
+function tlStop(){if(tlTimer){clearInterval(tlTimer);tlTimer=null}$('#tl-play').textContent='▶ Play';$('#tl-play').setAttribute('aria-label','Play the timeline')}
+function tlRender(){
+  const r=$('#tl-r');r.value=M.until;
+  $('#tl-ticks').innerHTML=TL.map((e,k)=>`<span class="${k<=M.until?'on':''}" style="left:${TL.length>1?100*k/(TL.length-1):0}%;height:${3+Math.min(3,Math.log10(e.n))}px"></span>`).join('');
+  if(!TL.length){$('#tl-out').textContent='No run dates recorded.';return}
+  const e=TL[M.until],upto=TL.slice(0,M.until+1).reduce((a,x)=>a+x.n,0),total=TL.reduce((a,x)=>a+x.n,0);
+  const what=[...e.what].map(([w,n])=>`${esc(w)} (+${n.toLocaleString()})`).join(', ');
+  $('#tl-out').innerHTML=`<b>${M.until===TL.length-1?'All studies':'Up to '+fmtWhen(e.t)}</b> · ${upto.toLocaleString()} of ${total.toLocaleString()} wings run`
+    +`<br><span class="muted">Step ${M.until+1} of ${TL.length}, ${fmtWhen(e.t)}: ${what}${e.note?` · <i>${esc(e.note)}</i>`:''}</span>`;
+}
+function initTimeline(){
+  const r=$('#tl-r');r.max=Math.max(0,TL.length-1);
+  r.oninput=()=>{tlStop();M.until=+r.value;drawMap()};
+  $('#tl-play').onclick=()=>{if(tlTimer){tlStop();return}
+    if(M.until>=TL.length-1)M.until=0;
+    if(!M.view){const u=M.until;M.until=TL.length-1;VIS=filtered();fitView();M.until=u}  // fix the axes to the full set
+    $('#tl-play').textContent='❚❚ Pause';$('#tl-play').setAttribute('aria-label','Pause the timeline');drawMap();
+    tlTimer=setInterval(()=>{if(M.until>=TL.length-1){tlStop();return}M.until++;drawMap()},700)};
+  tlRender();
 }
 function chipRow(el,items,set,colorFn){
   el.innerHTML=items.map(([v,l,t])=>`<button class="chip ${set.has(v)?'':'off'}" data-v="${v}" aria-pressed="${set.has(v)}"${t?` title="${esc(t)}"`:''}>${colorFn?`<span class="sw" style="background:${colorFn(v)}"></span>`:''}${l}<span class="c" data-c="${v}"></span></button>`).join('');
@@ -554,6 +608,7 @@ function filtered(){
     if(!lambdaPass(i))continue;
     if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
     if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
+    if(TL.length&&TIME[i]>TL[M.until].t)continue;
     const x=gx(i),y=gy(i); if(x==null||y==null||!isFinite(x)||!isFinite(y))continue;
     out.push(i);
   }
@@ -575,7 +630,7 @@ function fitView(){
 let rafPending=false;
 function drawMap(){
   VIS=filtered(); if(!M.view)fitView();
-  renderChips(); updateCounts();
+  renderChips(); updateCounts(); tlRender();
   requestDraw();
 }
 function requestDraw(){if(rafPending)return;rafPending=true;requestAnimationFrame(()=>{rafPending=false;paint()})}
@@ -799,7 +854,7 @@ function renderWinners(){
     h+='</div></div>'}
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.until=TL.length-1;M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Elasticity effects, part 1: rigid → chordwise
