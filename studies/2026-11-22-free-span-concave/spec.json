@@ -1,0 +1,18 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-22-free-span-concave",
+ "title": "Free-span lambda searches from the concave seed, 0.5 mm sheet pivoting on the leading edge",
+ "author": "sam",
+ "question": "When the half-span is free to move, where do lambda = 0.75, 1.25 and 1.75 climbs from the 400 mm concave seed take span and chord for a 0.5 mm sheet pivoting freely about a straight leading edge at 1 Hz, and how do the results fill the thrust-torque frontier beyond the campaigns' five fixed spans?",
+ "kind": "evolutionary",
+ "structure": "chordwise",
+ "models": ["t0.50"],
+ "frequencies_hz": [1.0],
+ "numerics": [{"span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4}],
+ "search": {"objectives": [{"lambda": 0.75}, {"lambda": 1.25}, {"lambda": 1.75}],
+            "seed_half_spans_mm": [400], "seed_families": ["concave"],
+            "solves_per_lineage": 150, "step_mm": 20, "min_chord_mm": 10, "decreasing": true,
+            "span_step_mm": 40, "half_span_limits_mm": [150, 800]},
+ "notes": "Boundary condition: the chordwise 0.5 mm model (t0.50) holds the leading edge straight and in place and lets each strip pitch about it against the sheet's own torsion and warping, with the root fixed to the hub. That is also the model of a sheet hinged freely on a rigid rod: the rod's torsion is excluded and its mass sits on the pitch axis, adding no pitching load. Rod bending along the span is not modelled. Seed: concave family, 200 mm root; in the rigid lambda studies the best concave lineage was at the largest seed span. Span step 40 mm (20 mm half-step), chord step 20 mm, numerics as the campaigns' nominal setting.",
+ "budget": {"max_cases": 453}
+}
