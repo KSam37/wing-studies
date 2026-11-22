@@ -1,0 +1,5142 @@
+{
+ "schema": "wingstudy/study-results@1",
+ "study": "2026-11-22-free-span-concave",
+ "kind": "evolutionary",
+ "spec_sha256": "7026ad163a0077a83968bc0148beb753d148d727bf02f3a7545c3d59f0f8641f",
+ "code": {
+  "structural": "c13001410d04fe1a9ce9f1e1e660100eafe86254de2edd7d3aa3661b634f6d1c",
+  "solve_path": "1feda8c970e4717f59a7662f33b4589dc30edcdf0eeefb8987725c2f9706eb34",
+  "ptera": "5.1.0",
+  "numpy": "2.5.4",
+  "numba": "0.68.0",
+  "scipy": "1.18.1",
+  "python": "3.14.2",
+  "digest": "80ca99756b95ec04"
+ },
+ "completed": "2026-11-22T16:31:52Z",
+ "counts": {
+  "verified": 62
+ },
+ "cases": [
+  {
+   "wing": "concave seed, 400 mm",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    149.591837,
+    106.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "68f76db8cb4d10bc2a803b6a",
+   "case_id": "c0001",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.149592,
+      0.106939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "68f76db8cb4d10bc2a803b6a"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.804687566651331,
+   "torque_Nm": 1.0096766056703934,
+   "tip_twist_deg": 57.4993109532146,
+   "rms_lift_N": 4.573071640123023,
+   "verification_spread_pct": 0.019980086446565907,
+   "cycle_error_pct": 0.006246463644505712,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.6
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    149.591837,
+    106.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "e83378046c1a99e0796a78fa",
+   "case_id": "c0002",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.149592,
+      0.106939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "e83378046c1a99e0796a78fa"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.8870106567274108,
+   "torque_Nm": 0.9874266921744533,
+   "tip_twist_deg": 63.94108776202816,
+   "rms_lift_N": 4.527944352724004,
+   "verification_spread_pct": 0.058167834102170766,
+   "cycle_error_pct": 0.010671493189553708,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.11
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    149.591837,
+    106.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 360.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "c3fefc129a9f80f3e55abbfe",
+   "case_id": "c0003",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.149592,
+      0.106939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.36,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c3fefc129a9f80f3e55abbfe"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6381168493627642,
+   "torque_Nm": 1.009255581378851,
+   "tip_twist_deg": 47.29173924386693,
+   "rms_lift_N": 4.480161899299372,
+   "verification_spread_pct": 0.1981464822458022,
+   "cycle_error_pct": 0.007113102623492364,
+   "dt_s": 0.02,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 15.34
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    169.591837,
+    106.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "baf8d3d7f1cfa2cb312c9de3",
+   "case_id": "c0004",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.169592,
+      0.106939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "baf8d3d7f1cfa2cb312c9de3"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.916071678483235,
+   "torque_Nm": 1.0050859433515127,
+   "tip_twist_deg": 63.92348346150868,
+   "rms_lift_N": 4.6934537342984015,
+   "verification_spread_pct": 0.06629022230394027,
+   "cycle_error_pct": 0.010957925794456065,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 27.92
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    106.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "814302fb5c57e276c4e4a1f4",
+   "case_id": "c0005",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.106939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "814302fb5c57e276c4e4a1f4"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.8407532471921,
+   "torque_Nm": 0.9623572551667896,
+   "tip_twist_deg": 63.96059847344111,
+   "rms_lift_N": 4.320486403965642,
+   "verification_spread_pct": 0.05452090799276303,
+   "cycle_error_pct": 0.011877446566583311,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 28.44
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "b023bed2a834ceaf0d6d48e4",
+   "case_id": "c0006",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "b023bed2a834ceaf0d6d48e4"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.7567595509967795,
+   "torque_Nm": 0.9334877607334686,
+   "tip_twist_deg": 64.18513335199196,
+   "rms_lift_N": 4.28129125081588,
+   "verification_spread_pct": 0.09188897813643226,
+   "cycle_error_pct": 0.014227099181695162,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 27.72
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    72.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "23279ddebdbbc456985bf2ba",
+   "case_id": "c0007",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.072041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "23279ddebdbbc456985bf2ba"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.904113665133766,
+   "torque_Nm": 0.9833239053467133,
+   "tip_twist_deg": 63.74650915349865,
+   "rms_lift_N": 4.308968024985324,
+   "verification_spread_pct": 0.04259389789943638,
+   "cycle_error_pct": 0.01134248759037672,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 28.12
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    86.938776,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "a054ec888a8cb95a9e4b95a5",
+   "case_id": "c0008",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.086939,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "a054ec888a8cb95a9e4b95a5"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.8410078308267948,
+   "torque_Nm": 0.9668498370504646,
+   "tip_twist_deg": 64.00663672549092,
+   "rms_lift_N": 4.239298843793752,
+   "verification_spread_pct": 0.0530552805241471,
+   "cycle_error_pct": 0.01368806196516723,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.88
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "47d0ad1e6bacf70f7bea3269",
+   "case_id": "c0009",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "47d0ad1e6bacf70f7bea3269"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.966890599360175,
+   "torque_Nm": 0.9964549012881072,
+   "tip_twist_deg": 63.39024585618693,
+   "rms_lift_N": 4.3605441476281825,
+   "verification_spread_pct": 0.019340787427061887,
+   "cycle_error_pct": 0.009432724425635728,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 32.53
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "4d89fab8ae32fae17d6b989c",
+   "case_id": "c0010",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "4d89fab8ae32fae17d6b989c"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6649331925489075,
+   "torque_Nm": 0.9080311181185726,
+   "tip_twist_deg": 64.56615593405448,
+   "rms_lift_N": 4.135508089102379,
+   "verification_spread_pct": 0.1394769833896429,
+   "cycle_error_pct": 0.02202435671036586,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 39.44
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    52.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "32d1c124a5ffacc9e74d2239",
+   "case_id": "c0011",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.052041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "32d1c124a5ffacc9e74d2239"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.833232329469261,
+   "torque_Nm": 0.9614417354120465,
+   "tip_twist_deg": 63.75744315239491,
+   "rms_lift_N": 4.388666802183809,
+   "verification_spread_pct": 0.053165422351978874,
+   "cycle_error_pct": 0.009651931665508352,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 38.62
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    52.040816,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "8af23a3db26c29df9ff98871",
+   "case_id": "c0012",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.052041,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "8af23a3db26c29df9ff98871"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.955870947070664,
+   "torque_Nm": 0.9983785956299883,
+   "tip_twist_deg": 63.602094090004215,
+   "rms_lift_N": 4.332261992663717,
+   "verification_spread_pct": 0.01929873656437289,
+   "cycle_error_pct": 0.01043179527905823,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.19
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    25.510204,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "e6d85314e8aa8e00c81294b6",
+   "case_id": "c0013",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.02551,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "e6d85314e8aa8e00c81294b6"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.9608957501249957,
+   "torque_Nm": 1.0305406513129303,
+   "tip_twist_deg": 62.69570258851644,
+   "rms_lift_N": 4.4029422700618355,
+   "verification_spread_pct": 1.5381777466466233,
+   "cycle_error_pct": 0.007997707775731685,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.69
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "41408ec7136ab750e7bf7cfd",
+   "case_id": "c0014",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "41408ec7136ab750e7bf7cfd"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.7108413987348006,
+   "torque_Nm": 0.920221552909464,
+   "tip_twist_deg": 64.38613847843592,
+   "rms_lift_N": 4.211284431540266,
+   "verification_spread_pct": 0.13292406823185482,
+   "cycle_error_pct": 0.017420326043380622,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.82
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    62.040816,
+    44.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "e74f9183e5b2e0ae26a05d42",
+   "case_id": "c0015",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.062041,
+      0.044898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "e74f9183e5b2e0ae26a05d42"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.7989619199259526,
+   "torque_Nm": 0.9481208452027606,
+   "tip_twist_deg": 63.97301987423869,
+   "rms_lift_N": 4.341760253187178,
+   "verification_spread_pct": 0.06950207130838493,
+   "cycle_error_pct": 0.011497327977024963,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.63
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    64.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "bbb2c4ce458b7f01edc5b642",
+   "case_id": "c0016",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.064898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "bbb2c4ce458b7f01edc5b642"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6802552614216997,
+   "torque_Nm": 0.938234531678115,
+   "tip_twist_deg": 64.85243257266943,
+   "rms_lift_N": 4.067410263630821,
+   "verification_spread_pct": 0.20178067545455267,
+   "cycle_error_pct": 0.028109037171572395,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 26.24
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    25.510204,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "a532bb0413674c58af6562bb",
+   "case_id": "c0017",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.02551,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "a532bb0413674c58af6562bb"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.629500628978124,
+   "torque_Nm": 0.905983865230849,
+   "tip_twist_deg": 64.0593924708738,
+   "rms_lift_N": 4.179133621935318,
+   "verification_spread_pct": 0.29858479866653337,
+   "cycle_error_pct": 0.019247976470054298,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 30.59
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "dcddb875309956756ac9798d",
+   "case_id": "c0018",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "dcddb875309956756ac9798d"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.973329311999586,
+   "torque_Nm": 0.9976307021936748,
+   "tip_twist_deg": 63.003130783555946,
+   "rms_lift_N": 4.390694323784557,
+   "verification_spread_pct": 0.08149275692261677,
+   "cycle_error_pct": 0.008296349745752787,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.76
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    64.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "43f2677b7d086cbdfca69638",
+   "case_id": "c0019",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.064898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "43f2677b7d086cbdfca69638"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.720514260736964,
+   "torque_Nm": 0.94657968538714,
+   "tip_twist_deg": 64.70268564455067,
+   "rms_lift_N": 4.141943264336738,
+   "verification_spread_pct": 0.12939445428971652,
+   "cycle_error_pct": 0.0228057557513515,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.71
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    25.510204,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "ed05552af96d6d85281d145b",
+   "case_id": "c0020",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.02551,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "ed05552af96d6d85281d145b"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.67425294702078,
+   "torque_Nm": 0.9438619353072869,
+   "tip_twist_deg": 64.06737258960212,
+   "rms_lift_N": 4.251016351519393,
+   "verification_spread_pct": 1.5470081914819558,
+   "cycle_error_pct": 0.8161091521591074,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.65
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    54.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "434ac5ac2db98157f076b750",
+   "case_id": "c0021",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.054898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "434ac5ac2db98157f076b750"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6725781432630846,
+   "torque_Nm": 0.9221873190529576,
+   "tip_twist_deg": 64.7472113682969,
+   "rms_lift_N": 4.101766843720378,
+   "verification_spread_pct": 0.14813647589901768,
+   "cycle_error_pct": 0.02502591744287868,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.55
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "3a6a088bb61ed9e9693812ad",
+   "case_id": "c0022",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "3a6a088bb61ed9e9693812ad"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6514232133815363,
+   "torque_Nm": 0.8981158048170282,
+   "tip_twist_deg": 64.34619389600702,
+   "rms_lift_N": 4.163063586788048,
+   "verification_spread_pct": 0.15459344789602467,
+   "cycle_error_pct": 0.022496333619726964,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 23.45
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "38f3a8c79f4996c65ce90156",
+   "case_id": "c0023",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "38f3a8c79f4996c65ce90156"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.953366152032809,
+   "torque_Nm": 0.9871436216050268,
+   "tip_twist_deg": 63.480644234399904,
+   "rms_lift_N": 4.345779522374144,
+   "verification_spread_pct": 0.020427704830389144,
+   "cycle_error_pct": 0.00940455417687642,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.82
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "293f732f47b8cb62ff065a16",
+   "case_id": "c0024",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "293f732f47b8cb62ff065a16"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.942062761259571,
+   "torque_Nm": 1.2377963181641316,
+   "tip_twist_deg": 68.94238942714202,
+   "rms_lift_N": 4.444867938511193,
+   "verification_spread_pct": 1.2276510797208453,
+   "cycle_error_pct": 0.02192105317433717,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 34.55
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    54.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "4d4fd2868eec1442e568cea2",
+   "case_id": "c0025",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.054898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "4d4fd2868eec1442e568cea2"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.7160053941775835,
+   "torque_Nm": 0.931772064850158,
+   "tip_twist_deg": 64.57510730923252,
+   "rms_lift_N": 4.177403618307901,
+   "verification_spread_pct": 0.12061688406626488,
+   "cycle_error_pct": 0.01981308327418545,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.95
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    34.897959,
+    25.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "09bed610a34421cf14e8c2af",
+   "case_id": "c0026",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.034898,
+      0.02551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "09bed610a34421cf14e8c2af"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6990375996335034,
+   "torque_Nm": 0.9183095072696432,
+   "tip_twist_deg": 64.13152182470901,
+   "rms_lift_N": 4.238008609579547,
+   "verification_spread_pct": 0.10543094738569324,
+   "cycle_error_pct": 0.015386999877663947,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.57
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    34.897959,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "8be3223131e0ea6f004185fd",
+   "case_id": "c0027",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.034898,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "8be3223131e0ea6f004185fd"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.672087727864168,
+   "torque_Nm": 0.9046209581628637,
+   "tip_twist_deg": 64.52166368653064,
+   "rms_lift_N": 4.154279941570633,
+   "verification_spread_pct": 0.13361516671845144,
+   "cycle_error_pct": 0.02041956617053859,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 26.76
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "77f4a6a63a0c260b542201d1",
+   "case_id": "c0028",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "77f4a6a63a0c260b542201d1"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.458376847216803,
+   "torque_Nm": 0.8419996330707961,
+   "tip_twist_deg": 64.04500602991038,
+   "rms_lift_N": 4.033410700737871,
+   "verification_spread_pct": 0.07396416184643469,
+   "cycle_error_pct": 0.019929850772628713,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 85.97
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "e4c510837ff3898b47fcd5ef",
+   "case_id": "c0029",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "e4c510837ff3898b47fcd5ef"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.908491982312116,
+   "torque_Nm": 0.9632501829283768,
+   "tip_twist_deg": 66.61636985480038,
+   "rms_lift_N": 4.2482368174703184,
+   "verification_spread_pct": 0.016465359924925718,
+   "cycle_error_pct": 0.011779116204788177,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 32.06
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    10.0,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "71d0467e2cdf1ab69a014e24",
+   "case_id": "c0030",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "71d0467e2cdf1ab69a014e24"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.9375634563823816,
+   "torque_Nm": 0.9895032143501366,
+   "tip_twist_deg": 62.41611475147543,
+   "rms_lift_N": 4.352669490288402,
+   "verification_spread_pct": 0.028233223757205262,
+   "cycle_error_pct": 0.008933155804883863,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.69
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    44.897959,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "ac3c2d87e308b3a8b1f3bc2b",
+   "case_id": "c0031",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.044898,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "ac3c2d87e308b3a8b1f3bc2b"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.7336881573160676,
+   "torque_Nm": 0.9426332847567084,
+   "tip_twist_deg": 64.66710452260618,
+   "rms_lift_N": 4.175051101073607,
+   "verification_spread_pct": 0.18832347360707202,
+   "cycle_error_pct": 0.020084149251684964,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.93
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    13.877551,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "92622592f1b3d063f92c8a78",
+   "case_id": "c0032",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.013878,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "92622592f1b3d063f92c8a78"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.667603863191109,
+   "torque_Nm": 0.9314213371703026,
+   "tip_twist_deg": 64.25697608923322,
+   "rms_lift_N": 4.215095034175503,
+   "verification_spread_pct": 0.5838693090268954,
+   "cycle_error_pct": 0.016327445401726988,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 33.52
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    10.0,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "32a829c96c684f860b5688d0",
+   "case_id": "c0033",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "32a829c96c684f860b5688d0"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.5726442511103915,
+   "torque_Nm": 0.9310112591472461,
+   "tip_twist_deg": 64.68950269035336,
+   "rms_lift_N": 4.156328152709898,
+   "verification_spread_pct": 0.9787403545979222,
+   "cycle_error_pct": 0.2832420485070248,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 25.68
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    30.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "0d83e4321e1944ae12337895",
+   "case_id": "c0034",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.03
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0d83e4321e1944ae12337895"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.8278862746818825,
+   "torque_Nm": 0.9382013335257016,
+   "tip_twist_deg": 67.09311141333436,
+   "rms_lift_N": 4.180783055419578,
+   "verification_spread_pct": 0.015924107094405504,
+   "cycle_error_pct": 0.012507890430598056,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.5
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    0.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "3eb098938becdeff39cf598d",
+   "case_id": "c0035",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.0
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "3eb098938becdeff39cf598d"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.568213585838516,
+   "torque_Nm": 0.9114403539925385,
+   "tip_twist_deg": 59.09458726265163,
+   "rms_lift_N": 4.183659676494176,
+   "verification_spread_pct": 0.008886381723427322,
+   "cycle_error_pct": 0.008252165492490101,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 32.51
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    35.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "02b6f84bd690feb0a8fcaff6",
+   "case_id": "c0036",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.03551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "02b6f84bd690feb0a8fcaff6"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.724768839970927,
+   "torque_Nm": 0.928539940761069,
+   "tip_twist_deg": 64.5945604132501,
+   "rms_lift_N": 4.193878811920548,
+   "verification_spread_pct": 0.11237304794543017,
+   "cycle_error_pct": 0.018768651495310568,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.09
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    15.510204,
+    13.877551,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "d25840302f2755a78ee3f192",
+   "case_id": "c0037",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.01551,
+      0.013878,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "d25840302f2755a78ee3f192"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.675181053633293,
+   "torque_Nm": 0.9176347416575283,
+   "tip_twist_deg": 64.11294927849768,
+   "rms_lift_N": 4.215131198210444,
+   "verification_spread_pct": 0.21671447214164186,
+   "cycle_error_pct": 0.28901779711936443,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.58
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    20.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "ccb975f6a7314c80abfa680e",
+   "case_id": "c0038",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.02
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "ccb975f6a7314c80abfa680e"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.8682697381094564,
+   "torque_Nm": 0.9472887294853642,
+   "tip_twist_deg": 66.88608182469628,
+   "rms_lift_N": 4.214667555683773,
+   "verification_spread_pct": 0.01492116348598025,
+   "cycle_error_pct": 0.012103668974227348,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.11
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    25.510204,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "db3fc328a69d50de69852ba1",
+   "case_id": "c0039",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.02551,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "db3fc328a69d50de69852ba1"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.72564865724375,
+   "torque_Nm": 0.9106164141814888,
+   "tip_twist_deg": 66.22250935217701,
+   "rms_lift_N": 4.187199616413036,
+   "verification_spread_pct": 0.11293618767573485,
+   "cycle_error_pct": 0.01945687118084734,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.11
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    10.0,
+    10.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "7c09152510f271ad056f1207",
+   "case_id": "c0040",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "7c09152510f271ad056f1207"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6870487197943835,
+   "torque_Nm": 0.9196838629228877,
+   "tip_twist_deg": 63.4720872405405,
+   "rms_lift_N": 4.20998284643668,
+   "verification_spread_pct": 0.1400748605876334,
+   "cycle_error_pct": 0.016618997391138635,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 32.52
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    13.877551
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "6faef5abb530587c335795a3",
+   "case_id": "c0041",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.013878
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "6faef5abb530587c335795a3"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.454066948093338,
+   "torque_Nm": 0.8383662114319657,
+   "tip_twist_deg": 64.5794230128399,
+   "rms_lift_N": 4.026535656552134,
+   "verification_spread_pct": 0.07391951101891484,
+   "cycle_error_pct": 0.020085545209046318,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 82.44
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    0.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "f6d4133b211566cb2268fcb3",
+   "case_id": "c0042",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.0
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "f6d4133b211566cb2268fcb3"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.5119797973602833,
+   "torque_Nm": 0.9698187497022331,
+   "tip_twist_deg": 58.7417314730105,
+   "rms_lift_N": 4.294892164590102,
+   "verification_spread_pct": 1.1243735361969274,
+   "cycle_error_pct": 0.42046516217102436,
+   "dt_s": 0.02,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 19.86
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "e052c8e10e08b9c5711ea45e",
+   "case_id": "c0043",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "e052c8e10e08b9c5711ea45e"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.9681479740564285,
+   "torque_Nm": 0.9806235786364169,
+   "tip_twist_deg": 70.31089591923798,
+   "rms_lift_N": 4.2782423057118235,
+   "verification_spread_pct": 0.03143101944443675,
+   "cycle_error_pct": 0.014485324013842367,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 29.77
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    25.510204,
+    25.510204
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "f2f262e603027de6fc300ebc",
+   "case_id": "c0044",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.02551,
+      0.02551
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "f2f262e603027de6fc300ebc"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.675349211473267,
+   "torque_Nm": 0.887482257686305,
+   "tip_twist_deg": 66.85937482511605,
+   "rms_lift_N": 4.144787118480137,
+   "verification_spread_pct": 0.1529032057742101,
+   "cycle_error_pct": 0.019851737947348635,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 31.54
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    25.510204,
+    0.0
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "32c65690c85b553fc98223e2",
+   "case_id": "c0045",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.02551,
+      0.0
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "32c65690c85b553fc98223e2"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6103283603996514,
+   "torque_Nm": 1.0201455181350318,
+   "tip_twist_deg": 61.668366776652064,
+   "rms_lift_N": 4.325894331032439,
+   "verification_spread_pct": 2.964385758945583,
+   "cycle_error_pct": 0.9743361287584537,
+   "dt_s": 0.02,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 14.02
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    13.877551
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "c09353151be1134574d52b5d",
+   "case_id": "c0046",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.013878
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c09353151be1134574d52b5d"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.5595214922460983,
+   "torque_Nm": 0.8605668923913536,
+   "tip_twist_deg": 68.26513771545919,
+   "rms_lift_N": 3.913487122410095,
+   "verification_spread_pct": 0.10682416877569349,
+   "cycle_error_pct": 0.03700194429679904,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 77.17
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    109.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "5d53a1374ca8ac65159f920e",
+   "case_id": "c0047",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.109592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "5d53a1374ca8ac65159f920e"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.918624571377706,
+   "torque_Nm": 0.9670619060339594,
+   "tip_twist_deg": 70.32719551358714,
+   "rms_lift_N": 4.050364444233676,
+   "verification_spread_pct": 0.029356262764336994,
+   "cycle_error_pct": 0.01612494262799105,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 28.71
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    25.510204,
+    25.510204
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "6b032f1ed42cc434242ba705",
+   "case_id": "c0048",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.02551,
+      0.02551
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "6b032f1ed42cc434242ba705"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.6070927176207546,
+   "torque_Nm": 0.8793932059469317,
+   "tip_twist_deg": 69.61605352111619,
+   "rms_lift_N": 3.9175322699910673,
+   "verification_spread_pct": 0.11517503195874491,
+   "cycle_error_pct": 0.039164647451009324,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 115.63
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    13.877551
+   ],
+   "half_span_mm": 460.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "26e8182ee35f69fd00ed5f90",
+   "case_id": "c0049",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.013878
+     ],
+     "half_span": 0.46,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "26e8182ee35f69fd00ed5f90"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.4850743259793937,
+   "torque_Nm": 0.8366254598989498,
+   "tip_twist_deg": 66.14902091538366,
+   "rms_lift_N": 3.963192413338185,
+   "verification_spread_pct": 0.09064684833836,
+   "cycle_error_pct": 0.027919274002907654,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 83.92
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    119.591837,
+    86.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "d56e2cd36c7765ce3d05142a",
+   "case_id": "c0050",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.119592,
+      0.086939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "d56e2cd36c7765ce3d05142a"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.945974879944413,
+   "torque_Nm": 0.974399411625576,
+   "tip_twist_deg": 70.3185290207818,
+   "rms_lift_N": 4.169325013504839,
+   "verification_spread_pct": 0.030028415705288653,
+   "cycle_error_pct": 0.015319610851968642,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 29.91
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    25.510204,
+    25.510204
+   ],
+   "half_span_mm": 460.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "a35823c3f2ece82d8ba46b73",
+   "case_id": "c0051",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.02551,
+      0.02551
+     ],
+     "half_span": 0.46,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "a35823c3f2ece82d8ba46b73"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.682860053211016,
+   "torque_Nm": 0.8900619573532813,
+   "tip_twist_deg": 68.06623971068719,
+   "rms_lift_N": 4.087474447848786,
+   "verification_spread_pct": 0.2982526280051811,
+   "cycle_error_pct": 0.026958489583249565,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.17
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    126.938776,
+    126.938776,
+    92.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    13.877551
+   ],
+   "half_span_mm": 460.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "20f7d478932a378c7cb5e421",
+   "case_id": "c0052",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.126939,
+      0.126939,
+      0.092041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.013878
+     ],
+     "half_span": 0.46,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "20f7d478932a378c7cb5e421"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.478922922548897,
+   "torque_Nm": 0.8332756399061141,
+   "tip_twist_deg": 66.1551461485231,
+   "rms_lift_N": 3.9347364824599014,
+   "verification_spread_pct": 0.0905499321501643,
+   "cycle_error_pct": 0.027804489587623507,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 79.03
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    66.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "237defa6d4eaf075a80cfdde",
+   "case_id": "c0053",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.066939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "237defa6d4eaf075a80cfdde"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.9941304722655127,
+   "torque_Nm": 0.9997913922066205,
+   "tip_twist_deg": 70.32681678456717,
+   "rms_lift_N": 4.2023933432948,
+   "verification_spread_pct": 0.02423152338830181,
+   "cycle_error_pct": 0.01573657685135401,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 29.51
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.25 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    126.938776,
+    126.938776,
+    82.040816,
+    44.897959,
+    25.510204,
+    25.510204,
+    25.510204
+   ],
+   "half_span_mm": 440.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "33c2f166c2d6f30ad2bab49f",
+   "case_id": "c0054",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.126939,
+      0.126939,
+      0.082041,
+      0.044898,
+      0.02551,
+      0.02551,
+      0.02551
+     ],
+     "half_span": 0.44,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "33c2f166c2d6f30ad2bab49f"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.668255322250874,
+   "torque_Nm": 0.8840447350885673,
+   "tip_twist_deg": 66.86069645539584,
+   "rms_lift_N": 4.114881897278058,
+   "verification_spread_pct": 0.13055925234283988,
+   "cycle_error_pct": 0.019879665777530076,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 32.18
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    126.938776,
+    126.938776,
+    112.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    13.877551
+   ],
+   "half_span_mm": 460.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "3ea5ef3476e5e4e6f0508956",
+   "case_id": "c0055",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.126939,
+      0.126939,
+      0.112041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.013878
+     ],
+     "half_span": 0.46,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "3ea5ef3476e5e4e6f0508956"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.429236417847539,
+   "torque_Nm": 0.8325887154121085,
+   "tip_twist_deg": 66.26435213429156,
+   "rms_lift_N": 3.7783907053047816,
+   "verification_spread_pct": 0.12128999757752762,
+   "cycle_error_pct": 0.03802826978009483,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 80.09
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    76.938776,
+    52.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "587ddab1203416de7750e4d1",
+   "case_id": "c0056",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.076939,
+      0.052041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "587ddab1203416de7750e4d1"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.98762970297319,
+   "torque_Nm": 0.9917587158054278,
+   "tip_twist_deg": 70.31769764565266,
+   "rms_lift_N": 4.250571141397437,
+   "verification_spread_pct": 0.0238092618075209,
+   "cycle_error_pct": 0.01500969973720152,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 29.79
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_1.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    126.938776,
+    126.938776,
+    102.040816,
+    34.897959,
+    13.877551,
+    13.877551,
+    13.877551
+   ],
+   "half_span_mm": 460.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "d339a02dbceed33ac273d795",
+   "case_id": "c0057",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.126939,
+      0.126939,
+      0.102041,
+      0.034898,
+      0.013878,
+      0.013878,
+      0.013878
+     ],
+     "half_span": 0.46,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "d339a02dbceed33ac273d795"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.4492587365607275,
+   "torque_Nm": 0.8302001636389347,
+   "tip_twist_deg": 66.23263517376758,
+   "rms_lift_N": 3.853031196751003,
+   "verification_spread_pct": 0.10574825478964774,
+   "cycle_error_pct": 0.033136130810860885,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 81.66
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    34.897959,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "ec2ed4e8e31be3630240ebc3",
+   "case_id": "c0058",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.034898,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "ec2ed4e8e31be3630240ebc3"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.940216564113493,
+   "torque_Nm": 0.970021495003115,
+   "tip_twist_deg": 70.26296190013088,
+   "rms_lift_N": 4.267935402159074,
+   "verification_spread_pct": 0.040566913579238924,
+   "cycle_error_pct": 0.013025554653769542,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 30.24
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    42.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "ef857e105137643bb9f571d3",
+   "case_id": "c0059",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.042041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "ef857e105137643bb9f571d3"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.960047414823166,
+   "torque_Nm": 0.9765574509745165,
+   "tip_twist_deg": 70.28374667168393,
+   "rms_lift_N": 4.280736923473664,
+   "verification_spread_pct": 0.024509036829958596,
+   "cycle_error_pct": 0.013475074477541493,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 23.99
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    42.040816,
+    34.897959,
+    34.897959,
+    34.897959,
+    10.0
+   ],
+   "half_span_mm": 480.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "0563aaf95e5e2ea8850ff2b8",
+   "case_id": "c0060",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.042041,
+      0.034898,
+      0.034898,
+      0.034898,
+      0.01
+     ],
+     "half_span": 0.48,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0563aaf95e5e2ea8850ff2b8"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.9556014229388405,
+   "torque_Nm": 0.9778579421723124,
+   "tip_twist_deg": 70.33009883830121,
+   "rms_lift_N": 4.275811560019762,
+   "verification_spread_pct": 0.0250859547033531,
+   "cycle_error_pct": 0.013604638942491703,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 22.38
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    42.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 520.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "c7dbcc0659eebb848d9bb1a6",
+   "case_id": "c0061",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.042041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.52,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c7dbcc0659eebb848d9bb1a6"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.8721631072372684,
+   "torque_Nm": 0.9394749143164476,
+   "tip_twist_deg": 72.37381916550761,
+   "rms_lift_N": 4.277680292291068,
+   "verification_spread_pct": 0.024316528976499174,
+   "cycle_error_pct": 0.01544061459985484,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 120.83
+  },
+  {
+   "wing": "t0.50@1Hz/lambda_0.75 L00 (concave seed, 400 mm)",
+   "model": "t0.50",
+   "structure": "chordwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    129.591837,
+    86.938776,
+    42.040816,
+    34.897959,
+    34.897959,
+    33.877551,
+    10.0
+   ],
+   "half_span_mm": 500.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "4d06c2a05b3bb58a3d17c071",
+   "case_id": "c0062",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.129592,
+      0.086939,
+      0.042041,
+      0.034898,
+      0.034898,
+      0.033878,
+      0.01
+     ],
+     "half_span": 0.5,
+     "elastic_options": {},
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "4d06c2a05b3bb58a3d17c071"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 2.938238304722128,
+   "torque_Nm": 0.9877903976809819,
+   "tip_twist_deg": 70.41732474821463,
+   "rms_lift_N": 4.283114993891273,
+   "verification_spread_pct": 0.0542018310495804,
+   "cycle_error_pct": 0.014443266467006385,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 22.82
+  }
+ ],
+ "searches": [
+  {
+   "id": "t0.50@1Hz/lambda_0.75",
+   "model": "t0.50",
+   "freq": 1.0,
+   "objective": {
+    "lambda": 0.75
+   },
+   "objective_label": "\u03bb = 0.75",
+   "lineages": [
+    {
+     "id": "L00",
+     "seed": {
+      "label": "concave seed, 400 mm",
+      "family": "concave",
+      "half_span_mm": 400.0,
+      "chords_mm": [
+       200.0,
+       149.591837,
+       106.938776,
+       72.040816,
+       44.897959,
+       25.510204,
+       13.877551,
+       10.0
+      ]
+     },
+     "status": "one_refinement_per_chord_complete",
+     "solves": 31,
+     "accepted": [
+      {
+       "key": "68f76db8cb4d10bc2a803b6a",
+       "score": 0.25,
+       "pass": 0,
+       "node": null,
+       "kind": "seed",
+       "half_span_mm": 400.0
+      },
+      {
+       "key": "e83378046c1a99e0796a78fa",
+       "score": 0.2958794695399769,
+       "pass": 1,
+       "node": "span",
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "814302fb5c57e276c4e4a1f4",
+       "score": 0.29800845855062164,
+       "pass": 1,
+       "node": 1,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "23279ddebdbbc456985bf2ba",
+       "score": 0.3050250776636092,
+       "pass": 1,
+       "node": 2,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "47d0ad1e6bacf70f7bea3269",
+       "score": 0.31765407680106683,
+       "pass": 1,
+       "node": 3,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "dcddb875309956756ac9798d",
+       "score": 0.31907637459204685,
+       "pass": 1,
+       "node": 4,
+       "kind": "half_step",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "38f3a8c79f4996c65ce90156",
+       "score": 0.31974852106340823,
+       "pass": 1,
+       "node": 5,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "e4c510837ff3898b47fcd5ef",
+       "score": 0.3214971528412187,
+       "pass": 1,
+       "node": 6,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "e052c8e10e08b9c5711ea45e",
+       "score": 0.3298620866879759,
+       "pass": 2,
+       "node": "span",
+       "kind": "coordinate",
+       "half_span_mm": 480.0
+      },
+      {
+       "key": "ef857e105137643bb9f571d3",
+       "score": 0.3299942339084234,
+       "pass": 2,
+       "node": 3,
+       "kind": "half_step",
+       "half_span_mm": 480.0
+      }
+     ],
+     "best": "ef857e105137643bb9f571d3",
+     "best_score": 0.3299942339084234
+    }
+   ],
+   "winner": "ef857e105137643bb9f571d3",
+   "winner_score": 0.3299942339084234,
+   "status": "complete",
+   "tref_N": 2.804687566651331,
+   "mref_Nm": 1.0096766056703934
+  },
+  {
+   "id": "t0.50@1Hz/lambda_1.25",
+   "model": "t0.50",
+   "freq": 1.0,
+   "objective": {
+    "lambda": 1.25
+   },
+   "objective_label": "\u03bb = 1.25",
+   "lineages": [
+    {
+     "id": "L00",
+     "seed": {
+      "label": "concave seed, 400 mm",
+      "family": "concave",
+      "half_span_mm": 400.0,
+      "chords_mm": [
+       200.0,
+       149.591837,
+       106.938776,
+       72.040816,
+       44.897959,
+       25.510204,
+       13.877551,
+       10.0
+      ]
+     },
+     "status": "one_refinement_per_chord_complete",
+     "solves": 25,
+     "accepted": [
+      {
+       "key": "68f76db8cb4d10bc2a803b6a",
+       "score": -0.25,
+       "pass": 0,
+       "node": null,
+       "kind": "seed",
+       "half_span_mm": 400.0
+      },
+      {
+       "key": "e83378046c1a99e0796a78fa",
+       "score": -0.19310219381094984,
+       "pass": 1,
+       "node": "span",
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "814302fb5c57e276c4e4a1f4",
+       "score": -0.1785586173636584,
+       "pass": 1,
+       "node": 1,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "b023bed2a834ceaf0d6d48e4",
+       "score": -0.17276521345965268,
+       "pass": 1,
+       "node": 2,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "41408ec7136ab750e7bf7cfd",
+       "score": -0.1727133119701546,
+       "pass": 1,
+       "node": 3,
+       "kind": "half_step",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "db3fc328a69d50de69852ba1",
+       "score": -0.15554248842835727,
+       "pass": 1,
+       "node": 6,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "f2f262e603027de6fc300ebc",
+       "score": -0.1448359999440083,
+       "pass": 1,
+       "node": 7,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "33c2f166c2d6f30ad2bab49f",
+       "score": -0.1431095751333208,
+       "pass": 2,
+       "node": 1,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      }
+     ],
+     "best": "33c2f166c2d6f30ad2bab49f",
+     "best_score": -0.1431095751333208
+    }
+   ],
+   "winner": "33c2f166c2d6f30ad2bab49f",
+   "winner_score": -0.1431095751333208,
+   "status": "complete",
+   "tref_N": 2.804687566651331,
+   "mref_Nm": 1.0096766056703934
+  },
+  {
+   "id": "t0.50@1Hz/lambda_1.75",
+   "model": "t0.50",
+   "freq": 1.0,
+   "objective": {
+    "lambda": 1.75
+   },
+   "objective_label": "\u03bb = 1.75",
+   "lineages": [
+    {
+     "id": "L00",
+     "seed": {
+      "label": "concave seed, 400 mm",
+      "family": "concave",
+      "half_span_mm": 400.0,
+      "chords_mm": [
+       200.0,
+       149.591837,
+       106.938776,
+       72.040816,
+       44.897959,
+       25.510204,
+       13.877551,
+       10.0
+      ]
+     },
+     "status": "one_refinement_per_chord_complete",
+     "solves": 23,
+     "accepted": [
+      {
+       "key": "68f76db8cb4d10bc2a803b6a",
+       "score": -0.75,
+       "pass": 0,
+       "node": null,
+       "kind": "seed",
+       "half_span_mm": 400.0
+      },
+      {
+       "key": "e83378046c1a99e0796a78fa",
+       "score": -0.6820838571618766,
+       "pass": 1,
+       "node": "span",
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "814302fb5c57e276c4e4a1f4",
+       "score": -0.6551256932779381,
+       "pass": 1,
+       "node": 1,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "b023bed2a834ceaf0d6d48e4",
+       "score": -0.635035882845749,
+       "pass": 1,
+       "node": 2,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "4d89fab8ae32fae17d6b989c",
+       "score": -0.6236540275668606,
+       "pass": 1,
+       "node": 3,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "3a6a088bb61ed9e9693812ad",
+       "score": -0.6112854549960992,
+       "pass": 1,
+       "node": 4,
+       "kind": "half_step",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "77f4a6a63a0c260b542201d1",
+       "score": -0.5828532222568826,
+       "pass": 1,
+       "node": 5,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "6faef5abb530587c335795a3",
+       "score": -0.5780923503752837,
+       "pass": 1,
+       "node": 7,
+       "kind": "coordinate",
+       "half_span_mm": 440.0
+      },
+      {
+       "key": "26e8182ee35f69fd00ed5f90",
+       "score": -0.5640196755863198,
+       "pass": 2,
+       "node": "span",
+       "kind": "half_step",
+       "half_span_mm": 460.0
+      },
+      {
+       "key": "20f7d478932a378c7cb5e421",
+       "score": -0.5604069309919619,
+       "pass": 2,
+       "node": 1,
+       "kind": "coordinate",
+       "half_span_mm": 460.0
+      }
+     ],
+     "best": "20f7d478932a378c7cb5e421",
+     "best_score": -0.5604069309919619
+    }
+   ],
+   "winner": "20f7d478932a378c7cb5e421",
+   "winner_score": -0.5604069309919619,
+   "status": "complete",
+   "tref_N": 2.804687566651331,
+   "mref_Nm": 1.0096766056703934
+  }
+ ]
+}
