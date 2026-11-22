@@ -14,6 +14,7 @@ A planned study is how a new simulation question enters the project. Each study 
   - Every model × frequency × objective combination is one search. Each search runs one lineage per seed: each seed half-span crossed with each seed family, plus any seed wings.
   - An objective is either a torque budget (maximum thrust with peak torque ≤ B) or a λ trade-off (T/T<sub>ref</sub> − λ·M/M<sub>ref</sub>, with the references taken from the search's valid seeds).
   - The `search` block also sets the solves per lineage, the chord step, the smallest chord and whether chords must decrease toward the tip.
+  - **Free span.** With `span_step_mm` > 0 the half-span is one more search coordinate. Each pass tries it first (± the step, one half-step retry, then retired, like a chord); the stations stretch with it and the root chord stays fixed. `half_span_limits_mm` bounds it, and the seeds must lie inside. With 0 (the default) each lineage keeps its seed span, as in the campaigns.
   - `results.json` records every lineage's accepted steps and each search's winner. The atlas animates each winner's shape evolution from them.
 - **`geometry-sweep`** samples outlines with scrambled Sobol points under the campaign rules. There is no climbing.
 - **`design-set`** ("Re-solve chosen wings") re-solves named outlines and/or atlas designs (by key) for every model, frequency and numerical setting.

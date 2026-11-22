@@ -5,7 +5,9 @@ one per seed half-span x seed family (the campaigns' family seeds, 200 mm root) 
 per seed wing. A lineage is ``coordinate_search.climb`` unchanged: it tries +/- one chord
 step on each station in turn, keeps a step only if the objective improves, gets exactly
 one half-step retry per station, and stops when every station is retired or it has used
-``solves_per_lineage`` solves. Objectives, as in the campaigns:
+``solves_per_lineage`` solves. With ``span_step_mm`` > 0 the half-span is one more
+coordinate (tried first each pass, same rules, within ``half_span_limits_mm``), so a
+lineage's span can grow or shrink. Objectives, as in the campaigns:
 
     torque_budget_Nm = B   maximize mean thrust subject to peak root torque <= B
                            (seeds above B first walk down in torque, then climb thrust)
@@ -37,9 +39,13 @@ def rules(search: dict, objective: dict, root_mm: float) -> dict:
     step, mn, root = search["step_mm"] / 1000, search["min_chord_mm"] / 1000, root_mm / 1000
     bounds = [{"min_m": root, "max_m": root, "step_m": step}]
     bounds += [{"min_m": mn if i < 2 else 0.0, "max_m": S.CHORD_RANGE[1] / 1000, "step_m": step} for i in range(1, S.NODES)]
-    return {"node_count": S.NODES, "bounds": bounds, "root_chord_m": root, "tip_chord_m": mn, "minimum_chord_m": mn,
-            "decreasing": bool(search["decreasing"]), "tradeoff_lambda": float(objective.get("lambda", 0.0)),
-            "score_tolerance": 1e-6, "objective": objective_name(objective)}
+    out = {"node_count": S.NODES, "bounds": bounds, "root_chord_m": root, "tip_chord_m": mn, "minimum_chord_m": mn,
+           "decreasing": bool(search["decreasing"]), "tradeoff_lambda": float(objective.get("lambda", 0.0)),
+           "score_tolerance": 1e-6, "objective": objective_name(objective)}
+    if search.get("span_step_mm"):
+        lo, hi = search["half_span_limits_mm"]
+        out.update(span_step_m=search["span_step_mm"] / 1000, span_min_m=lo / 1000, span_max_m=hi / 1000)
+    return out
 
 
 def seeds(spec: dict) -> list[dict]:
@@ -60,6 +66,9 @@ def seeds(spec: dict) -> list[dict]:
         r = rules(s, {"lambda": 0.0}, x["chords_mm"][0])
         if not adaptive.valid([c / 1000 for c in x["chords_mm"]], r):
             raise ValueError(f"seed {x['label']!r} does not obey the search rules (minimum chord, decreasing chords)")
+        lo, hi = s["half_span_limits_mm"]
+        if not lo <= x["half_span_mm"] <= hi:
+            raise ValueError(f"seed {x['label']!r}: half-span {x['half_span_mm']:g} mm is outside search.half_span_limits_mm")
     return out
 
 
@@ -162,7 +171,8 @@ def search(spec: dict, solve_many, log=print) -> dict:
                 if msg[0] == "accepted":
                     ev = msg[1]
                     lin["accepted"].append({"key": ev["case"]["id"], "score": lin["score_fn"](ev["case"]),
-                                            "pass": ev.get("pass"), "node": ev.get("node"), "kind": ev.get("kind")})
+                                            "pass": ev.get("pass"), "node": ev.get("node"), "kind": ev.get("kind"),
+                                            "half_span_mm": round(ev["span_m"] * 1000, 6)})
                     msg = next(lin["gen"])
                     continue
                 pending = msg[1]
@@ -171,8 +181,8 @@ def search(spec: dict, solve_many, log=print) -> dict:
                     lin["gen"].close()
                     return []
                 lin["evals"] += len(pending)
-                return [case(lin["model"], lin["freq"], [c * 1000 for c in ch], lin["half_span_mm"],
-                             f"{lin['search']['id']} {lin['id']} ({lin['seed']['label']})") for ch, _ in pending]
+                return [case(lin["model"], lin["freq"], [c * 1000 for c in ch], round(meta["span_m"] * 1000, 6),
+                             f"{lin['search']['id']} {lin['id']} ({lin['seed']['label']})") for ch, meta in pending]
         except StopIteration as stop:
             lin["status"] = (stop.value or {}).get("status", "complete")
             return []

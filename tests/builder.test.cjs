@@ -72,7 +72,11 @@ const FIX = [
   m(evo({ seed_families: ["triangle", "triangle"] })), m(evo({ seed_families: [1] })), m(evo({ seed_families: "square" })),
   m(evo({ solves_per_lineage: 0 })), m(evo({ solves_per_lineage: 501 })), m(evo({ solves_per_lineage: 2.5 })), m(evo({ solves_per_lineage: null })),
   m(evo({ step_mm: 0 })), m(evo({ step_mm: "20" })), m(evo({ min_chord_mm: 4 })), m(evo({ min_chord_mm: 100.5 })), m(evo({ decreasing: "yes" })),
-  m(evo({ decreasing: false })), m(evo({ extra: 1 })), m(Object.assign(evo(), { numerics: [{}, { steps_per_cycle: 100 }] })),
+  m(evo({ decreasing: false })), m(evo({ extra: 1 })),
+  m(evo({ span_step_mm: 20, half_span_limits_mm: [150, 700] })), m(evo({ span_step_mm: -1 })), m(evo({ span_step_mm: 201 })),
+  m(evo({ span_step_mm: "20" })), m(evo({ half_span_limits_mm: [400, 300] })), m(evo({ half_span_limits_mm: [50, 700] })),
+  m(evo({ half_span_limits_mm: [150, 900] })), m(evo({ half_span_limits_mm: [150] })), m(evo({ half_span_limits_mm: [250, 700] })),
+  m(Object.assign(evo({ span_step_mm: 20 }), { models: ["t0.50"] })), m(Object.assign(evo(), { numerics: [{}, { steps_per_cycle: 100 }] })),
   m(Object.assign(evo(), { sweep: { count: 3 } })), m(Object.assign(evo(), { wings: "x" })), m(Object.assign(evo(), { wings: {} })),
   m(Object.assign(evo({ seed_half_spans_mm: [], seed_families: [] }), { wings: w(d()) })),
   m(Object.assign(evo(), { wings: w(d({ chords_mm: [200, 210, 100, 50, 20, 8, 0, 0] })) })),
@@ -91,7 +95,7 @@ const pick = a => a[Math.floor(rnd() * a.length)];
 const ATOMS = [null, true, false, 0, -1, 1.5, 1, 8, 50, "", "x", "t0.50r", "rigid", "2026-11-20-x", [], {}, [1], [200, 0], TAPER, "ab".repeat(12),
   "matched", "triangle", [300], { lambda: 1 }, { torque_budget_Nm: 1 }];
 const KEYS = Object.keys(base).concat(["sweep", "search", "parent", "notes", "designs", "from_atlas", "count", "half_span_mm", "chords_mm", "name", "seed", "span_panels",
-  "objectives", "lambda", "torque_budget_Nm", "seed_half_spans_mm", "seed_families", "solves_per_lineage", "step_mm", "min_chord_mm", "decreasing"]);
+  "objectives", "lambda", "torque_budget_Nm", "seed_half_spans_mm", "seed_families", "solves_per_lineage", "step_mm", "min_chord_mm", "decreasing", "span_step_mm", "half_span_limits_mm", [150, 700]]);
 const junk = (dep = 0) => { const r = rnd(); if (dep > 2 || r < 0.5) return pick(ATOMS);
   if (r < 0.75) return Array.from({ length: Math.floor(rnd() * 9) }, () => junk(dep + 1));
   const o = {}; for (let i = Math.floor(rnd() * 4); i > 0; i--) o[pick(KEYS)] = junk(dep + 1); return o; };

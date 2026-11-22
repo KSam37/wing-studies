@@ -250,6 +250,18 @@ Reuse the template's CSS variables, themes, navigation, chips, chart helpers, to
 
 Matched comparisons are `D.span_comparisons`. Solved rows are registered into the Wing map arrays at load; `EXTRA` identifies them and `ORIGINAL_N` preserves the old catalog boundary. Never treat every appended row as historical catalog data. Rows from planned studies carry `src` bit 4; evolutionary studies add `D.row_search` (objectives, λ or torque budget, winner marks and the lineage's accepted steps), which drives the *Shape evolution* player without a campaign database.
 
+Every wing carries a **leading-edge boundary condition** tag, derived from its analysis type and construction, with its own filter and colour option. In every model the root is fixed to the flapping hub.
+
+| Tag | Model | What holds the sheet at the leading edge |
+|---|---|---|
+| Rigid outline | rigid | nothing deforms |
+| Pivots freely about a straight leading edge | chordwise, no rod | LE straight and in place; strips pitch against the sheet's own torsion and warping. Also the model of a sheet hinged freely on a rigid rod (the rod's mass sits on the pitch axis and adds no pitching load) |
+| Bonded to the rod: twists with it | chordwise, rod | sheet and rod twist together; rod GJ (≈0.24 N·m²) adds to the sheet's and dominates |
+| Free sheet: bends along the span and pitches | spanwise, no rod | LE bends with the sheet |
+| Clamped to a non-rotating rod: flexes behind it; rod bends | spanwise, rod | rod bends but does not rotate; sheet pitches by bending behind it, k = 3EI/c |
+
+No current model has a sheet hinged freely on a rod that also bends along the span.
+
 Wing map: independent Spanwise elasticity chips (Off = rigid/chordwise, On = span+chord); other study/material/frequency/quality filters still apply; inspecting a result enables its elasticity category.
 
 Elasticity effects, part 2: default is the union of maximum-thrust designs under each model at each frequency, among verified pairs (six highlights, no torque ceiling); the alternative shows all 149 verified pairs. Blue/orange identify the model; dashed links join the SAME wing, not an interpolated optimum. Clicking a highlight opens paired native animations with side/front/top controls. Only the six highlights have new replays.

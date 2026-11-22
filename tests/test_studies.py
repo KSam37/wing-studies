@@ -171,6 +171,20 @@ class Evolutionary(unittest.TestCase):
         self.assertTrue(any("must not increase" in x for x in e) and any("min_chord_mm" in x for x in e), e)
         self.assertTrue(any("only for evolutionary" in e for e in S.validate(design_spec(search={"objectives": [{"lambda": 1}]}))))
 
+    def test_span_coordinate_rules(self):
+        def errs(models=None, structure=None, **search):
+            s = filled("evolutionary")
+            s["search"] = dict(s["search"], **search)
+            if models:
+                s["models"] = models
+            if structure:
+                s["structure"] = structure
+            return S.validate(s)
+        self.assertEqual(errs(span_step_mm=20, half_span_limits_mm=[150, 700]), [])
+        self.assertTrue(any("span_step_mm" in e for e in errs(span_step_mm=-5)))
+        self.assertTrue(any("half_span_limits_mm" in e for e in errs(half_span_limits_mm=[500, 300])))
+        self.assertTrue(any("within search.half_span_limits_mm" in e for e in errs(half_span_limits_mm=[250, 700])))
+
 
 
 class SchemaAgreement(unittest.TestCase):
@@ -283,6 +297,28 @@ class RunAndMerge(unittest.TestCase):
         self.assertEqual(D["cols"]["src"][1:], [A.SRC_STUDY] * 2)
         self.assertEqual(len(D["cols"]["C"]), 8 * 3)
         self.assertIn("100 steps per cycle", D["row_notes"]["2"])
+
+    def test_evolutionary_span_move(self):
+        try:
+            import numpy  # noqa: F401
+        except ImportError:
+            self.skipTest("numpy not installed")
+        spec = filled("evolutionary", "2026-11-22-span")
+        spec["search"] = {"objectives": [{"lambda": 0.1}], "seed_half_spans_mm": [300], "seed_families": ["concave"],
+                          "solves_per_lineage": 200, "step_mm": 20, "min_chord_mm": 10, "decreasing": True,
+                          "span_step_mm": 50, "half_span_limits_mm": [200, 600]}
+        S.write_json(S.study_dir(spec["id"]) / "spec.json", spec)
+        with mock.patch.object(R, "job_for", evo_job), mock.patch.object(R, "solve", evo_solve):
+            out = R.run(spec["id"], log=lambda *a: None)
+        self.assertEqual(R.results_errors(out, spec), [])
+        lin = out["searches"][0]["lineages"][0]
+        spans = [a["half_span_mm"] for a in lin["accepted"]]
+        self.assertEqual(spans[0], 300)
+        self.assertIn("span", [a["node"] for a in lin["accepted"]])
+        self.assertEqual(max(spans), 600)                 # thrust-heavy objective: the span runs to its limit
+        self.assertTrue(all(200 <= c["half_span_mm"] <= 600 for c in out["cases"]))
+        keys = {c["key"]: c for c in out["cases"]}
+        self.assertEqual(keys[lin["best"]]["half_span_mm"], spans[-1])
 
     def test_evolutionary_run(self):
         try:

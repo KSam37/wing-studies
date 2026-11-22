@@ -174,7 +174,7 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
       <span class="fh">View</span>
       <label>X <select id="ax-x"></select></label>
       <label>Y <select id="ax-y"></select></label>
-      <label>Colour by <select id="colorby"><option value="study">study</option><option value="struct">analysis type</option><option value="constr">construction</option><option value="thk">sheet thickness</option><option value="model">material (thickness + rod)</option><option value="freq">frequency</option></select></label>
+      <label>Colour by <select id="colorby"><option value="study">study</option><option value="struct">analysis type</option><option value="constr">construction</option><option value="bc">leading-edge boundary condition</option><option value="thk">sheet thickness</option><option value="model">material (thickness + rod)</option><option value="freq">frequency</option></select></label>
       <span style="flex:1"></span>
       <button class="iconbtn ftoggle" id="f-toggle" style="width:auto;padding:0 10px" aria-expanded="false">Filters</button>
       <button class="iconbtn" id="f-reset" style="width:auto;padding:0 10px">Reset filters</button>
@@ -184,10 +184,11 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
       <fieldset class="fg"><legend>Analysis</legend>
         <div class="frow"><span class="fl">Analysis type</span><div class="chips" id="f-struct"></div></div>
         <div class="frow"><span class="fl">Construction</span><div class="chips" id="f-constr"></div></div>
+        <div class="frow"><span class="fl">Leading-edge boundary condition</span><div class="chips" id="f-bc"></div></div>
         <div class="frow"><span class="fl">Sheet thickness</span><div class="chips" id="f-thk"></div></div>
         <div class="frow"><span class="fl">Torque penalty λ</span><div class="chips" id="f-lambda"></div></div>
         <div class="frow"><span class="fl">Study</span><div class="chips" id="f-study"></div></div>
-        <p class="tiny muted" style="margin:2px 0 0">Analysis type is the physics a wing was simulated with. Rigid wings have no material, so construction and thickness apply to the elastic analyses only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge.
+        <p class="tiny muted" style="margin:2px 0 0">Analysis type is the physics a wing was simulated with. Rigid wings have no material, so construction and thickness apply to the elastic analyses only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge. The boundary condition says how the model holds the sheet at the leading edge (hover a chip for the details); it follows from analysis type and construction, and in every model the root is fixed to the flapping hub.
         λ is the torque penalty in the search score S = T/T<sub>ref</sub> − λ·M/M<sub>ref</sub>: a larger λ steers the search toward lower root torque. Designs found any other way (the torque-budget search, shape maps, sweeps, reruns) have no λ.</p>
       </fieldset>
       <fieldset class="fg"><legend>Geometry, conditions &amp; quality</legend>
@@ -447,6 +448,16 @@ const THKS=[...new Set(D.models.map((m,i)=>BASE_OF[i]==='rigid'?null:MODEL[BASE_
 const THK_OF=D.models.map((m,i)=>{const t=BASE_OF[i]==='rigid'?null:MODEL[BASE_OF[i]]?.thickness;return t==null?null:THKS.indexOf(t)});
 const CONSTRS=[[1,'Rod + sheet'],[0,'Sheet only']], CONSTR_VAR=['--s3','--s1'], THK_VAR=['--s7','--s3','--s4','--s5','--s8','--s6'];
 const constrColor=k=>css(CONSTR_VAR[k]), thkColor=k=>css(THK_VAR[k%THK_VAR.length]);
+// Leading-edge boundary condition: what holds the sheet at the leading edge in the model a wing
+// was solved with. It follows from the analysis type and the construction. In every model the
+// root is fixed to the flapping hub and the motion is imposed there.
+const BCS=[[0,'Rigid outline','No structure: the whole outline flaps as one rigid plate.'],
+  [1,'Pivots freely about a straight leading edge','Chordwise model, no rod. The leading edge stays straight and in place; each strip pitches about it, resisted only by the sheet’s own torsion and warping. This is also the model of a sheet hinged freely on a rigid rod.'],
+  [2,'Bonded to the rod: twists with it','Chordwise model with rod. Sheet and rod twist together about the leading edge, so the rod’s torsional stiffness adds to the sheet’s (the rod dominates).'],
+  [3,'Free sheet: bends along the span and pitches','Spanwise + chordwise model, no rod. The leading edge bends with the sheet; strips pitch about it against the sheet’s own torsion.'],
+  [4,'Clamped to a non-rotating rod: flexes behind it; rod bends','Spanwise + chordwise model with rod. The rod bends along the span but does not rotate; the sheet is clamped along it and pitches by bending just behind it (k = 3EI/c).']];
+const BC_VAR=['--neutral','--s3','--s1','--s4','--s2'], bcColor=k=>css(BC_VAR[k]);
+const BC_OF=D.models.map((m,i)=>STRUCT_OF[i]===0?0:(STRUCT_OF[i]===1?1:3)+(ROD_OF[i]?1:0));
 const matLabel=mi=>BASE_OF[mi]==='rigid'?'none (rigid analysis)':`${MODEL[BASE_OF[mi]].thickness} mm carbon sheet${ROD_OF[mi]?' + leading-edge rod':''}`;
 const QUAL_OF=st=>GOOD.has(st)?0:st==='uncertain'?1:2;
 const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / unresolved']];
@@ -455,7 +466,7 @@ const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low t
 const LAMBDA_BITS=2|4|8;
 const lambdaPass=i=>{const o=C.obj[i]&LAMBDA_BITS;if(!o)return M.lambda.has(0);for(const b of [2,4,8])if(o&b&&M.lambda.has(b))return true;return false};
 const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),
-  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),thk:new Set(THKS.map((_,k)=>k))});
+  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k))});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];
@@ -480,7 +491,7 @@ function initMapControls(){
   spSync();
 }
 function chipRow(el,items,set,colorFn){
-  el.innerHTML=items.map(([v,l])=>`<button class="chip ${set.has(v)?'':'off'}" data-v="${v}" aria-pressed="${set.has(v)}">${colorFn?`<span class="sw" style="background:${colorFn(v)}"></span>`:''}${l}<span class="c" data-c="${v}"></span></button>`).join('');
+  el.innerHTML=items.map(([v,l,t])=>`<button class="chip ${set.has(v)?'':'off'}" data-v="${v}" aria-pressed="${set.has(v)}"${t?` title="${esc(t)}"`:''}>${colorFn?`<span class="sw" style="background:${colorFn(v)}"></span>`:''}${l}<span class="c" data-c="${v}"></span></button>`).join('');
   el.querySelectorAll('.chip').forEach(b=>b.onclick=e=>{const v=+b.dataset.v;
     if(e.shiftKey||e.metaKey||e.ctrlKey){set.clear();set.add(v)}else if(set.has(v))set.delete(v);else set.add(v);
     chipRow(el,items,set,colorFn);M.view=null;drawMap()});
@@ -490,6 +501,7 @@ function renderChips(){
   chipRow($('#f-lambda'),LAMBDAS,M.lambda,null);
   chipRow($('#f-struct'),STRUCTS,M.struct,M.color==='struct'?structColor:null);
   chipRow($('#f-constr'),CONSTRS,M.constr,M.color==='constr'?constrColor:null);
+  chipRow($('#f-bc'),BCS,M.bc,M.color==='bc'?bcColor:null);
   chipRow($('#f-thk'),THKS.map((t,k)=>[k,t+' mm']),M.thk,M.color==='thk'?thkColor:null);
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
   chipRow($('#f-lim'),[[0,`≤ ${LIM} N·m`],[1,`> ${LIM} N·m`]],M.lim,null);
@@ -499,7 +511,7 @@ function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   for(let i=0;i<N;i++){
     const m=C.m[i];
-    if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m]))continue;
+    if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))continue;
     if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
     if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
     if(!lambdaPass(i))continue;
@@ -513,7 +525,7 @@ function filtered(){
   return out;
 }
 function colorOf(i){const m=C.m[i];if(M.color==='constr'||M.color==='thk'){const k=M.color==='constr'?ROD_OF[m]:THK_OF[m];return k==null?css('--neutral'):M.color==='constr'?constrColor(k):thkColor(k)}
-  return M.color==='model'?modelColor(BASE_OF[m]):M.color==='struct'?structColor(STRUCT_OF[m]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
+  return M.color==='model'?modelColor(BASE_OF[m]):M.color==='struct'?structColor(STRUCT_OF[m]):M.color==='bc'?bcColor(BC_OF[m]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
 const PAD={l:62,r:16,t:14,b:46};
 function fitView(){
   const gx=AXES[M.x].get,gy=AXES[M.y].get;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
@@ -572,8 +584,8 @@ function paint(){
 function star(x,y,R,fill,ring){ctx.beginPath();for(let j=0;j<10;j++){const a=-Math.PI/2+j*Math.PI/5,rr=j%2?R*.45:R;ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}ctx.closePath();
   ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=ring;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=css('--text');ctx.stroke()}
 function updateCounts(){
-  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
-  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
+  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),l,k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
+  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
   const cnt={};for(const i of VIS){const k=key(i);cnt[k]=(cnt[k]||0)+1}
   $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span>`;
 
@@ -675,7 +687,7 @@ function selectDesign(i){
   const st=STATUS[C.S[i]],w=WIN_ROWS.get(i),m=D.models[C.m[i]],col=modelColor(m.id),rg=D.ranges[i];
   const others=[];for(let j=0;j<N;j++)if(j!==i&&C.k[j]===C.k[i])others.push(D.studies[C.s[j]].short);
   const info=`<div class="kv"><div>Study</div><div>${D.studies[C.s[i]].label}${others.length?` (also in ${others.join(', ')})`:''}</div>
-    <div>Analysis</div><div>${STRUCTS[STRUCT_OF[C.m[i]]][1]}</div><div>Material</div><div>${matLabel(C.m[i])}</div><div>Frequency</div><div>${D.freqs[C.f[i]]} Hz</div>
+    <div>Analysis</div><div>${STRUCTS[STRUCT_OF[C.m[i]]][1]}</div><div>Leading edge</div><div class="small" title="${esc(BCS[BC_OF[C.m[i]]][2])}">${BCS[BC_OF[C.m[i]]][1]}</div><div>Material</div><div>${matLabel(C.m[i])}</div><div>Frequency</div><div>${D.freqs[C.f[i]]} Hz</div>
     <div>Thrust</div><div><b>${fmt(C.T[i],3)} N</b>${rg?` <span class="muted">(${fmt(rg[0],3)}–${fmt(rg[1],3)})</span>`:''}</div>
     <div>Peak torque</div><div><b>${fmt(C.Q[i],3)} N·m</b>${rg?` <span class="muted">(${fmt(rg[2],3)}–${fmt(rg[3],3)})</span>`:''}</div>
     <div>Tip twist</div><div>${C.W[i]==null?'– (rigid)':'±'+fmt(C.W[i],1)+'°'}</div>
@@ -696,8 +708,8 @@ function selectDesign(i){
     <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
 }
 function downloadCSV(){
-  const head=['study','plate','freq_hz','status','thrust_N','peak_torque_Nm','tip_twist_deg','half_span_mm','area_cm2','c1_mm','c2_mm','c3_mm','c4_mm','c5_mm','c6_mm','c7_mm','c8_mm','source','key'];
-  const rows=VIS.map(i=>[D.studies[C.s[i]].id,D.models[C.m[i]].id,D.freqs[C.f[i]],STATUS[C.S[i]],C.T[i],C.Q[i],C.W[i]??'',Math.round(SPAN[i]),isFinite(AREA[i])?AREA[i].toFixed(1):'',...(isCat(i)?Array(8).fill(''):chordsOf(i)),isCat(i)?'catalog #'+CAT.number[i-CAT0]:(C.src[i]&1?'search':'')+(C.src[i]&2?' map':''),C.k[i]].join(','));
+  const head=['study','plate','leading_edge_bc','freq_hz','status','thrust_N','peak_torque_Nm','tip_twist_deg','half_span_mm','area_cm2','c1_mm','c2_mm','c3_mm','c4_mm','c5_mm','c6_mm','c7_mm','c8_mm','source','key'];
+  const rows=VIS.map(i=>[D.studies[C.s[i]].id,D.models[C.m[i]].id,'"'+BCS[BC_OF[C.m[i]]][1]+'"',D.freqs[C.f[i]],STATUS[C.S[i]],C.T[i],C.Q[i],C.W[i]??'',Math.round(SPAN[i]),isFinite(AREA[i])?AREA[i].toFixed(1):'',...(isCat(i)?Array(8).fill(''):chordsOf(i)),isCat(i)?'catalog #'+CAT.number[i-CAT0]:(C.src[i]&1?'search':'')+(C.src[i]&2?' map':''),C.k[i]].join(','));
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([head.join(',')+'\n'+rows.join('\n')],{type:'text/csv'}));a.download='elastic_wings_visible.csv';a.click();
 }
 
@@ -750,7 +762,7 @@ function renderWinners(){
     h+='</div></div>'}
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Elasticity effects, part 1: rigid → chordwise

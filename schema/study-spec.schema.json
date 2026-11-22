@@ -250,6 +250,28 @@
           "type": "boolean",
           "default": true,
           "description": "chords never increase toward the tip"
+        },
+        "span_step_mm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200,
+          "default": 0,
+          "description": "half-span step of the span coordinate (0 keeps each lineage's span fixed, as in the campaigns); tried first each pass, same rules as a chord"
+        },
+        "half_span_limits_mm": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 100,
+            "maximum": 800
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "default": [
+            100,
+            800
+          ],
+          "description": "[low, high] half-span bounds for the span coordinate; seed half-spans must lie inside"
         }
       }
     },

@@ -49,9 +49,11 @@ SWEEP_COUNT = (1, 4096)
 # Evolutionary searches: the campaigns' coordinate climb (wingstudy/coordinate_search.py).
 FAMILIES = ("triangle", "square", "concave", "convex", "narrow")
 SEARCH_KEYS = {"objectives", "seed_half_spans_mm", "seed_families", "solves_per_lineage", "step_mm",
-               "min_chord_mm", "decreasing"}
+               "min_chord_mm", "decreasing", "span_step_mm", "half_span_limits_mm"}
 SEARCH_DEFAULT = {"seed_half_spans_mm": [], "seed_families": [], "solves_per_lineage": 60, "step_mm": 20.0,
-                  "min_chord_mm": 10.0, "decreasing": True}
+                  "min_chord_mm": 10.0, "decreasing": True, "span_step_mm": 0.0,
+                  "half_span_limits_mm": [100.0, 800.0]}
+SPAN_STEP_RANGE = (0.0, 200.0)      # 0 keeps each lineage's span fixed (the campaigns' climb)
 LAMBDA_RANGE = (0.0, 10.0)
 TORQUE_BUDGET_RANGE = (0.05, 20.0)
 OBJECTIVES_MAX = 6
@@ -303,6 +305,15 @@ def _search_errors(search) -> list[str]:
             e.append(f"search.{k}: {'whole number ' if whole else ''}{lo:g}-{hi:g}")
     if not isinstance(search.get("decreasing", True), bool):
         e.append("search.decreasing: true or false")
+    v = search.get("span_step_mm", SEARCH_DEFAULT["span_step_mm"])
+    if not _num(v) or not SPAN_STEP_RANGE[0] <= v <= SPAN_STEP_RANGE[1]:
+        e.append(f"search.span_step_mm: {SPAN_STEP_RANGE[0]:g}-{SPAN_STEP_RANGE[1]:g} (0 keeps the span fixed)")
+    lim = search.get("half_span_limits_mm", SEARCH_DEFAULT["half_span_limits_mm"])
+    if (not isinstance(lim, list) or len(lim) != 2 or not all(_num(x) for x in lim) or not lim[0] < lim[1]
+            or lim[0] < HALF_SPAN_RANGE[0] or lim[1] > HALF_SPAN_RANGE[1]):
+        e.append(f"search.half_span_limits_mm: [low, high] within {HALF_SPAN_RANGE[0]:g}-{HALF_SPAN_RANGE[1]:g} mm")
+    elif spans_ok and any(not lim[0] <= x <= lim[1] for x in spans):
+        e.append("search.seed_half_spans_mm: every seed half-span must lie within search.half_span_limits_mm")
     return e
 
 
@@ -427,6 +438,7 @@ def limits() -> dict:
             "objectives_max": OBJECTIVES_MAX, "seed_spans_max": SEED_SPANS_MAX,
             "solves_per_lineage": list(SOLVES_PER_LINEAGE), "step_range": list(STEP_RANGE),
             "min_chord_range": list(MIN_CHORD_RANGE), "seed_root_mm": SEED_ROOT_MM,
+            "span_step_range": list(SPAN_STEP_RANGE),
             "id_re": ID_RE.pattern, "key_re": KEY_RE.pattern, "top_keys": sorted(TOP_KEYS),
             "required": list(REQUIRED), "placeholders": PLACEHOLDERS}
 

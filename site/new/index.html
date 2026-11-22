@@ -178,6 +178,9 @@ header .brand,nav a,nav button{white-space:nowrap}
         <div><label class="f" for="f-step">Chord step (mm)</label><input type="number" id="f-step" min="1" max="100" step="1"></div>
         <div><label class="f" for="f-minc">Smallest positive chord (mm)</label><input type="number" id="f-minc" min="5" max="100" step="1"></div>
         <div><label class="f">&nbsp;</label><label class="small"><input type="checkbox" id="f-dec"> Chords never increase toward the tip</label></div>
+        <div><label class="f" for="f-sstep">Half-span step (mm, 0 = fixed span)</label><input type="number" id="f-sstep" min="0" max="200" step="1"></div>
+        <div><label class="f" for="f-slo">Half-span limits (mm)</label><span style="display:flex;gap:6px;align-items:center"><input type="number" id="f-slo" min="100" max="800" step="10" style="width:90px"> to <input type="number" id="f-shi" min="100" max="800" step="10" style="width:90px"></span></div>
+        <p class="small muted" style="grid-column:1/-1;margin:0">With a half-span step the span is one more coordinate: each pass tries it first (± the step, then one half-step retry), the stations stretch with it and the root chord stays fixed. Seeds must lie within the limits.</p>
       </div>
       <p class="tiny" style="margin:6px 0 0">The campaigns used 60 solves per lineage, a 20 mm step, a 10 mm smallest chord and decreasing chords; lineages there finished after about 22 solves on average. The root chord stays fixed at each seed's root.</p>
     </div>
@@ -273,7 +276,7 @@ const EXISTING=new Set(B.studies.map(s=>s.id));
 
 /* ---------- state (kept as a draft in localStorage, so a trip to the atlas keeps it) ---------- */
 const BASKET_KEY='wingstudy-basket', DRAFT_KEY='wingstudy-draft';
-const freshSearch=()=>({objectives:[{torque_budget_Nm:1},{lambda:1.25}],spans:[220,340],fams:['triangle','convex'],solves:30,step:20,minc:10,dec:true});
+const freshSearch=()=>({objectives:[{torque_budget_Nm:1},{lambda:1.25}],spans:[220,340],fams:['triangle','convex'],solves:30,step:20,minc:10,dec:true,sstep:0,slo:150,shi:700});
 const fresh=()=>({title:'',question:'',author:'',parent:'',notes:'',kind:'evolutionary',structure:'chordwise',models:['t0.50r'],freqs:[1],
   outlines:[],sweep:{count:16,seed:1,lo:280,hi:400},search:freshSearch(),numerics:[{...L.numerics_default}],id:'',idTouched:false,budget:null});
 let st=Object.assign(fresh(),JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}'));
@@ -297,7 +300,8 @@ function specOf(){
     if(st.kind==='design-set'||designs.length||keys.length)s.wings=w}
   if(st.kind==='evolutionary'){const q=st.search;
     s.search={objectives:q.objectives.map(o=>{const [k,v]=Object.entries(o)[0];return {[k]:v===''?null:+v}}),seed_half_spans_mm:[...q.spans],seed_families:[...q.fams],
-      solves_per_lineage:q.solves===''?null:+q.solves,step_mm:q.step===''?null:+q.step,min_chord_mm:q.minc===''?null:+q.minc,decreasing:!!q.dec}}
+      solves_per_lineage:q.solves===''?null:+q.solves,step_mm:q.step===''?null:+q.step,min_chord_mm:q.minc===''?null:+q.minc,decreasing:!!q.dec};
+    if(q.sstep!==0&&q.sstep!=null)Object.assign(s.search,{span_step_mm:q.sstep===''?null:+q.sstep,half_span_limits_mm:[q.slo===''?null:+(q.slo??150),q.shi===''?null:+(q.shi??700)]})}
   const n=safeCount(s);s.budget={max_cases:st.budget!=null?+st.budget:Math.max(1,n||1)};
   if(st.parent)s.parent=st.parent;if(st.notes.trim())s.notes=st.notes.trim();
   return s;
@@ -362,7 +366,8 @@ function renderSearch(){
   $('#seed-spans').innerHTML=spans.map(v=>`<button class="chip ${q.spans.includes(v)?'on':''}" data-span="${v}">${v}</button>`).join('');
   $('#seed-fams').innerHTML=L.families.map(f=>`<button class="chip ${q.fams.includes(f)?'on':''}" data-fam="${f}" style="display:inline-flex;align-items:center;gap:6px"><span style="width:64px;display:inline-block">${outlineSVG(seedChords(f,q.minc),340,{w:64,h:30}).replace(/<text[^>]*>[^<]*<\/text>/,'')}</span>${f}</button>`).join('');
   seedNote();
-  for(const [k,id] of [['solves','#f-solves'],['step','#f-step'],['minc','#f-minc']])if(document.activeElement!==$(id))$(id).value=q[k];
+  for(const [k,id,dv] of [['solves','#f-solves'],['step','#f-step'],['minc','#f-minc'],['sstep','#f-sstep',0],['slo','#f-slo',150],['shi','#f-shi',700]])if(document.activeElement!==$(id))$(id).value=q[k]??dv??'';
+  $('#f-slo').disabled=$('#f-shi').disabled=!q.sstep;
   $('#f-dec').checked=!!q.dec;
 }
 function seedNote(){const q=st.search,nb=basket().length+st.outlines.length,lin=q.spans.length*q.fams.length+nb;
@@ -439,7 +444,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.kind)e.target.click()});
 $('#b-freq-add').onclick=()=>{const v=+$('#f-freq-add').value;if(v>0&&!st.freqs.includes(v)){st.freqs=[...st.freqs,v].sort((a,b)=>a-b);$('#f-freq-add').value='';renderStatic();update()}};
-for(const [k,id] of [['solves','#f-solves'],['step','#f-step'],['minc','#f-minc']])$(id).oninput=e=>{st.search[k]=e.target.value===''?'':+e.target.value;if(k==='minc')renderSearch();update()};
+for(const [k,id] of [['solves','#f-solves'],['step','#f-step'],['minc','#f-minc'],['sstep','#f-sstep'],['slo','#f-slo'],['shi','#f-shi']])$(id).oninput=e=>{st.search[k]=e.target.value===''?'':+e.target.value;if(k==='minc'||k==='sstep')renderSearch();update()};
 $('#f-dec').onchange=e=>{st.search.dec=e.target.checked;update()};
 $('#b-span-add').onclick=()=>{const v=+$('#f-span-add').value;if(v>0&&!st.search.spans.includes(v)){st.search.spans=[...st.search.spans,v].sort((a,b)=>a-b);$('#f-span-add').value='';renderSearch();update()}};
 $('#b-add-outline').onclick=()=>{st.outlines.push({name:`wing ${st.outlines.length+1}`,half_span:340,chords:[...TAPER]});renderOutlines();update()};
@@ -459,7 +464,8 @@ $('#f-load').onchange=async e=>{const file=e.target.files[0];if(!file)return;try
   const q=s.search||{};
   Object.assign(st,{title:s.title||'',question:s.question||'',author:s.author||'',notes:s.notes||'',parent:s.parent||'',kind:KINDS[s.kind]?s.kind:'evolutionary',
     search:s.search?{objectives:q.objectives||[],spans:q.seed_half_spans_mm||[],fams:q.seed_families||[],solves:q.solves_per_lineage??L.search_default.solves_per_lineage,
-      step:q.step_mm??L.search_default.step_mm,minc:q.min_chord_mm??L.search_default.min_chord_mm,dec:q.decreasing??true}:st.search,
+      step:q.step_mm??L.search_default.step_mm,minc:q.min_chord_mm??L.search_default.min_chord_mm,dec:q.decreasing??true,
+      sstep:q.span_step_mm??0,slo:(q.half_span_limits_mm||[])[0]??150,shi:(q.half_span_limits_mm||[])[1]??700}:st.search,
     structure:s.structure||'chordwise',models:s.models||[],freqs:s.frequencies_hz||[],numerics:(s.numerics||[L.numerics_default]).map(n=>({...L.numerics_default,...n})),
     id:s.id||'',idTouched:!!s.id,budget:s.budget?s.budget.max_cases:null,
     outlines:((s.wings||{}).designs||[]).map(d=>({name:d.name||'',half_span:d.half_span_mm,chords:[...d.chords_mm]})),

@@ -4,12 +4,19 @@ Native simulations decide acceptance. Lambda and seed-derived study-wide scales
 stay fixed. A failed full step gets exactly one half-step trial, then that chord
 is retired for this run even if the half step succeeds. This is a deliberately
 bounded local heuristic, not a global or derivative-stationarity certificate.
+
+Optional span coordinate: when the rules carry ``span_step_m`` > 0 the half-span is
+one more coordinate, tried first in every pass with the same rules as a chord (+/-
+one step, remembered sign, one half-step retry, then retired). The stations stretch
+with it; ``span_min_m`` / ``span_max_m`` bound it. Without ``span_step_m`` the climb
+is exactly the fixed-span algorithm the campaigns used.
 """
 import csv
 import math
 from . import adaptive
 
 ALGORITHM='independent_coordinate_v1'
+ALGORITHM_SPAN='independent_coordinate_v1+span'
 
 
 def loads(row):
@@ -44,6 +51,12 @@ def move(chords,node,delta,r):
     return out if out!=chords and adaptive.valid(out,r) else None
 
 
+def move_span(span,delta,r):
+    """Change only the half-span, within its bounds; None if nothing changes."""
+    value=round(min(r['span_max_m'],max(r['span_min_m'],span+delta)),12)
+    return None if abs(value-span)<1e-12 else value
+
+
 def event(r,row,chords,meta,scales):
     t,m=loads(row)
     return {**meta,'accepted':True,'evolution_role':'seed' if meta['kind']=='seed' else 'improvement',
@@ -58,24 +71,36 @@ def climb(r,span,job,family,initial,scales,score_fn=None):
     score_fn(row) -> float|None optionally replaces the lambda score (default unchanged).
     """
     sc=score_fn or (lambda row:score(row,scales,r['tradeoff_lambda']))
-    chords,row=initial;directions=[None]*len(chords);finished=[False]*len(chords)
+    span_on=bool(r.get('span_step_m'))
+    chords,row=initial;n=len(chords)
+    # Index n is the half-span coordinate (when enabled); 0..n-1 are the chords.
+    directions=[None]*(n+1);finished=[False]*n+[not span_on]
     base={'job':job,'lineage_id':f'seed_{job:03d}','span_m':span,'seed_family':family,
-        'objective':r['objective'],'search_algorithm':ALGORITHM}
+        'objective':r['objective'],'search_algorithm':ALGORITHM_SPAN if span_on else ALGORITHM}
     yield ('accepted',event(r,row,chords,{**base,'pass':0,'node':None,'step_m':0.,'parent_case':None,'kind':'seed'},scales))
     passes=0
+    order=([n] if span_on else [])+list(range(n))
     while not all(finished):
         passes+=1
-        for node in range(len(chords)):
+        for node in order:
             if finished[node]:continue
-            step=r['bounds'][node]['step_m'];signs=(1,-1) if directions[node] is None else (directions[node],)
+            is_span=node==n
+            step=r['span_step_m'] if is_span else r['bounds'][node]['step_m'];signs=(1,-1) if directions[node] is None else (directions[node],)
             for refinement in (False,True):
                 amount=step*(.5 if refinement else 1);pending=[]
                 for sign in signs:
-                    proposed=move(chords,node,sign*amount,r)
-                    if proposed is None:continue
-                    meta={**base,'pass':passes,'node':node,'kind':'half_step' if refinement else 'coordinate',
+                    if is_span:
+                        new_span=move_span(base['span_m'],sign*amount,r)
+                        if new_span is None:continue
+                        proposed=chords[:];delta=new_span-base['span_m']
+                    else:
+                        proposed=move(chords,node,sign*amount,r)
+                        if proposed is None:continue
+                        new_span=base['span_m'];delta=proposed[node]-chords[node]
+                    meta={**base,'span_m':new_span,'pass':passes,'node':'span' if is_span else node,
+                        'kind':'half_step' if refinement else 'coordinate',
                         'direction':sign,'step_m':amount,'parent_case':row['id'],
-                        'actual_delta_m':proposed[node]-chords[node],'refinement':refinement}
+                        'actual_delta_m':delta,'refinement':refinement}
                     pending.append((proposed,meta))
                 # Blocked coordinates need no solver or synchronization turn.
                 results=(yield ('batch',pending)) if pending else []
@@ -88,10 +113,10 @@ def climb(r,span,job,family,initial,scales,score_fn=None):
                     value,proposed,meta,trial=best
                     meta={**meta,'score_change':value-current_score,
                         'directional_score_slope_per_m':(value-current_score)/meta['actual_delta_m']}
-                    chords=proposed;row=trial;directions[node]=meta['direction']
+                    chords=proposed;row=trial;directions[node]=meta['direction'];base['span_m']=meta['span_m']
                     # A newly exposed tip has a new feasible lower boundary.
                     # Give it a turn even if it stalled behind the old tip.
-                    if chords[node]==0 and node>=3:finished[node-1]=False
+                    if not is_span and chords[node]==0 and node>=3:finished[node-1]=False
                     yield ('accepted',event(r,row,chords,meta,scales))
                 if refinement:
                     finished[node]=True
@@ -99,9 +124,10 @@ def climb(r,span,job,family,initial,scales,score_fn=None):
                 if best:break  # Next chord, not another step on this chord.
                 # No initial winner: test both signs once at half size, then stop.
                 # Remembered sign failed: test only that sign at half size.
-    return {'job':job,'lineage_id':base['lineage_id'],'span_m':span,'seed_family':family,
+    return {'job':job,'lineage_id':base['lineage_id'],'span_m':base['span_m'],'seed_family':family,
         'case_id':row['id'],'passes':passes,'score':sc(row),
-        'status':'one_refinement_per_chord_complete','chord_directions':directions}
+        'status':'one_refinement_per_chord_complete','chord_directions':directions[:n],
+        **({'span_direction':directions[n],'seed_span_m':span} if span_on else {})}
 
 
 def run(r,pipeline):

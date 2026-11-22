@@ -89,6 +89,13 @@
         if (!(whole ? isInt(v) : isNum(v)) || !(lo <= v && v <= hi)) e.push(`search.${k}: ${whole ? "whole number " : ""}${g(lo)}-${g(hi)}`);
       }
       if (typeof get(search, "decreasing", true) !== "boolean") e.push("search.decreasing: true or false");
+      const ss = get(search, "span_step_mm", L.search_default.span_step_mm), [SLO, SHI] = L.span_step_range;
+      if (!isNum(ss) || !(SLO <= ss && ss <= SHI)) e.push(`search.span_step_mm: ${g(SLO)}-${g(SHI)} (0 keeps the span fixed)`);
+      const lim = get(search, "half_span_limits_mm", L.search_default.half_span_limits_mm);
+      if (!Array.isArray(lim) || lim.length !== 2 || !lim.every(isNum) || !(lim[0] < lim[1]) || lim[0] < HLO || lim[1] > HHI)
+        e.push(`search.half_span_limits_mm: [low, high] within ${g(HLO)}-${g(HHI)} mm`);
+      else if (spansOk && spans.some(x => !(lim[0] <= x && x <= lim[1])))
+        e.push("search.seed_half_spans_mm: every seed half-span must lie within search.half_span_limits_mm");
       return e;
     }
 
