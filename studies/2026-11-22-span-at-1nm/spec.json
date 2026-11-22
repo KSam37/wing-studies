@@ -1,0 +1,19 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-22-span-at-1nm",
+ "title": "Best wing at a 1 N·m torque budget for each half-span, 300-700 mm, 0.5 mm sheet pivoting on the leading edge",
+ "author": "sam",
+ "question": "For a 0.5 mm sheet pivoting freely about a straight leading edge at 1 Hz, how does the best thrust under a 1 N·m peak-torque budget change with half-span from 300 to 700 mm, and what outline does each span want?",
+ "kind": "evolutionary",
+ "parent": "2026-11-22-free-span-concave",
+ "structure": "chordwise",
+ "models": ["t0.50"],
+ "frequencies_hz": [1.0],
+ "numerics": [{"span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4}],
+ "search": {"objectives": [{"torque_budget_Nm": 1.0}],
+            "seed_half_spans_mm": [300, 350, 400, 450, 500, 550, 600, 650, 700], "seed_families": ["concave"],
+            "solves_per_lineage": 60, "step_mm": 20, "min_chord_mm": 10, "decreasing": true,
+            "span_step_mm": 0, "half_span_limits_mm": [150, 800]},
+ "notes": "One lineage per seed half-span, span fixed (a tip chord may still reach zero and shorten the wing), so the winners trace best thrust at 1 N·m against span. Seeds above the budget first walk down in torque, then climb thrust. Every trial, accepted or not, is kept, which fills the atlas around 1 N·m. Same model, motion and numerics as the parent free-span study, whose lambda searches settled at 440-480 mm.",
+ "budget": {"max_cases": 549}
+}
