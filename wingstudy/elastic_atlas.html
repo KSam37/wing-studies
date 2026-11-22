@@ -149,6 +149,12 @@ ul.f{margin:4px 0 0;padding-left:18px}ul.f li{margin:0 0 7px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
 .kv div:nth-child(odd){color:var(--text-2)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+table.cov{border-collapse:separate;border-spacing:2px;width:100%}
+table.cov td.cov-c{cursor:pointer;border-radius:4px;padding:6px 8px;vertical-align:top;min-width:150px}
+table.cov td.cov-c:hover{outline:2px solid var(--s1)}
+table.cov td.cov-e{border:1px dashed var(--axis);border-radius:4px;padding:6px 8px;vertical-align:top}
+table.cov td.cov-x{text-align:center}
+table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -380,6 +386,36 @@ const legend=items=>`<div class="legend">${items.map(([c,l])=>`<span><span class
 /* ======================================================================================
    Overview
    ====================================================================================== */
+// Coverage: how many wings were simulated for each material x analysis type (and so each
+// leading-edge boundary condition). One hue, shaded by count on a log scale; numbers in every cell.
+function coverageCard(){
+  const rank=mi=>BASE_OF[mi]==='rigid'?[0,0]:[ROD_OF[mi]?2:1,-(MODEL[BASE_OF[mi]]?.thickness||0)];
+  const rows=MATS.slice().sort((a,b)=>{const x=rank(a),y=rank(b);return x[0]-y[0]||x[1]-y[1]});
+  const cell={};
+  for(let i=0;i<N;i++){const m=C.m[i],k=MAT_OF[m]+'|'+STRUCT_OF[m];
+    const c=cell[k]||(cell[k]={n:0,ok:0,bc:BC_OF[m],freq:{},study:{},bins:new Set(),lo:Infinity,hi:-Infinity});
+    c.n++;if(GOOD.has(STATUS[C.S[i]]))c.ok++;c.freq[C.f[i]]=(c.freq[C.f[i]]||0)+1;c.study[C.s[i]]=(c.study[C.s[i]]||0)+1;
+    const sp=SPAN[i];if(isFinite(sp)&&sp>0){c.bins.add(Math.round(sp/10));if(sp<c.lo)c.lo=sp;if(sp>c.hi)c.hi=sp}}
+  const max=Math.max(1,...Object.values(cell).map(c=>c.n)),shade=n=>Math.round(8+50*Math.log(n+1)/Math.log(max+1));
+  const tip=(mi,k,c)=>`<b>${esc(D.models[mi].label)} · ${STRUCTS[k][1]}</b><br>${BCS[c.bc][1]}<br>${c.n.toLocaleString()} wings, ${c.ok.toLocaleString()} verified / settled<br>`
+    +`Half-span ${Math.round(c.lo)}–${Math.round(c.hi)} mm, ${c.bins.size} distinct (10 mm bins)<br>`
+    +Object.entries(c.freq).map(([f,n])=>`${D.freqs[f]} Hz: ${n.toLocaleString()}`).join(' · ')+'<br>'
+    +Object.entries(c.study).map(([st,n])=>`${esc(D.studies[st].label)}: ${n.toLocaleString()}`).join('<br>')+'<br><span class="muted">Click to show these on the Wing map</span>';
+  const colTot=STRUCTS.map(([k])=>rows.reduce((a,mi)=>a+(cell[mi+'|'+k]?.n||0),0));
+  let h=`<div class="card"><h3>What has been simulated</h3><p class="small muted" style="max-width:900px">Every wing in the atlas by material (rows) and analysis type (columns). The two together fix the leading-edge boundary condition, named in each cell. Darker cells hold more wings (log scale); empty cells are combinations not simulated yet. Hover a cell for frequencies, studies and the spans covered; click it to open those wings on the Wing map.</p>
+   <div style="overflow-x:auto"><table class="cov"><tr><th>Material</th>${STRUCTS.map(([k,l])=>`<th>${l}</th>`).join('')}<th class="n">Total</th></tr>`;
+  for(const mi of rows){const rigid=BASE_OF[mi]==='rigid';let tot=0;
+    h+=`<tr><td><b>${esc(rigid?'Rigid (no material)':D.models[mi].label)}</b></td>`;
+    for(const [k] of STRUCTS){const c=cell[mi+'|'+k];
+      if(c){tot+=c.n;h+=`<td class="cov-c" data-tip="${esc(tip(mi,k,c))}" onclick="coverageGo(${mi},${k})" style="background:color-mix(in srgb,var(--s1) ${shade(c.n)}%,transparent)"><div class="cov-n">${c.n.toLocaleString()}</div><div class="tiny">${c.ok.toLocaleString()} verified</div><div class="tiny" style="color:var(--text-2)">${BCS[c.bc][1]}</div></td>`}
+      else if(rigid!==(k===0))h+=`<td class="cov-x tiny muted">–</td>`;
+      else h+=`<td class="cov-e"><div class="tiny muted">not simulated</div><div class="tiny muted">${BCS[k===0?0:(k===1?1:3)+(ROD_OF[mi]?1:0)][1]}</div></td>`}
+    h+=`<td class="n"><b>${tot.toLocaleString()}</b></td></tr>`}
+  h+=`<tr><td><b>Total</b></td>${colTot.map(n=>`<td class="n"><b>${n.toLocaleString()}</b></td>`).join('')}<td class="n"><b>${N.toLocaleString()}</b></td></tr></table></div></div>`;
+  return h;
+}
+function coverageGo(mi,k){Object.assign(M,mapDefaults(),{view:null});M.models=new Set([mi]);M.struct=new Set([k]);
+  M.freqs=new Set(D.freqs.map((_,i)=>i));M.quality=new Set(QUALS.map(q=>q[0]));go('map');drawMap()}
 function renderOverview(){
   const R=Object.fromEntries(D.refined.filter(r=>(r.set||'campaign')==='campaign').map(r=>[r.model,r]));
   const RS=Object.fromEntries(D.refined.filter(r=>r.set==='sweep').map(r=>[r.model,r]));
@@ -397,6 +433,7 @@ function renderOverview(){
    ${R['t0.50']?tile('Bare 0.5 mm plate · 1 Hz',fmt(R['t0.50'].final.thrust)+' N',`±${fmt(R['t0.50'].final.twist,0)}° tip twist: outside the model's comfort zone`):''}
    ${tile('Designs simulated',N.toLocaleString(),`${(CAT_END-CAT0).toLocaleString()} rigid catalog runs + ${D.unique.toLocaleString()} unique elastic-study designs${N>CAT_END?` + ${(N-CAT_END).toLocaleString()} matched or planned-study results`:''}`)}
   </div>
+  ${coverageCard()}
   <div class="grid2">
   <div class="card"><h3>Key findings</h3><ul class="f">
    <li><b>The leading-edge rod makes the wing nearly rigid in twist.</b> With the 5/3 mm carbon tube bolted along the leading edge, tip twist is only ±1–2° for either sheet, and 0.5 mm and 0.25 mm perform within 1% of each other.</li>
