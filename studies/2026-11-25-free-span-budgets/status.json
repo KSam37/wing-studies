@@ -1,0 +1,9 @@
+{
+ "state": "complete",
+ "total": 9060,
+ "done": 952,
+ "failed": 0,
+ "started": "2026-11-26T04:23:54Z",
+ "finished": "2026-11-26T06:12:27Z",
+ "note": "total is the most an evolutionary search can solve; lineages usually stop earlier"
+}
