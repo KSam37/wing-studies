@@ -3,6 +3,7 @@ convergence, convergence-report, polish, favorite."""
 from __future__ import annotations
 
 import argparse
+import re
 import datetime as dt
 import json
 import shutil
@@ -15,6 +16,7 @@ from . import spec as S
 COMMANDS = ("new", "import", "validate", "plan", "run", "publish", "list", "convergence", "convergence-report",
             "polish", "favorite")
 FAVORITES = S.ROOT / "atlas" / "favorites.json"
+FAV_KEY_RE = re.compile(r"^[0-9a-f]{20}(?:[0-9a-f]{4})?$")   # study designs: 24 hex; refine_top solves: 20
 
 # Studies estimated above this many minutes (the maximum, for searches) need a person's go-ahead:
 # `run` asks at a terminal and refuses when no one is there, unless --yes is given.
@@ -357,9 +359,9 @@ def cmd_favorite(a) -> int:
         if not fav["favorites"]:
             print('no favourites yet: python -m wingstudy favorite KEY --note "why"')
         return 0
-    bad = [k for k in a.keys if not S.KEY_RE.fullmatch(k)]
+    bad = [k for k in a.keys if not FAV_KEY_RE.fullmatch(k)]
     if bad:
-        print(f"not atlas design keys (24 hex characters): {', '.join(bad)}", file=sys.stderr)
+        print(f"not atlas design keys (24 hex characters, or 20 for an optimized wing): {', '.join(bad)}", file=sys.stderr)
         return 1
     have = {f["key"]: f for f in fav["favorites"]}
     for k in a.keys:

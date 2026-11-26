@@ -125,7 +125,9 @@ canvas#map{display:block;width:100%;height:560px;cursor:crosshair;touch-action:n
 .tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12.5px;overflow-wrap:anywhere;max-width:min(380px,calc(100vw - 16px));display:none}
 .tip b{font-weight:650}
 .wgrid{display:grid;gap:10px}
-.wcell{background:var(--surface-2);border-radius:10px;padding:8px 10px;cursor:pointer;border:1px solid transparent;min-width:0}
+.wcell{background:var(--surface-2);border-radius:10px;padding:8px 10px;cursor:pointer;border:1px solid transparent;min-width:0;position:relative}
+.hbtn{position:absolute;top:4px;right:6px;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--text-2);padding:2px 4px}
+.hbtn:hover{color:#e0457b}.hbtn.on{color:#e0457b}.hbtn:disabled{cursor:default}
 .wcell:hover{border-color:var(--axis)}
 .wcell.best{border-color:var(--accent)}
 .wcell .t{font-size:12.5px;color:var(--text-2)}
@@ -191,6 +193,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
       <label>Colour by <select id="colorby"><option value="study">study group</option><option value="bc">model (leading edge)</option><option value="thk">sheet thickness</option><option value="freq">frequency</option></select></label>
       <button class="chip" id="f-faav" aria-pressed="true" title="Colour only the wing that was built (0.5 mm carbon sheet, chordwise elasticity, pivoting freely on a stiff leading edge that neither bends nor twists); every other wing is drawn in grey behind it. Nothing is hidden.">Highlight FAAV build</button>
       <button class="chip off" id="f-fav" aria-pressed="false" title="Only designs starred as favourites (shared and your own)">♥ Favourites</button>
+      <button class="chip off" id="f-steps" aria-pressed="false" title="Searches solve many wings on the way to their result. By default the map shows each search's final variants only (search winners, the end of every lineage, the campaign winners and the optimized standouts), plus favourites. Turn this on to show every wing every search solved, trial and intermediate steps included.">Show every search step</button>
       <span style="flex:1"></span>
       <button class="iconbtn ftoggle" id="f-toggle" style="width:auto;padding:0 10px" aria-expanded="false">Filters</button>
       <button class="iconbtn" id="f-reset" style="width:auto;padding:0 10px">Reset filters</button>
@@ -287,7 +290,7 @@ const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','
 const STUDY_VAR_ID={rod:'--s1',weekend:'--s2',sweep:'--s3',spanfree:'--s7',catalog:'--neutral'}, FREQ_VAR=['--f1','--f2','--f3'];
 // Study groups: studies of the same kind share a chip and a colour on the Wing map.
 const SGROUPS=[[0,'Original campaigns (rod and plate)','--s1'],[1,'Geometric sweeps','--s3'],[2,'Span and shape searches','--s7'],[3,'Design sets and reruns','--s4'],[4,'Rigid catalog','--neutral']];
-const SGROUP_OF=D.studies.map(s=>s.id==='rod'||s.id==='weekend'?0:s.id==='sweep'||s.kind==='geometry-sweep'?1:s.id==='catalog'?4:s.kind==='evolutionary'||s.id==='spanfree'?2:3);
+const SGROUP_OF=D.studies.map(s=>s.id==='rod'||s.id==='weekend'?0:s.id==='sweep'||s.kind==='geometry-sweep'?1:s.id==='catalog'?4:s.kind==='evolutionary'||s.kind==='refine'||s.id==='spanfree'?2:3);
 const modelColor=id=>css(MODEL_VAR[id]||(id.startsWith('span-flex')?'--s2':'--s1')); const studyColor=i=>css(SGROUPS[SGROUP_OF[i]][2]); const freqColor=i=>css(FREQ_VAR[i%FREQ_VAR.length]);
 const STATUS=D.statuses, GOOD=new Set(['verified','ok']);
 const statusPill=s=>`<span class="pill ${GOOD.has(s)?'good':s==='uncertain'?'warn':'bad'}">${s==='ok'?'settled (rigid)':s}</span>`;
@@ -357,7 +360,8 @@ function outlineSVG(pts,{w=260,h=96,color='var(--accent)',spanMax=420,chordMax=2
   if(labels){const L=pts[pts.length-1][0];g+=`<text x="${pad}" y="${h-2}">0</text><text x="${(pad+s*L).toFixed(1)}" y="${h-2}" text-anchor="end">${Math.round(L)} mm</text>`}
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block" role="img" aria-label="Wing outline, to scale"><title>Outline to scale: leading edge (thick line) at the top, root at the left</title>${g}</svg>`;
 }
-const designOutline=i=>activeOutline(chordsOf(i),C.H[i]);
+const designOutline=i=>activeOutline(D.row_outline&&D.row_outline[i]||chordsOf(i),C.H[i]);   // row_outline: refined rows, every mesh station
+const FINE=i=>!!(C.src[i]&8);   // fine-mesh refinement rows (Optimized shapes): not compared with 8 x 4 results
 
 /* ---------- media viewer ---------- */
 const viewer=$('#viewer');
@@ -387,7 +391,7 @@ function openEvolution(i){
   const path=[{name:'path',color:col,points:steps.map((j,k)=>({x:C.Q[j],y:C.T[j],row:j,tip:`${k?'Step '+k:'Seed'}: ${fmt(C.T[j],3)} N at ${fmt(C.Q[j],3)} N·m`}))}];
   $('#v-title').textContent=`Shape evolution · ${e.search}`;
   $('#v-body').innerHTML=`<div><div class="seg"><button id="evo-play">Pause</button><button id="evo-back">◀</button><button id="evo-next">▶</button></div>${frames}
-    <p class="tiny muted">Each frame is an accepted step of the lineage that won this search: one chord station moved by the search step (or half of it on the single retry) and kept only because the objective improved. Objective: ${esc(e.objective)}.</p></div>
+    <p class="tiny muted">${e.note?esc(e.note):`Each frame is an accepted step of the lineage that won this search: one chord station moved by the search step (or half of it on the single retry) and kept only because the objective improved.`} Objective: ${esc(e.objective)}.</p></div>
     <div style="max-width:440px">${lineChart({series:path,xlabel:'Peak root torque (N·m)',ylabel:'Mean thrust (N)',w:420,h:260,xfmt:x=>fmt(x,2)})}<p class="tiny muted">Path of the lineage in thrust–torque space, seed to winner.${e.torque_budget_Nm!=null?' Torque budget: '+e.torque_budget_Nm+' N·m.':''}</p></div>`;
   const F=$$('.evo-f');let k=0,on=true;const show=n=>{k=(n+F.length)%F.length;F.forEach((f,q)=>f.style.display=q===k?'block':'none')};
   clearInterval(window.evoTimer);window.evoTimer=setInterval(()=>{if(on)show(k+1)},700);
@@ -583,6 +587,10 @@ function toggleFav(i){const k=C.k[i];if(SHARED_FAV.has(k))return;let l=localFav(
 const CONV=new Map();for(const st of D.convergence||[])for(const w of st.wings)if(w.source_key&&!CONV.has(w.source_key))CONV.set(w.source_key,{...w,study:st.study});
 function convRow(i){const c=CONV.get(C.k[i]);if(!c)return '';const t=c.thrust||{},q=c.torque||{},b=c.levels.base||{},f=c.levels.fine||{};
   return `<div>Convergence</div><div class="small">${t.behaviour?`<b>${t.behaviour}</b> under refinement`:'partly solved'}${t.extrapolated!=null?` · extrapolated thrust ${fmt(t.extrapolated,3)} N (base ${t.base_error_pct>=0?'+':''}${fmt(t.base_error_pct,1)}%, GCI ${fmt(t.gci_pct,1)}%)`:''}${q.base_error_pct!=null?` · torque base ${q.base_error_pct>=0?'+':''}${fmt(q.base_error_pct,1)}%`:''}${f.thrust_N!=null?`<br><span class="muted">fine 18 × 9 / 112: ${fmt(f.thrust_N,3)} N at ${fmt(f.torque_Nm,3)} N·m · ${esc(c.study)}</span>`:''}</div>`}
+const HEART='#e0457b';
+// One-click heart for cards: shared favourites show a filled heart that cannot be removed here.
+function heartBtn(i){const k=C.k[i];if(isCat(i))return '';const sh=SHARED_FAV.has(k),on=sh||isFav(k);
+  return `<button class="hbtn${on?' on':''}" aria-pressed="${on}" ${sh?'disabled ':''}title="${sh?'Shared favourite (atlas/favorites.json)':on?'Remove from favourites':'Add to favourites (this browser)'}" onclick="event.stopPropagation();toggleFav(${i})">${on?'♥':'♡'}</button>`}
 const favCmd=keys=>`python -m wingstudy favorite ${keys.join(' ')} --note "…"`;
 function favButton(i){const k=C.k[i];if(isCat(i))return '';
   if(SHARED_FAV.has(k))return `<span id="fav-btn" class="pill" title="${esc(SHARED_FAV.get(k).note||'')}">♥ shared favourite</span>`;
@@ -593,7 +601,7 @@ const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low t
 const LAMBDA_BITS=2|4|8;
 const lambdaPass=i=>{const o=C.obj[i]&LAMBDA_BITS;if(!o)return M.lambda.has(0);for(const b of [2,4,8])if(o&b&&M.lambda.has(b))return true;return false};
 const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),
-  studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false});
+  studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false,steps:false});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];M.until=TL.length-1;
@@ -601,6 +609,11 @@ const ST_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=ST[i]
 M.stLo=ST_LIM[0];M.stHi=ST_LIM[1];
 function stSync(){$('#st-lo').value=M.stLo.toFixed(2);$('#st-hi').value=M.stHi.toFixed(2);$('#st-lo-r').value=M.stLo;$('#st-hi-r').value=M.stHi}
 const WIN_ROWS=new Map(); D.winners.forEach(w=>{if(w.row!=null)WIN_ROWS.set(w.row,w)});
+// Final variants. A search row is a step on the way unless it is a search winner, the end of a lineage, a
+// campaign winner (the original campaigns kept no lineages, so their winners are their only known finals)
+// or an optimized standout. Steps are hidden unless "Show every search step" is on.
+const FINAL_ROWS=new Set([...WIN_ROWS.keys(),...(D.lineage_pairs||[]).map(p=>p.after).filter(r=>r!=null),...Object.entries(D.row_search||{}).filter(([,v])=>v.winner).map(([r])=>+r)]);
+const STEP_ROW=i=>!!(C.src[i]&1)&&!FINAL_ROWS.has(i);
 let VIS=[], SX=null, SY=null, HOVER=null;
 const cv=$('#map'), ctx=cv.getContext('2d');
 function initMapControls(){
@@ -612,6 +625,7 @@ function initMapControls(){
   $('#csv').onclick=downloadCSV;
   $('#f-faav').onclick=()=>{M.faav=!M.faav;M.view=null;drawMap()};
   $('#f-fav').onclick=()=>{M.favOnly=!M.favOnly;M.view=null;drawMap()};
+  $('#f-steps').onclick=()=>{M.steps=!M.steps;M.view=null;drawMap()};
   $('#f-reset').onclick=()=>{tlStop();Object.assign(M,mapDefaults(),{spLo:SPAN_LIM[0],spHi:SPAN_LIM[1],stLo:ST_LIM[0],stHi:ST_LIM[1],until:TL.length-1,view:null});spSync();stSync();
     drawMap()};
   initTimeline();
@@ -660,7 +674,7 @@ function chipRow(el,items,set,colorFn){
     chipRow(el,items,set,colorFn);M.view=null;drawMap()});
 }
 function renderChips(){
-  for(const [id,on] of [['f-faav',M.faav],['f-fav',M.favOnly]]){const b=$('#'+id);if(b){b.classList.toggle('off',!on);b.setAttribute('aria-pressed',on)}}
+  for(const [id,on] of [['f-faav',M.faav],['f-fav',M.favOnly],['f-steps',M.steps]]){const b=$('#'+id);if(b){b.classList.toggle('off',!on);b.setAttribute('aria-pressed',on)}}
   chipRow($('#f-study'),SGROUPS.filter(g=>SGROUP_OF.some((x,i)=>x===g[0]&&!D.studies[i].convergence)).map(g=>[g[0],g[1],D.studies.filter((s,i)=>SGROUP_OF[i]===g[0]&&!s.convergence).map(s=>s.label).join('\n')]),M.studies,M.color==='study'?k=>css(SGROUPS[k][2]):null);
   chipRow($('#f-lambda'),LAMBDAS,M.lambda,null);
   chipRow($('#f-bc'),BCS.map(([k,l,t])=>[k,BC_SHORT[k],l+'. '+t]),M.bc,M.color==='bc'?bcColor:null);
@@ -677,6 +691,7 @@ function filtered(){
     if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
     if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
     if(M.favOnly&&!isFav(C.k[i]))continue;
+    if(!M.steps&&STEP_ROW(i)&&i!==M.sel&&!isFav(C.k[i]))continue;
     if(!lambdaPass(i))continue;
     if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
     if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
@@ -748,10 +763,10 @@ function paint(){
   ctx.globalAlpha=1;
   // winners as stars
   for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!WIN_ROWS.has(i))continue;star(SX[k],SY[k],8,colorOf(i),surf)}
-  // favourites: an outlined diamond
-  for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!isFav(C.k[i]))continue;const x=SX[k],y=SY[k];
-    ctx.beginPath();ctx.moveTo(x,y-7);ctx.lineTo(x+7,y);ctx.lineTo(x,y+7);ctx.lineTo(x-7,y);ctx.closePath();
-    ctx.lineWidth=2.5;ctx.strokeStyle=surf;ctx.stroke();ctx.lineWidth=1.6;ctx.strokeStyle=css('--text');ctx.stroke();ctx.lineWidth=1}
+  // favourites: a heart
+  for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!isFav(C.k[i]))continue;const x=SX[k],y=SY[k]+1,r=7;
+    ctx.beginPath();ctx.moveTo(x,y+r*.95);ctx.bezierCurveTo(x-r*1.5,y-r*.05,x-r*.75,y-r*1.25,x,y-r*.4);ctx.bezierCurveTo(x+r*.75,y-r*1.25,x+r*1.5,y-r*.05,x,y+r*.95);ctx.closePath();
+    ctx.globalAlpha=1;ctx.fillStyle=HEART;ctx.fill();ctx.lineWidth=1.6;ctx.strokeStyle=surf;ctx.stroke();ctx.lineWidth=1}
   // hover + selection rings
   for(const [i,col,w] of [[HOVER,css('--text'),1.5],[M.sel,css('--text'),2.2]]){if(i==null)continue;const k=VIS.indexOf(i);if(k<0)continue;
     ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.arc(SX[k],SY[k],7,0,7);ctx.stroke()}
@@ -764,7 +779,7 @@ function updateCounts(){
   const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),BC_SHORT[k],k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?SGROUPS.map(g=>[css(g[2]),g[1],g[0]]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
   const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?SGROUP_OF[C.s[i]]:C.f[i];
   const cnt={};let nGrey=0;for(const i of VIS){if(GREYED(i)){nGrey++;continue}const k=key(i);cnt[k]=(cnt[k]||0)+1}
-  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span><span>◇ favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
+  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span><span><span style="color:${HEART}">♥</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
 
   const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
   $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} top performers). Shift-click a chip to show only that one. Hollow = uncertain.`;
@@ -875,7 +890,7 @@ function selectDesign(i){
     <div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
     <div>Chords</div><div class="small">${chordsOf(i).map(Math.round).join(' · ')} mm (root → tip, ${chordsOf(i).length} equally spaced stations)</div>
     <div>Quality</div><div>${statusPill(st)}</div>
-    <div>Found by</div><div class="small">${[C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):'',C.src[i]&4?'a planned study':''].filter(Boolean).join(' and ')||'–'}</div>
+    <div>Found by</div><div class="small">${[C.src[i]&8?'fine-mesh refinement (Optimized shapes)':C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):'',C.src[i]&4?'a planned study':''].filter(Boolean).join(' and ')||'–'}</div>
     ${D.row_notes&&D.row_notes[i]?`<div>Numerics</div><div class="small">${esc(D.row_notes[i])}</div>`:''}
     <div>Objective</div><div class="small">${RS(i)?(RS(i).trial?'trial step (not accepted)':esc(RS(i).objectives.join(' · '))+(RS(i).winner?' · <b>★ search winner</b>':'')):C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
     ${lambdaRow(i,w)}${evoRow(w,i)}
@@ -885,7 +900,7 @@ function selectDesign(i){
   $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:8px 0 0">${favButton(i)} ${basketButton(i)}</div>
-    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
+    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(FINE(i)?'<p class="tiny muted">No animation rendered for this design. It was solved by the fine-mesh refinement; rerunning it reuses the cached solves:<br><code>python -m wingstudy.refine_top --from atlas/refine-top.json --chord-panels 12 --curve 6 --out outputs/refine-top-curve</code></p>':C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
 }
 function downloadCSV(){
   const head=['study','plate','leading_edge_bc','freq_hz','status','thrust_N','peak_torque_Nm','tip_twist_deg','half_span_mm','strouhal','area_cm2','c1_mm','c2_mm','c3_mm','c4_mm','c5_mm','c6_mm','c7_mm','c8_mm','source','key'];
@@ -905,7 +920,7 @@ function winnerInfo(w){const m=MODEL[w.model];return `<div class="kv"><div>Study
   <div>Evaluated</div><div>${w.evaluated.toLocaleString()} designs in this category</div><div>Key</div><div><code>${w.key}</code></div></div>`}
 // Best verified / settled row with peak torque ≤ LIM in each group (rigid catalog excluded: other conditions).
 function bestRows(keep,group){const best=new Map();
-  for(let i=0;i<N;i++){if(isCat(i)||!GOOD.has(STATUS[C.S[i]])||!(C.Q[i]<=LIM)||!(C.T[i]>0)||!keep(i))continue;
+  for(let i=0;i<N;i++){if(isCat(i)||FINE(i)||!GOOD.has(STATUS[C.S[i]])||!(C.Q[i]<=LIM)||!(C.T[i]>0)||!keep(i))continue;
     const g=group(i),b=best.get(g);if(b==null||C.T[i]>C.T[b])best.set(g,i)}
   return best}
 const studyOf=i=>EXTRA[i]?'Matched spanwise reruns':D.studies[C.s[i]].label;
@@ -960,7 +975,7 @@ const LEVELS=[0.5,0.75,1,1.25,1.5,2];
 function setTop(k,v){TOPS[k]=v;renderWinners()}
 // Verified FAAV wings at the chosen frequency, one row per design key.
 function faavRows(sheet=TOPS.sheet){const out=[],seen=new Set();
-  for(let i=0;i<N;i++){if(isCat(i)||EXTRA[i]||!FAAV(i)||C.f[i]!==TOPS.f||!GOOD.has(STATUS[C.S[i]])||!(C.T[i]>0)||!(C.Q[i]>0))continue;
+  for(let i=0;i<N;i++){if(isCat(i)||EXTRA[i]||FINE(i)||!FAAV(i)||C.f[i]!==TOPS.f||!GOOD.has(STATUS[C.S[i]])||!(C.T[i]>0)||!(C.Q[i]>0))continue;
     if(sheet&&SPAN[i]>SHEET+0.5)continue;if(seen.has(C.k[i]))continue;seen.add(C.k[i]);out.push(i)}
   return out}
 const bestUnder=(rows,B)=>{let b=null;for(const i of rows)if(C.Q[i]<=B+1e-9&&(b==null||C.T[i]>C.T[b]))b=i;return b};
@@ -972,23 +987,21 @@ function wingSVG(i,{w=260,h=80,spanMax=700,chordMax=210,color='var(--accent)',gh
 function topCell(i,{title='',best=false,spanMax=700,note=''}={}){const m=D.models[C.m[i]],media=mediaForRow(i),id='t'+i;
   if(media)MEDIA_REG[id]={media,title:`${title||m.label} · ${Math.round(SPAN[i])} mm`,info:''};
   return `<div class="wcell ${best?'best':''}" ${media?`onclick="openViewer('${id}')" title="Play the Ptera animation"`:''}>
-    ${title?`<div class="small" style="font-weight:600;margin-bottom:4px">${title}</div>`:''}
+    ${heartBtn(i)}<div class="small" style="font-weight:600;margin-bottom:4px;padding-right:24px;min-height:1em">${title}</div>
     ${wingSVG(i,{spanMax,color:modelColor(m.id)})}
     <div class="t"><b>${fmt(C.T[i],2)} N</b> at ${fmt(C.Q[i],2)} N·m<br>${Math.round(SPAN[i])} mm half-span ${sheetTag(i)} · St ${fmt(ST[i],2)}${C.W[i]!=null?` · ±${fmt(C.W[i],0)}° twist`:''}${note?`<br>${note}`:''}<br><span class="tiny muted">${esc(studyOf(i))}</span></div>
-    ${media?'<span class="playbtn">▶ animation</span> ':''}${RS(i)&&RS(i).evolution?`<button class="playbtn" onclick="event.stopPropagation();openEvolution(${i})">▶ shape evolution</button> `:''}<button class="playbtn" onclick="event.stopPropagation();showOnMap(${i})">◎ on map</button> ${SHARED_FAV.has(C.k[i])?'<span class="pill">♥ shared</span>':`<button class="playbtn" onclick="event.stopPropagation();toggleFav(${i})">${isFav(C.k[i])?'♥ favourite':'♡ favourite'}</button>`}</div>`}
+    ${media?'<span class="playbtn">▶ animation</span> ':''}${RS(i)&&RS(i).evolution?`<button class="playbtn" onclick="event.stopPropagation();openEvolution(${i})">▶ shape evolution</button> `:''}<button class="playbtn" onclick="event.stopPropagation();showOnMap(${i})">◎ on map</button></div>`}
 // Optimized standouts (Optimized shapes, refine-top-curve.json) shown on the Top tab when they beat the study
 // pick on the same 21 x 12 mesh (refine-top-baseline.json): the pick breaks the budget there, or gives less thrust.
 function optFor(B){if(D.freqs[TOPS.f]!==1||!D.refine_curve||!D.refine_baseline)return null;
   const y=D.refine_curve.seeds.find(q=>Math.abs(q.budget_Nm-B)<1e-9),f=y&&y.final;
   if(!f||f.thrust==null||!(f.torque<=B+1e-9)||!y.final_chords_mm)return null;
   const b=D.refine_baseline.seeds.find(q=>q.id===y.id);if(!b||b.thrust==null)return null;
-  return b.torque>B+1e-9||f.thrust>b.thrust?{y,b}:null}
-function optCell({y,b},B,spanMax){const f=y.final,over=b.torque>B+1e-9,n=D.refine_baseline.chord_panels||12,m=(y.numerics&&y.numerics.span_panels)||21;
-  return `<div class="wcell best" style="cursor:pointer" title="Open its before / after card on Optimized shapes" onclick="go('opt');setTimeout(()=>{const e=document.getElementById('rt-${esc(y.id)}');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},60)">
-    <div class="small" style="font-weight:600;margin-bottom:4px">≤ ${B} N·m · optimized <span class="pill">${m} × ${n} mesh</span></div>
-    ${wingSVG(null,{pts:activeOutline(y.final_chords_mm,1000*f.span),spanMax,color:css('--s1')})}
-    <div class="t"><b>${fmt(f.thrust,2)} N</b> at ${fmt(f.torque,2)} N·m<br>${Math.round(1000*f.span)} mm half-span · smooth curve, single sheet<br><span class="small">Study pick on the same mesh: ${fmt(b.thrust,2)} N at <span${over?' style="color:var(--warn)"':''}>${fmt(b.torque,2)} N·m${over?', over budget':''}</span></span></div>
-    <span class="playbtn">▶ before / after and evolution</span></div>`}
+  const r=Object.entries(D.row_search||{}).find(([,v])=>v.refine&&v.winner&&v.winner_of.includes(y.id));if(!r)return null;
+  return b.torque>B+1e-9||f.thrust>b.thrust?{y,b,row:+r[0]}:null}
+function optCell({y,b,row},B,spanMax){const over=b.torque>B+1e-9,n=D.refine_baseline.chord_panels||12,m=(y.numerics&&y.numerics.span_panels)||21;
+  return topCell(row,{title:`≤ ${B} N·m · optimized <span class="pill">${m} × ${n} mesh</span>`,best:true,spanMax,
+    note:`<span class="small">Study pick on the same mesh: ${fmt(b.thrust,2)} N at <span${over?' style="color:var(--warn)"':''}>${fmt(b.torque,2)} N·m${over?', over budget':''}</span></span><br><button class="playbtn" onclick="event.stopPropagation();go('opt');setTimeout(()=>{const e=document.getElementById('rt-${esc(y.id)}');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},60)">▶ before / after</button>`})}
 function levelsCard(rows,rowsSheet){
   const spanMax=SHEET*1.02;
   let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust FAAV wing within one ${SHEET} mm sheet whose peak root torque is at or below each budget. Outlines share one scale. Where a wing from Optimized shapes beats the study pick when both are solved on the same finer mesh (the pick breaks the budget there, or gives less thrust), the optimized wing is shown first and the study pick after it.</p><div class="grid3">`;
@@ -1055,7 +1068,7 @@ function faavTopHTML(){
    <div class="chips" style="margin:0 0 10px">${fs.map(f=>`<button class="chip ${f===TOPS.f?'':'off'}" aria-pressed="${f===TOPS.f}" onclick="setTop('f',${f})">${D.freqs[f]} Hz</button>`).join('')}</div>`;
   if(!rows.length)return h+`<div class="card"><p>No verified FAAV wings at ${D.freqs[TOPS.f]} Hz.</p></div>`;
   h+=levelsCard(TOPS.sheet?rowsSheet:rows,rowsSheet)+sliceCard(allRows)
-    +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&SPAN[i]<=SHEET+0.5,`for the FAAV build within one ${SHEET} mm sheet, at every frequency simulated`)
+    +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&!FINE(i)&&SPAN[i]<=SHEET+0.5,`for the FAAV build within one ${SHEET} mm sheet, at every frequency simulated`)
     +favouritesCard()+convergenceCard();
   return h}
 function renderWinners(){
@@ -1104,7 +1117,7 @@ function renderWinners(){
   h+='</details>';
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){M.favOnly=false;M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([SGROUP_OF[C.s[i]]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.until=TL.length-1;M.stLo=ST_LIM[0];M.stHi=ST_LIM[1];stSync();M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.favOnly=false;if(STEP_ROW(i))M.steps=true;M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([SGROUP_OF[C.s[i]]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.until=TL.length-1;M.stLo=ST_LIM[0];M.stHi=ST_LIM[1];stSync();M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Elasticity effects, part 1: rigid → chordwise

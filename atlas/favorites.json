@@ -1,0 +1,15 @@
+{
+ "schema": "wingstudy/favorites@1",
+ "favorites": [
+  {
+   "key": "340fd319d8e5483b1220",
+   "note": "Optimized \u2264 1 N\u00b7m standout: 2.72 N at 1.00 N\u00b7m, 360 mm, smooth curve (21 \u00d7 12 mesh)",
+   "added": "2026-11-26"
+  },
+  {
+   "key": "eb1077d1efc929445293",
+   "note": "Optimized \u2264 1.25 N\u00b7m standout: 3.11 N at 1.25 N\u00b7m, 350 mm, smooth curve (21 \u00d7 12 mesh)",
+   "added": "2026-11-26"
+  }
+ ]
+}

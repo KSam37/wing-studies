@@ -181,3 +181,99 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
             if ev and ev.get("steps") and isinstance(ev["steps"][0], str):
                 ev["steps"] = [rows_of.get(k) for k in ev["steps"]]
     return added
+
+
+SRC_REFINE = 8
+
+
+def _resample(chords: list, n: int) -> list:
+    """Chords at n equally spaced stations of an outline given at len(chords) equally spaced stations."""
+    m = len(chords) - 1
+    out = []
+    for j in range(n):
+        x = j * m / (n - 1)
+        a = min(int(x), m - 1)
+        t = x - a
+        out.append(round(chords[a] * (1 - t) + chords[a + 1] * t, 2))
+    return out
+
+
+def merge_refinement(D: dict, stages: list[dict]) -> int:
+    """Fine-mesh refinement of the FAAV standouts (wingstudy.refine_top summaries, in stage order) as map rows.
+
+    Every accepted step of every stage becomes a row (``src`` = search | refine). The last accepted
+    step of the last stage is each standout's final variant: ``row_search`` marks it the winner and
+    carries the whole path (study pick, then every accepted step) as its evolution. Rows keep their
+    own outline (``row_outline``: chords in mm at the mesh stations, root to tip) because the curve
+    has more stations than the atlas's 8; ``C`` holds it resampled to 8 for filters and exports.
+    """
+    stages = [s for s in stages if s and s.get("seeds")]
+    if not stages:
+        return 0
+    cols = D["cols"]
+    if D.get("catalog") and "end" not in D["catalog"]:
+        D["catalog"]["end"] = len(cols["s"])
+    keyrow = {k: r for r, k in enumerate(cols["k"])}
+    sid = len(D["studies"])
+    D["studies"].append({"id": "refine-top", "label": "Optimized shapes: fine-mesh refinement of the FAAV standouts",
+                         "short": "Optimized shapes (fine mesh)", "kind": "refine", "planned": True,
+                         "about": "The best single-sheet FAAV wing at each torque budget, refined on finer meshes "
+                                  "(wingstudy.refine_top): tripled chord stations on 21 × 4 panels, then 21 × 12 "
+                                  "panels and a smooth-curve search. See Optimized shapes.",
+                         **({"run_date": stages[-1]["updated"]} if stages[-1].get("updated") else {})})
+    mi = _model(D, "t0.50", "chordwise")
+    fi = _index(D["freqs"], 1.0)
+    notes, outlines, rsearch = D.setdefault("row_notes", {}), D.setdefault("row_outline", {}), D.setdefault("row_search", {})
+    ids = list(dict.fromkeys(x["id"] for st in stages for x in st["seeds"]))
+    added = 0
+    for sid_ in ids:
+        path, budget, source = [], None, None
+        for n, st in enumerate(stages):
+            x = next((q for q in st["seeds"] if q["id"] == sid_), None)
+            if not x:
+                continue
+            budget, source = x["budget_Nm"], x["source"]
+            num = x.get("numerics") or {}
+            mesh = f"{num.get('span_panels')} × {num.get('chord_panels')} panels"
+            for h in x.get("history") or []:
+                if not (h.get("key") and _finite(h.get("thrust")) and _finite(h.get("torque")) and h.get("ctrl")):
+                    continue
+                ch = h.get("chords_mm") or [200.0] + [round(1000 * c, 2) for c in h["ctrl"]]
+                path.append((h, ch, f"step {n + 1 if n == 0 else 3}{'' if h['round'] else ' start'}"
+                                    f"{', round ' + str(h['round']) if h['round'] else ''} ({mesh}"
+                                    f"{', smooth curve' if num.get('param') == 'pchip' else ''})"))
+        rows = []
+        for h, ch, what in path:
+            if h["key"] in keyrow:
+                rows.append(keyrow[h["key"]])
+                continue
+            row = len(cols["s"])
+            vals = {"s": sid, "m": mi, "f": fi, "T": h["thrust"], "Q": h["torque"], "H": round(1000 * h["span"], 2),
+                    "W": h.get("tip_twist"), "S": _index(D["statuses"], h.get("status") or "verified"),
+                    "src": SRC_SEARCH | SRC_REFINE, "k": h["key"], "obj": 0}
+            for k in cols:
+                if k == "C":
+                    cols["C"].extend(_resample(ch, S.NODES))
+                else:
+                    cols[k].append(vals.get(k))
+            keyrow[h["key"]] = row
+            outlines[str(row)] = ch
+            notes[str(row)] = f"Optimized shapes, ≤ {budget:g} N·m standout ({sid_}): {what}"
+            rsearch[str(row)] = {"objectives": [f"≤ {budget:g} N·m (fine-mesh refinement)"], "lambda": [],
+                                 "torque_budget_Nm": [budget], "winner": False, "winner_of": [], "refine": True}
+            rows.append(row)
+            added += 1
+        if not rows:
+            continue
+        final = rsearch[str(rows[-1])] if str(rows[-1]) in rsearch else None
+        if final is not None:
+            seed = keyrow.get(source.get("key")) if source else None
+            final.update({"winner": True, "winner_of": [sid_], "evolution": {
+                "search": f"Optimized shapes · ≤ {budget:g} N·m", "objective": f"most thrust with peak torque ≤ {budget:g} N·m",
+                "lambda": None, "torque_budget_Nm": budget, "family": "wing", "seed_label": "study pick",
+                "seed_half_span_mm": source.get("half_span_mm") if source else None,
+                "steps": ([seed] if seed is not None else []) + list(dict.fromkeys(rows)),
+                "note": "The study pick (8 × 4 mesh), then every accepted step: tripled chord stations on 21 × 4 panels, "
+                        "then a smooth curve through 6 control chords on 21 × 12 panels. Thrust and torque rise with the "
+                        "finer meshes, so compare steps within a mesh."}})
+    return added
