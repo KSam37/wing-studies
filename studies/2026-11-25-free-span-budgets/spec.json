@@ -1,0 +1,67 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-25-free-span-budgets",
+ "title": "Continuous span and shape across torque budgets 0.5-2 N\u00b7m, 0.5 mm FAAV sheet",
+ "author": "sam",
+ "question": "For the FAAV sheet (0.5 mm, pivoting on a stiff leading edge) at 1 Hz, with half-span free, how do the best thrust, half-span and outline change with peak-torque budget from 0.5 to 2 N\u00b7m, and where does the 400 mm single-sheet limit start to cost thrust?",
+ "kind": "evolutionary",
+ "parent": "2026-11-22-span-at-1nm",
+ "structure": "chordwise",
+ "models": [
+  "t0.50"
+ ],
+ "frequencies_hz": [
+  1.0
+ ],
+ "numerics": [
+  {
+   "span_panels": 8,
+   "chord_panels": 4,
+   "steps_per_cycle": 50,
+   "cycles": 4
+  }
+ ],
+ "search": {
+  "objectives": [
+   {
+    "torque_budget_Nm": 0.5
+   },
+   {
+    "torque_budget_Nm": 0.75
+   },
+   {
+    "torque_budget_Nm": 1.25
+   },
+   {
+    "torque_budget_Nm": 1.5
+   },
+   {
+    "torque_budget_Nm": 2.0
+   }
+  ],
+  "seed_half_spans_mm": [
+   250,
+   350,
+   450,
+   550
+  ],
+  "seed_families": [
+   "concave",
+   "convex",
+   "triangle"
+  ],
+  "solves_per_lineage": 150,
+  "step_mm": 20,
+  "min_chord_mm": 10,
+  "decreasing": true,
+  "span_step_mm": 20,
+  "half_span_limits_mm": [
+   150,
+   800
+  ]
+ },
+ "notes": "Boundary condition: the FAAV build. A 0.5 mm carbon sheet on a stiff leading edge that the sheet pivots about; the leading edge itself neither bends nor twists. That is the chordwise t0.50 model: the leading edge is held straight and in place, each strip pitches about it against the sheet's own torsion and warping, root fixed to the hub; the rod is not modelled (its torsion excluded, its mass on the pitch axis). Companion to 2026-11-25-free-span-1nm, which covers 1 N\u00b7m with finer steps. Twelve lineages per budget (3 families x 4 half-spans), span a search coordinate (20 mm step, 10 mm half-step), chord step 20 mm. Manufacturing: a single sheet is at most 400 mm; not a search limit, shaded in the atlas.",
+ "budget": {
+  "max_cases": 9060
+ }
+}
