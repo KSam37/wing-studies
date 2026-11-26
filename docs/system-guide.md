@@ -262,6 +262,19 @@ Every wing carries a **leading-edge boundary condition** tag, derived from its a
 
 No current model has a sheet hinged freely on a rod that also bends along the span.
 
+**Strouhal number.** Every wing carries a kinematic Strouhal number, computed in the page as St = f·A/U:
+- A is the tip's peak-to-peak vertical excursion under the prescribed flap about the root, which sits on the flapping axis. For the custom −26° to +34° stroke used by every elastic study and most of the rigid catalog, A = R·(sin 34° + sin 26°) ≈ 0.998 R. One rigid-catalog conditions group uses a ±30° sine, where A = R.
+- R is the effective half-span and U = 0.5 m/s.
+- Elastic deflection is not included. This is exact for the chordwise models, whose leading edge stays straight.
+
+St is a Wing map axis, a range filter, an inspector row and a CSV column. *Top performing wings* plots the best thrust at ≤ 1 N·m against St, one line per frequency.
+
+**Top performing wings** is computed in the page from the rows, so new studies appear without a rebuild of `atlas/data`. It has, in order:
+- A leaderboard: the best wing per material × analysis type at a chosen frequency (default 1 Hz).
+- The Strouhal plot.
+- One card per planned study, newest first: the best wing at each half-span the study ran, plus a thrust-against-span chart.
+- The campaign winners (`D.winners`) and the rigid catalog.
+
 **Timeline.** A slider above the Wing map shows only the wings run up to a chosen point; *Play* steps through the studies in order while the axes stay fixed. Each wing's run time comes from:
 - **Rigid-catalog rows:** their source study's timestamp (the `YYYYMMDD-HHMMSS` prefix of its id in `catalog.json`).
 - **Planned studies:** `results.json` `completed`.
