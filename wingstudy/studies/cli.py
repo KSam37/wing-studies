@@ -1,4 +1,5 @@
-"""Commands for planned studies: new, import, validate, plan, run, publish, list."""
+"""Commands for planned studies: new, import, validate, plan, run, publish, list,
+convergence, convergence-report, polish, favorite."""
 from __future__ import annotations
 
 import argparse
@@ -11,7 +12,9 @@ from pathlib import Path
 
 from . import spec as S
 
-COMMANDS = ("new", "import", "validate", "plan", "run", "publish", "list")
+COMMANDS = ("new", "import", "validate", "plan", "run", "publish", "list", "convergence", "convergence-report",
+            "polish", "favorite")
+FAVORITES = S.ROOT / "atlas" / "favorites.json"
 
 # Studies estimated above this many minutes (the maximum, for searches) need a person's go-ahead:
 # `run` asks at a terminal and refuses when no one is there, unless --yes is given.
@@ -239,6 +242,141 @@ def cmd_list(a) -> int:
     return 0
 
 
+def _sources(ids) -> list[dict] | None:
+    out = []
+    for sid in ids:
+        rp = S.study_dir(_id(sid)) / "results.json"
+        if not rp.exists():
+            print(f"{_id(sid)}: no results.json yet; run the study first", file=sys.stderr)
+            return None
+        out.append(S.read_json(rp))
+    return out
+
+
+def _write_new(spec: dict) -> int:
+    dest = S.study_dir(spec["id"]) / "spec.json"
+    if dest.exists():
+        print(f"{dest} already exists; choose another --id", file=sys.stderr)
+        return 1
+    e = S.validate(spec)
+    if e:
+        print("could not build a valid spec:\n  " + "\n  ".join(e), file=sys.stderr)
+        return 1
+    S.write_json(dest, spec)
+    return 0
+
+
+def _default_id(kind: str, first: str) -> str:
+    return f"{dt.date.today():%Y-%m-%d}-{kind}-{_id(first).split('-', 3)[-1]}"[:80].rstrip("-")
+
+
+def cmd_convergence(a) -> int:
+    """Write a convergence (refinement-ladder) study for designs of finished studies."""
+    from . import convergence as CV
+    sources = _sources(a.sources)
+    if sources is None:
+        return 1
+    keys = list(a.keys or [])
+    if a.favorites:
+        keys += [f["key"] for f in _favorites()["favorites"]]
+    picks = CV.select(sources, top=a.top, sample=a.sample, seed=a.seed, keys=keys,
+                      torque_window=tuple(a.torque) if a.torque else None)
+    found = {x["key"] for x in picks}
+    extra = [k for k in dict.fromkeys(keys) if k not in found and S.KEY_RE.fullmatch(k) and _atlas_try(k)]
+    sid = a.id or _default_id("convergence", a.sources[0])
+    if not S.ID_RE.fullmatch(sid):
+        print(f"--id {sid!r}: YYYY-MM-DD-short-name", file=sys.stderr)
+        return 1
+    try:
+        spec = CV.make_spec(sid, sources, picks, author=a.author, extra_atlas=extra)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if _write_new(spec):
+        return 1
+    roles = {r: sum(x["role"] == r for x in picks) for r in ("top", "sample", "pick")}
+    print(f"wrote {S.study_dir(sid) / 'spec.json'}: {roles['top']} top, {roles['sample']} sampled, "
+          f"{roles['pick'] + len(extra)} picked designs, {S.case_count(spec)} cases ({len(CV.LADDER)} numerics levels each)\n"
+          f"next: python -m wingstudy plan {sid} --workers 16, then run it; then python -m wingstudy convergence-report {sid}")
+    return 0
+
+
+def _atlas_try(k):
+    try:
+        return S.atlas_wings([k])
+    except (KeyError, FileNotFoundError):
+        return []
+
+
+def cmd_convergence_report(a) -> int:
+    from . import convergence as CV
+    sid = _id(a.id)
+    spec, rp = S.load(sid), S.study_dir(sid) / "results.json"
+    if not rp.exists():
+        print(f"{sid}: no results.json yet", file=sys.stderr)
+        return 1
+    m = CV.metrics(spec, S.read_json(rp))
+    print(json.dumps(m, indent=1) if a.json else CV.report(m))
+    return 0
+
+
+def cmd_polish(a) -> int:
+    """Write a follow-up search seeded from the best shapes of finished studies (before/after)."""
+    from . import polish as PO
+    sources = _sources(a.sources)
+    if sources is None:
+        return 1
+    sid = a.id or _default_id("polish", a.sources[0])
+    try:
+        spec = PO.make_spec(sid, sources, top=a.top, step_mm=a.step, span_step_mm=a.span_step,
+                            solves=a.solves, author=a.author, max_half_span_mm=a.max_span)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if _write_new(spec):
+        return 1
+    print(f"wrote {S.study_dir(sid) / 'spec.json'}: {S.lineages_per_search(spec)} seeds x "
+          f"{len(spec['search']['objectives'])} objective(s), up to {S.case_count(spec)} solves\n"
+          f"next: python -m wingstudy plan {sid} --workers 16, then run it. The atlas's Optimized shapes tab "
+          "shows each seed before and after.")
+    return 0
+
+
+def _favorites() -> dict:
+    if FAVORITES.exists():
+        return S.read_json(FAVORITES)
+    return {"schema": "wingstudy/favorites@1", "favorites": []}
+
+
+def cmd_favorite(a) -> int:
+    """Shared favourites (atlas/favorites.json): designs worth building, starred in the atlas."""
+    fav = _favorites()
+    if a.list or not a.keys:
+        for f in fav["favorites"]:
+            print(f"{f['key']}  {f.get('added', ''):<11} {f.get('note', '')}")
+        if not fav["favorites"]:
+            print('no favourites yet: python -m wingstudy favorite KEY --note "why"')
+        return 0
+    bad = [k for k in a.keys if not S.KEY_RE.fullmatch(k)]
+    if bad:
+        print(f"not atlas design keys (24 hex characters): {', '.join(bad)}", file=sys.stderr)
+        return 1
+    have = {f["key"]: f for f in fav["favorites"]}
+    for k in a.keys:
+        if a.remove:
+            have.pop(k, None)
+            continue
+        old = have.get(k, {})
+        have[k] = {"key": k, "note": a.note if a.note is not None else old.get("note", ""),
+                   "added": old.get("added") or f"{dt.date.today():%Y-%m-%d}",
+                   **({"by": a.author} if a.author else ({"by": old["by"]} if old.get("by") else {}))}
+    fav["favorites"] = sorted(have.values(), key=lambda f: (f["added"], f["key"]))
+    S.write_json(FAVORITES, fav)
+    print(f"{'removed' if a.remove else 'saved'} {len(a.keys)}; {len(fav['favorites'])} favourite(s) in {FAVORITES}. "
+          "Commit it in a pull request to share the stars on the site.")
+    return 0
+
+
 def main(cmd: str, argv: list[str]) -> int:
     ap = argparse.ArgumentParser(prog=f"python -m wingstudy {cmd}", description=__doc__)
     if cmd == "new":
@@ -263,8 +401,38 @@ def main(cmd: str, argv: list[str]) -> int:
         ap.add_argument("id")
         ap.add_argument("--no-push", action="store_true", help="commit on the study branch only")
         ap.add_argument("--spec-only", action="store_true", help="propose the study: commit only spec.json, no results needed")
+    elif cmd == "convergence":
+        ap.add_argument("sources", nargs="+", help="finished study ids whose designs to check")
+        ap.add_argument("--top", type=int, default=3, help="best lineage results per search, winner first (default 3)")
+        ap.add_argument("--sample", type=int, default=30, help="random other verified designs (default 30)")
+        ap.add_argument("--seed", type=int, default=0, help="random seed for the sample")
+        ap.add_argument("--torque", type=float, nargs=2, metavar=("LO", "HI"),
+                        help="sample only designs with peak torque in [LO, HI] N*m")
+        ap.add_argument("--keys", nargs="*", help="extra design keys (from the sources or the campaign atlas)")
+        ap.add_argument("--favorites", action="store_true", help="also check every design in atlas/favorites.json")
+        ap.add_argument("--id", help="study id (default: today's date, 'convergence' and the first source's name)")
+        ap.add_argument("--author", default="")
+    elif cmd == "convergence-report":
+        ap.add_argument("id")
+        ap.add_argument("--json", action="store_true")
+    elif cmd == "polish":
+        ap.add_argument("sources", nargs="+", help="finished evolutionary study ids")
+        ap.add_argument("--top", type=int, default=3, help="best lineage results per search to re-seed (default 3)")
+        ap.add_argument("--step", type=float, default=10.0, help="chord step in mm (default 10, half-step 5)")
+        ap.add_argument("--span-step", type=float, default=20.0, help="half-span step in mm, 0 = fixed (default 20)")
+        ap.add_argument("--solves", type=int, default=150, help="most solves per lineage (default 150)")
+        ap.add_argument("--max-span", type=float, default=800.0, help="upper half-span limit in mm (400 = single sheet)")
+        ap.add_argument("--id")
+        ap.add_argument("--author", default="")
+    elif cmd == "favorite":
+        ap.add_argument("keys", nargs="*", help="atlas design keys (shown in the atlas's Design details)")
+        ap.add_argument("--note", help="why it is a favourite, e.g. 'built 28 Nov'")
+        ap.add_argument("--remove", action="store_true")
+        ap.add_argument("--list", action="store_true")
+        ap.add_argument("--author", default="")
     a = ap.parse_args(argv)
     if cmd == "validate" and not a.all and not a.ids:
         ap.error("give study ids or --all")
     return {"new": cmd_new, "import": cmd_import, "validate": cmd_validate, "plan": cmd_plan, "run": cmd_run,
-            "publish": cmd_publish, "list": cmd_list}[cmd](a)
+            "publish": cmd_publish, "list": cmd_list, "convergence": cmd_convergence,
+            "convergence-report": cmd_convergence_report, "polish": cmd_polish, "favorite": cmd_favorite}[cmd](a)

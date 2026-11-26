@@ -9,6 +9,11 @@ Planned studies (studies/<id>/spec.json -> results -> pull request):
     python -m wingstudy run ID [--workers N]         solve; writes results.json and status.json
     python -m wingstudy publish ID                   study/<id> branch, push, open a PR (never merges)
     python -m wingstudy list
+    python -m wingstudy convergence ID... [--top 3 --sample 30 --favorites]
+                                                     refinement-ladder study of designs from finished studies
+    python -m wingstudy convergence-report ID        observed order, Richardson value, GCI, ranking check
+    python -m wingstudy polish ID... [--top 3]       re-optimize the best shapes (finer steps, free span)
+    python -m wingstudy favorite KEY... [--note T | --remove | --list]   shared favourites
 
 Campaign tools:
 

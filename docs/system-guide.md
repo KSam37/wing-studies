@@ -269,11 +269,27 @@ No current model has a sheet hinged freely on a rod that also bends along the sp
 
 St is a Wing map axis, a range filter, an inspector row and a CSV column. *Top performing wings* plots the best thrust at ≤ 1 N·m against St, one line per frequency.
 
-**Top performing wings** is computed in the page from the rows, so new studies appear without a rebuild of `atlas/data`. It has, in order:
-- A leaderboard: the best wing per material × analysis type at a chosen frequency (default 1 Hz).
-- The Strouhal plot.
-- One card per planned study, newest first: the best wing at each half-span the study ran, plus a thrust-against-span chart.
-- The campaign winners (`D.winners`) and the rigid catalog.
+**The FAAV build** is the wing that was made: a 0.5 mm carbon sheet on a stiff leading edge that the sheet pivots about and that itself neither bends nor twists. In the atlas that is `t0.50` with chordwise elasticity (`FAAV(i)` in the page). The Wing map's *FAAV build* toggle shows only those wings. **Single sheet:** a sheet is at most 400 mm (`SHEET`), so longer half-spans need a joined sheet. The map shades that zone whenever half-span is an axis, and wings carry a *single sheet* / *joined sheet* tag.
+
+**0.2 mm is left out.** It is not a standard sheet. `tools/atlas_data.py` `DROPPED_MODELS` removes its rows, winners and matched pairs at build time and renumbers every row reference (`drop_models`). The rows stay in `atlas/data`, which is never hand-edited.
+
+**Top performing wings** is computed in the page from the rows, so new studies appear without a rebuild of `atlas/data`. It is the at-a-glance view for the FAAV build: verified FAAV wings only, with a frequency switch and a *single sheet only* switch. It has, in order:
+- **Standout designs at each torque budget** (0.5, 0.75, 1, 1.25, 1.5, 2 N·m): the highest-thrust wing at or below each budget. Where that wing needs a joined sheet, the best single-sheet wing is given too. Below the cards, best thrust against budget for any span and for a single sheet.
+- **Torque slice:** every FAAV wing within a torque band (default 1 ± 0.05 N·m), and *n* of them (default 6) chosen by farthest-point sampling in thrust, normalized chords and span, with the best and worst always included. At equal torque, the thrust spread is the effect of shape.
+- The Strouhal plot for the FAAV build.
+- **Favourites:** shared ones from `atlas/favorites.json`, plus stars saved in this browser (`localStorage`). `python -m wingstudy favorite KEY --note "…"` adds a shared one; commit the file in a PR.
+- **Convergence** results (below).
+- A collapsed *Earlier studies, other materials and models* section: the per-material leaderboard, the all-materials Strouhal plot, the planned-study cards, the campaign winners and the rigid catalog.
+
+**Convergence studies.** `python -m wingstudy convergence STUDY… [--top 3] [--sample 30] [--seed 0] [--torque LO HI] [--keys …] [--favorites]` writes a design-set study of each search's top designs, a seeded random sample of the other verified designs, and any extra keys, re-solved on a ladder (`wingstudy/studies/convergence.py` `LADDER`):
+- three uniform levels, ratio r = 1.5: 8 × 4 panels / 50 steps per cycle (the searches' own setting), 12 × 6 / 75 and 18 × 9 / 112;
+- span panels, chord panels and steps per cycle each doubled alone from the base.
+
+`convergence-report ID` and the atlas give, per design and for thrust and torque: observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, the Richardson value f₁ + (f₁ − f₂)/(rᵖ − 1), the fine-grid GCI 1.25 |(f₁ − f₂)/f₁| / (rᵖ − 1) (p clamped to 0.5–6), and the base setting's error against the extrapolated value. Oscillatory triples get half their range as the band. Across designs, the Spearman correlation of base against fine thrust says whether the search's ranking holds on the fine mesh. Any design-set study with more than one numerics setting is treated this way: its cases go to `D.convergence`, not to map rows. That includes the earlier 2026-11-19 mesh-sensitivity study.
+
+**Before and after (polish).** `python -m wingstudy polish STUDY… [--top 3] [--step 10] [--span-step 20] [--max-span 800]` writes an evolutionary study whose lineages start from the source searches' best designs, with finer chord steps and the half-span free, under the source objectives. The Optimized shapes tab's *Optimize top performers* button writes the same kind of spec in the browser from the FAAV standouts, for `python -m wingstudy import`. The merge records every lineage's seed and best rows in `D.lineage_pairs`. Optimized shapes draws each lineage seeded from an existing design as before (dashed) and after (filled), with the thrust change.
+
+**Overview** now opens with *How the results were obtained*: the wing and motion, the fluid model, the structural models and boundary condition, verification, the objective functions (torque budget and λ, with their scores), the search, convergence and the derived quantities.
 
 **Timeline.** A slider above the Wing map shows only the wings run up to a chosen point; *Play* steps through the studies in order while the axes stay fixed. Each wing's run time comes from:
 - **Rigid-catalog rows:** their source study's timestamp (the `YYYYMMDD-HHMMSS` prefix of its id in `catalog.json`).

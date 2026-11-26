@@ -108,6 +108,63 @@ def assemble(data: Path) -> dict:
     return {**{k: D[k] for k in first if k in D}, **{k: v for k, v in D.items() if k not in first}}
 
 
+# Materials left out of the published atlas. 0.2 mm is not a standard sheet size; its rows stay
+# in atlas/data (generated, never hand-edited) and are dropped when the site is built.
+DROPPED_MODELS = ("t0.20",)
+
+
+def drop_models(D: dict, ids=DROPPED_MODELS) -> int:
+    """Remove every row, winner and matched comparison of the given base materials, in place,
+    renumbering the rows and models the rest of the atlas refers to. Run straight after
+    assemble (before attach_evolution and the planned-study merge). Returns rows removed."""
+    drop_m = {i for i, m in enumerate(D["models"]) if m["id"].split(":")[-1] in ids}
+    if not drop_m:
+        return 0
+    cols = D["cols"]
+    n = len(cols["s"])
+    keep = [cols["m"][i] not in drop_m for i in range(n)]
+    new_row, j = [None] * n, 0
+    for i in range(n):
+        if keep[i]:
+            new_row[i] = j
+            j += 1
+    new_model, k = {}, 0
+    for i in range(len(D["models"])):
+        if i not in drop_m:
+            new_model[i] = k
+            k += 1
+    for c, v in cols.items():
+        if c == "C":
+            cols[c] = [x for i in range(n) if keep[i] for x in v[8 * i:8 * i + 8]]
+        elif c == "m":
+            cols[c] = [new_model[x] for i, x in enumerate(v) if keep[i]]
+        else:
+            cols[c] = [x for i, x in enumerate(v) if keep[i]]
+    D["models"] = [m for i, m in enumerate(D["models"]) if i not in drop_m]
+
+    def remap(r):
+        return None if r is None or not 0 <= r < n else new_row[r]
+    cat = D.get("catalog") or {}
+    for key in ("first", "end"):
+        if key in cat:
+            cat[key] = sum(keep[:cat[key]])
+    for name in ("ranges", "row_notes", "row_search"):
+        if isinstance(D.get(name), dict):
+            D[name] = {str(remap(int(r))): v for r, v in D[name].items() if remap(int(r)) is not None}
+    D["winners"] = [w for w in D.get("winners", []) if w.get("model") not in ids]
+    for w in D["winners"]:
+        if w.get("row") is not None:
+            w["row"] = remap(w["row"])
+    D["refined"] = [x for x in D.get("refined", []) if x.get("model") not in ids]
+    D["span_comparisons"] = [p for p in D.get("span_comparisons", []) if (p["source"].get("source_model") or p["source"].get("model")) not in ids]
+    for p in D["span_comparisons"]:
+        if p["source"].get("row") is not None:
+            p["source"]["row"] = remap(p["source"]["row"])
+    if "unique" in D:
+        D["unique"] = len(set(cols["k"]))
+    return n - j
+
+
 def attach_evolution(D: dict, media: Path) -> int:
     """Attach each search-found winner's evolution animation (media/evolution/<study>/index.json,
     written by `python -m wingstudy.elastic_evolution CAMPAIGN --atlas-winners STUDY`)."""

@@ -9,6 +9,9 @@ Each ``studies/<id>/results.json`` becomes one atlas study:
 * evolutionary cases are also search rows (``src`` bit 1). ``row_search[row]`` names
   the objective(s) that reached each one and marks search winners, and each winner
   carries its lineage's accepted outlines (``evolution``) for the atlas to animate.
+  ``lineage_pairs`` records every lineage's seed and best rows (before and after);
+* convergence studies (design sets with several numerics settings) do not become map
+  rows: their per-design refinement metrics go to ``convergence`` (studies/convergence.py).
 
 Rows are appended after the rigid catalog, so ``catalog.end`` marks where it stops.
 """
@@ -18,6 +21,7 @@ import json
 import math
 from pathlib import Path
 
+from . import convergence as CV
 from . import spec as S
 
 SRC_STUDY = 4
@@ -109,7 +113,13 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
                              "about": f"{spec['question']} Planned study by {spec['author']}; "
                                       f"{len(results['cases'])} cases, code {results['code']['digest']}.",
                              "planned": True, "kind": spec["kind"],
-                             **({"run_date": results["completed"]} if results.get("completed") else {})})
+                             **({"run_date": results["completed"]} if results.get("completed") else {}),
+                             **({"convergence": True} if CV.is_convergence(spec) else {})})
+        if CV.is_convergence(spec):
+            m = CV.metrics(spec, results)
+            m["title"], m["question"], m["completed"] = spec["title"], spec["question"], results.get("completed")
+            D.setdefault("convergence", []).append(m)
+            continue
         roles = _search_roles(results) if spec["kind"] == "evolutionary" else {}
         rows_of = {}
         for c in results["cases"]:
@@ -151,6 +161,21 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
             notes[str(row)] = (f"{spec['id']} case {c['case_id']} ({c['wing']}): {n['span_panels']} × {n['chord_panels']} "
                                f"panels, {n['steps_per_cycle']} steps per cycle, {n['cycles']} cycles")
             added += 1
+        for x in results.get("searches") or [] if spec["kind"] == "evolutionary" else []:
+            (k, v), = x["objective"].items()
+            for lin in x.get("lineages") or []:
+                acc = lin.get("accepted") or []
+                if not acc or rows_of.get(acc[0]["key"]) is None or rows_of.get(acc[-1]["key"]) is None:
+                    continue
+                seed = lin.get("seed") or {}
+                D.setdefault("lineage_pairs", []).append({
+                    "study": spec["id"], "search": x["id"], "objective": x.get("objective_label") or f"{k} {v}",
+                    "torque_budget_Nm": float(v) if k == "torque_budget_Nm" else None,
+                    "lambda": float(v) if k == "lambda" else None, "lineage": lin["id"],
+                    "family": seed.get("family"), "seed_label": seed.get("label"),
+                    "before": rows_of[acc[0]["key"]], "after": rows_of[acc[-1]["key"]],
+                    "accepted": len(acc) - 1, "solves": lin.get("solves"), "status": lin.get("status"),
+                    "winner": acc[-1]["key"] == x.get("winner")})
         for v in (D.get("row_search") or {}).values():          # evolution steps as atlas rows
             ev = v.get("evolution")
             if ev and ev.get("steps") and isinstance(ev["steps"][0], str):

@@ -290,13 +290,21 @@ class RunAndMerge(unittest.TestCase):
         D = {"studies": [{"id": "rod"}], "models": [{"id": "t0.50r"}], "freqs": [1.0], "statuses": ["verified"],
              "catalog": {"first": 1}, "cols": {k: [0] for k in ("s", "m", "f", "T", "Q", "H", "W", "S", "src", "k", "obj")}}
         D["cols"]["C"] = [0.0] * 8
-        added = A.merge(D, studies)
-        self.assertEqual(added, 2)                                  # failed cases stay off the map
+        conv = copy.deepcopy(D)
+        self.assertEqual(A.merge(conv, studies), 0)                 # several numerics: a convergence study
+        self.assertTrue(conv["studies"][1]["convergence"])
+        self.assertEqual(len(conv["convergence"]), 1)
+        spec, results = studies[0]
+        one = dict(spec, numerics=spec["numerics"][:1])             # the same study with one setting maps
+        results = dict(results, cases=[c for c in results["cases"] if c["numerics"]["steps_per_cycle"] == 50])
+        results["spec_sha256"] = S.spec_sha256(one)
+        added = A.merge(D, [(one, results)])
+        self.assertEqual(added, 1)                                  # failed cases stay off the map
         self.assertEqual(D["catalog"]["end"], 1)
         self.assertEqual(D["studies"][1]["id"], self.spec["id"])
-        self.assertEqual(D["cols"]["src"][1:], [A.SRC_STUDY] * 2)
-        self.assertEqual(len(D["cols"]["C"]), 8 * 3)
-        self.assertIn("100 steps per cycle", D["row_notes"]["2"])
+        self.assertEqual(D["cols"]["src"][1:], [A.SRC_STUDY])
+        self.assertEqual(len(D["cols"]["C"]), 8 * 2)
+        self.assertIn("50 steps per cycle", D["row_notes"]["1"])
 
     def test_evolutionary_span_move(self):
         try:
@@ -438,3 +446,48 @@ class RunGoAhead(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Convergence(unittest.TestCase):
+    def test_richardson_recovers_order_and_limit(self):
+        from wingstudy.studies import convergence as CV
+        f = lambda h: 2.0 + 0.3 * h ** 2                           # second order, exact value 2
+        r = CV.richardson(f(1 / CV.R ** 2), f(1 / CV.R), f(1.0))
+        self.assertEqual(r["behaviour"], "monotone")
+        self.assertAlmostEqual(r["p"], 2.0, places=6)
+        self.assertAlmostEqual(r["extrapolated"], 2.0, places=6)
+        self.assertEqual(CV.richardson(1.0, 1.1, 0.95)["behaviour"], "oscillatory")
+
+    def test_spearman(self):
+        from wingstudy.studies import convergence as CV
+        self.assertAlmostEqual(CV.spearman([1, 2, 3, 4], [10, 20, 30, 40]), 1.0)
+        self.assertAlmostEqual(CV.spearman([1, 2, 3, 4], [4, 3, 2, 1]), -1.0)
+
+    def test_ladder_is_valid_numerics(self):
+        from wingstudy.studies import convergence as CV
+        spec = filled("design-set", "2026-11-25-ladder")
+        spec["numerics"] = [n for _, n in CV.LADDER]
+        spec["budget"] = {"max_cases": S.case_count(spec)}
+        self.assertEqual(S.validate(spec), [])
+        self.assertTrue(CV.is_convergence(spec))
+
+
+class DropModels(unittest.TestCase):
+    def test_rows_and_references_renumbered(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("atlas_data", S.ROOT / "tools" / "atlas_data.py")
+        ad = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ad)
+        D = {"models": [{"id": "rigid"}, {"id": "t0.20"}, {"id": "t0.50"}],
+             "cols": {"s": [0, 0, 0, 1], "m": [0, 1, 2, 0], "k": list("abcd"), "C": list(range(32))},
+             "catalog": {"first": 3}, "ranges": {"1": [1], "2": [2]},
+             "winners": [{"model": "t0.20", "row": 1}, {"model": "t0.50", "row": 2}],
+             "span_comparisons": [{"source": {"source_model": "t0.20", "row": 1}}, {"source": {"source_model": "t0.50", "row": 2}}]}
+        self.assertEqual(ad.drop_models(D, ("t0.20",)), 1)
+        self.assertEqual(D["cols"]["m"], [0, 1, 0])
+        self.assertEqual(D["cols"]["k"], list("acd"))
+        self.assertEqual(D["cols"]["C"], list(range(8)) + list(range(16, 32)))
+        self.assertEqual(D["catalog"]["first"], 2)
+        self.assertEqual(D["ranges"], {"1": [2]})
+        self.assertEqual(D["winners"], [{"model": "t0.50", "row": 1}])
+        self.assertEqual([p["source"]["row"] for p in D["span_comparisons"]], [1])
