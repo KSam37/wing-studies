@@ -1,0 +1,161 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-25-free-span-1nm",
+ "title": "Continuous span and shape at a 1 N\u00b7m torque budget, 0.5 mm FAAV sheet",
+ "author": "sam",
+ "question": "With half-span free to move in 10 mm steps and chords refined to 5 mm, what single half-span and outline give the most thrust under a 1 N\u00b7m peak-torque budget for the FAAV sheet (0.5 mm, pivoting on a stiff leading edge) at 1 Hz, and how much thrust is lost by staying within the 400 mm single-sheet manufacturing limit?",
+ "kind": "evolutionary",
+ "parent": "2026-11-22-span-at-1nm",
+ "structure": "chordwise",
+ "models": [
+  "t0.50"
+ ],
+ "frequencies_hz": [
+  1.0
+ ],
+ "numerics": [
+  {
+   "span_panels": 8,
+   "chord_panels": 4,
+   "steps_per_cycle": 50,
+   "cycles": 4
+  }
+ ],
+ "wings": {
+  "designs": [
+   {
+    "name": "1 N\u00b7m winner, 300 mm",
+    "chords_mm": [
+     200.0,
+     200.0,
+     156.9,
+     92.0,
+     84.9,
+     65.5,
+     65.5,
+     30.0
+    ],
+    "half_span_mm": 300.0
+   },
+   {
+    "name": "1 N\u00b7m winner, 350 mm",
+    "chords_mm": [
+     200.0,
+     169.6,
+     106.9,
+     72.0,
+     54.9,
+     25.5,
+     13.9,
+     13.9
+    ],
+    "half_span_mm": 350.0
+   },
+   {
+    "name": "1 N\u00b7m winner, 400 mm",
+    "chords_mm": [
+     200.0,
+     129.6,
+     86.9,
+     52.0,
+     44.9,
+     25.5,
+     25.5,
+     10.0
+    ],
+    "half_span_mm": 400.0
+   },
+   {
+    "name": "1 N\u00b7m winner, 450 mm",
+    "chords_mm": [
+     200.0,
+     159.6,
+     106.9,
+     72.0,
+     44.9,
+     35.5,
+     23.9,
+     10.0
+    ],
+    "half_span_mm": 450.0
+   },
+   {
+    "name": "1 N\u00b7m winner, 500 mm",
+    "chords_mm": [
+     200.0,
+     169.6,
+     56.9,
+     34.9,
+     34.9,
+     15.5,
+     10.0,
+     10.0
+    ],
+    "half_span_mm": 500.0
+   },
+   {
+    "name": "1 N\u00b7m winner, 550 mm",
+    "chords_mm": [
+     200.0,
+     129.6,
+     72.0,
+     72.0,
+     44.9,
+     25.5,
+     10.0,
+     10.0
+    ],
+    "half_span_mm": 550.0
+   },
+   {
+    "name": "1 N\u00b7m winner, 600 mm",
+    "chords_mm": [
+     200.0,
+     129.6,
+     52.0,
+     52.0,
+     44.9,
+     25.5,
+     13.9,
+     10.0
+    ],
+    "half_span_mm": 600.0
+   }
+  ]
+ },
+ "search": {
+  "objectives": [
+   {
+    "torque_budget_Nm": 1.0
+   }
+  ],
+  "seed_half_spans_mm": [
+   300,
+   350,
+   400,
+   450,
+   500,
+   550,
+   600
+  ],
+  "seed_families": [
+   "concave",
+   "convex",
+   "triangle",
+   "square"
+  ],
+  "solves_per_lineage": 200,
+  "step_mm": 10,
+  "min_chord_mm": 10,
+  "decreasing": true,
+  "span_step_mm": 20,
+  "half_span_limits_mm": [
+   200,
+   800
+  ]
+ },
+ "notes": "Boundary condition: the FAAV build. A 0.5 mm carbon sheet on a stiff leading edge that the sheet pivots about; the leading edge itself neither bends nor twists. That is the chordwise t0.50 model: the leading edge is held straight and in place, each strip pitches about it against the sheet's own torsion and warping, root fixed to the hub; the rod is not modelled (its torsion excluded, its mass on the pitch axis). Lineages: the seven per-span winners of the parent study plus 28 family seeds (4 families x 7 half-spans), so the optimum is approached from many starts. Span is a search coordinate (20 mm step, 10 mm half-step) and chords use a 10 mm step (5 mm half-step), so winners are not tied to a span grid. Manufacturing: a single sheet is at most 400 mm, so half-spans above 400 mm need a joined sheet; the search is not limited to it, the atlas shades the zone.",
+ "budget": {
+  "max_cases": 7035
+ }
+}
