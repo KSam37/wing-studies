@@ -87,11 +87,16 @@ def build(out: Path) -> None:
     now = dt.datetime.now(dt.timezone.utc)
     commit = _commit()
     D = atlas_data.assemble(ROOT / "atlas" / "data")
+    dropped = atlas_data.drop_models(D)
+    if dropped:
+        print(f"left out {dropped} rows of {', '.join(atlas_data.DROPPED_MODELS)} (not a standard sheet)")
     atlas_data.attach_evolution(D, ROOT / "atlas" / "media")
     atlas_data.attach_run_dates(D)
     planned = study_atlas.completed(ROOT / "studies")
     if planned:
         print(f"planned studies: {len(planned)} ({study_atlas.merge(D, planned)} map rows)")
+    fav = ROOT / "atlas" / "favorites.json"
+    D["favorites"] = json.loads(fav.read_text(encoding="utf-8")).get("favorites", []) if fav.exists() else []
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")
     D["build_id"] = f"{now:%Y%m%d%H%M%S}-{commit}"
 
