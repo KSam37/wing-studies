@@ -246,7 +246,7 @@ In the initial four-winner pilot, one failed 50-step case verified at 100 steps/
 
 Sources: `wingstudy/elastic_atlas.html` is the atlas template; `atlas/data/` holds its data as small JSON files (`meta.json`, `rows/<study>.json`, `catalog.json`, `span_comparisons.json`; see `tools/atlas_data.py`); `atlas/media/` and `atlas/files/` hold recompressed animations, plots and reports. `site/` holds the landing page and the study builder (`site/new/`). `python tools/build_site.py` assembles everything into `_site/`, merging every completed planned study into the atlas as its own study; open `_site/atlas/index.html` directly, no server needed.
 
-Reuse the template's CSS variables, themes, navigation, chips, chart helpers, tooltips and modal. Do not create another results app. Tabs: *Wing map*, *Optimized shapes*, *Top performing wings*, *Elasticity effects* (1 · rigid → chordwise; 2 · chordwise → spanwise + chordwise). Old `#stiff` and `#span` links redirect to *Elasticity effects*.
+Reuse the template's CSS variables, themes, navigation, chips, chart helpers, tooltips and modal. Do not create another results app. Tabs: *Wing map*, *Optimized shapes*, *Top performing wings*, *Convergence*, *Elasticity effects* (1 · rigid → chordwise; 2 · chordwise → spanwise + chordwise). Old `#stiff` and `#span` links redirect to *Elasticity effects*.
 
 Matched comparisons are `D.span_comparisons`. Solved rows are registered into the Wing map arrays at load; `EXTRA` identifies them and `ORIGINAL_N` preserves the old catalog boundary. Never treat every appended row as historical catalog data. Rows from planned studies carry `src` bit 4; evolutionary studies add `D.row_search` (objectives, λ or torque budget, winner marks and the lineage's accepted steps), which drives the *Shape evolution* player without a campaign database.
 
@@ -531,3 +531,13 @@ Recommended scientific next step: representative bare/rod cases spanning verifie
 - [History](history/): the 19 November handoff, the frontier study record, the rigid-app README and results
 
 Primary background already used: Causin, Gerbeau & Nobile (2005), DOI 10.1016/j.cma.2004.12.005, on partitioned FSI added-mass effects; TU Delft's Euler–Bernoulli formulation; discrete-elastic-rod literature as geometric motivation. These support principles, not physical validation of this implementation.
+
+## Convergence tab
+
+`renderConv()` presents the largest convergence study (studies/convergence.py) as an FEA/CFD mesh-convergence study (Roache's GCI; Celik et al. 2008, ASME J. Fluids Eng. 130, 078001; ASME V&V 20):
+- **Answer:** converged or not. The tolerance is `CONV_TOL` = 2 %: the change from 12 × 6 to 18 × 9 must be below it. The answer also shows the GCI, the ranking correlation, the coarse-mesh bias, and an estimate of the mesh needed for 2 %, from each monotone design's own observed order.
+- **Result against mesh size:** thrust and torque divided by each design's Richardson-extrapolated value, against panels on a log axis. One grey line per design, the median bold, a ±2 % band (`convPlot`).
+- **Change per refinement:** the median change per refinement step and the distance to the extrapolated value, then each setting doubled alone (`convBars`).
+- **The FAAV standouts on 8 × 4, 21 × 4 and 21 × 12:** from the refinement runs.
+- **Method:** the formulas, followed by the per-design table (`convergenceCard`).
+

@@ -175,6 +175,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
     <button data-t="map">Wing map</button>
     <button data-t="opt">Optimized shapes</button>
     <button data-t="winners">Top performing wings</button>
+    <button data-t="conv">Convergence</button>
     <button data-t="elastic">Elasticity effects</button>
   </nav>
   <a class="iconbtn" id="newstudy" href="../new/" title="Set up a study with the wings you picked">New study</a>
@@ -252,6 +253,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
   <div id="el-span" style="margin-top:28px;scroll-margin-top:64px"></div>
 </section>
 <section class="tab" id="t-opt"></section>
+<section class="tab" id="t-conv"></section>
 </main>
 <div class="tip" id="tip"></div>
 <dialog id="viewer"><div class="dlg-h"><h3 id="v-title" style="margin:0"></h3><button class="iconbtn" onclick="viewer.close()">Close</button></div><div class="dlg-b" id="v-body"></div></dialog>
@@ -471,7 +473,7 @@ function coverageGo(mi,k){Object.assign(M,mapDefaults(),{view:null,until:TL.leng
   M.freqs=new Set(D.freqs.map((_,i)=>i));M.quality=new Set(QUALS.map(q=>q[0]));go('map');drawMap()}
 
 function methodsCard(){
-  const cv=(D.convergence||[])[0],S=cv&&cv.summary;
+  const cv=(D.convergence||[]).slice().sort((a,b)=>b.wings.length-a.wings.length)[0],S=cv&&cv.summary;
   const blk=(t,b)=>`<div><h4 style="margin:0 0 4px">${t}</h4><div class="small">${b}</div></div>`;
   return `<div class="card"><h3>How the results were obtained</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px 22px">
    ${blk('1 · Wing and motion',`One wing of the robot. The leading edge is straight and perpendicular to the flow; the root chord is fixed at 200 mm. The outline is 8 chords at equally spaced stations from root to tip, never increasing toward the tip and at least 10 mm where positive (a zero tip suffix makes a shorter wing). The wing flaps about its root through a −26° to +34° stroke at 0.75, 1 or 1.25 Hz while moving at U = 0.5 m/s through water.`)}
@@ -480,7 +482,7 @@ function methodsCard(){
    ${blk('4 · Verification',`Every elastic case is solved at the base time step and refined (dt/2, dt/4) until two settings agree within 3%: <b>verified</b>. A rigid case is <b>settled</b> when its last two cycles agree within 5%. Results that never agree are kept but marked and left out of the rankings. Verified is numerical repeatability, not experimental validation.`)}
    ${blk('5 · Objective functions',`<b>Torque budget B</b> (the main one): maximize thrust T subject to peak torque Q ≤ B. The search scores a design S = T/T<sub>ref</sub> if Q ≤ B, and S = −10 − (Q − B)/M<sub>ref</sub> if not, so any design within budget beats any over it, and over-budget seeds first walk down in torque.<br><b>Torque penalty λ</b>: S = T/T<sub>ref</sub> − λ·Q/M<sub>ref</sub>; a larger λ favours lower torque. T<sub>ref</sub> and M<sub>ref</sub> are the largest thrust and torque among the search's own seeds.`)}
    ${blk('6 · Search',`A coordinate (pattern) search. Each pass tries +step and −step on every outboard chord in turn, and on the half-span when it is free; a move is kept only if the score improves. A coordinate that fails both ways gets one retry at half the step, then retires; a lineage stops when all are retired or its solve budget is spent. Lineages start from family seeds (triangle, square, concave, convex, narrow) or from existing designs, advance in lockstep and are solved in parallel. Every trial, accepted or not, is kept in the atlas.`)}
-   ${blk('7 · Convergence',`Top designs and a random sample are re-solved on three uniformly refined settings (8 × 4 / 50, 12 × 6 / 75, 18 × 9 / 112; r = 1.5) and with each parameter doubled alone. Observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, Richardson value f₁ + (f₁ − f₂)/(r<sup>p</sup> − 1), GCI = 1.25 |(f₁ − f₂)/f₁| / (r<sup>p</sup> − 1).${S?` <b>Latest:</b> thrust ranking kept with ρ = ${fmt(S.rank_correlation_base_fine,3)}; base-setting thrust within ${fmt(S.median_abs_base_error_thrust_pct,1)}% (median) of the extrapolated value.`:' See Top performing wings for results.'}`)}
+   ${blk('7 · Convergence',`Top designs and a random sample are re-solved on three uniformly refined settings (8 × 4 / 50, 12 × 6 / 75, 18 × 9 / 112; r = 1.5) and with each parameter doubled alone. Observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, Richardson value f₁ + (f₁ − f₂)/(r<sup>p</sup> − 1), GCI = 1.25 |(f₁ − f₂)/f₁| / (r<sup>p</sup> − 1).${S?` <b>Latest:</b> thrust ranking kept with ρ = ${fmt(S.rank_correlation_base_fine,3)}; base-setting thrust within ${fmt(S.median_abs_base_error_thrust_pct,1)}% (median) of the extrapolated value.`:' See the Convergence tab for results.'}`)}
    ${blk('8 · Derived quantities',`<b>Strouhal number</b> St = f·A/U with A the tip's peak-to-peak excursion, A = R(sin 34° + sin 26°) ≈ R for half-span R (elastic deflection not included). <b>Effective half-span</b> runs to the last non-zero chord. A <b>single sheet</b> is at most ${SHEET} mm, so longer half-spans need a joined sheet.`)}
   </div><p class="note small" style="margin-top:10px">Limits: the vortex-lattice method is inviscid, so viscous drag (on the rod and on very narrow chords) and flow separation at large twist are not modelled. Treat strip-like optima and very large twists as trends.</p></div>`}
 function renderOverview(){
@@ -1055,6 +1057,96 @@ function favouritesCard(){const fs=favList();
   const mine=fs.filter(f=>!f.shared).map(f=>f.key);
   if(mine.length)h+=`<p class="small" style="margin-top:8px">Share this browser's ${mine.length}: <code id="fav-cmd">${esc(favCmd(mine))}</code> <button class="iconbtn" style="width:auto;padding:0 8px" onclick="navigator.clipboard&&navigator.clipboard.writeText($('#fav-cmd').textContent)">Copy</button></p>`;
   return h+'</div>'}
+/* ---------- Convergence: a mesh-convergence study as in FEA / CFD practice ----------
+   Method (Roache's grid convergence index; Celik et al. 2008, ASME J. Fluids Eng. 130, 078001; ASME V&V 20):
+   solve each design on three systematically refined meshes (ratio r = 1.5 in every direction), plot the result
+   against mesh size, estimate the observed order p and the Richardson-extrapolated (zero mesh size) value, and
+   report the fine-mesh discretization uncertainty GCI. A result is called converged when refining again changes
+   it by less than the tolerance (here 2 %), as in an FEA h-refinement study. */
+const CONV_TOL=2;
+const CONV_LV=[['base',8,4,'8 × 4'],['medium',12,6,'12 × 6'],['fine',18,9,'18 × 9']];
+const panelsOf=n=>n.span_panels*n.chord_panels;
+const median=a=>{const b=a.filter(v=>v!=null&&isFinite(v)).sort((x,y)=>x-y);if(!b.length)return null;const k=b.length>>1;return b.length%2?b[k]:(b[k-1]+b[k])/2};
+// x on a log scale (panels), y linear: one thin line per design, the median bold, a tolerance band around 1
+function convPlot({designs,med,ylabel,ylo,yhi,band=null,xt,w=440,h=250,color}){
+  const m={l:50,r:14,t:12,b:42},xs=xt.map(t=>t[0]),lx=Math.log(Math.min(...xs)),hx=Math.log(Math.max(...xs));
+  const X=v=>m.l+(w-m.l-m.r)*(Math.log(v)-lx)/((hx-lx)||1),Y=v=>h-m.b-(h-m.t-m.b)*(Math.min(Math.max(v,ylo),yhi)-ylo)/(yhi-ylo);
+  let g='';
+  if(band)g+=`<rect x="${m.l}" y="${Y(band[1])}" width="${w-m.l-m.r}" height="${Y(band[0])-Y(band[1])}" fill="${color}" fill-opacity=".10"/><text x="${w-m.r-4}" y="${Y(band[1])-4}" text-anchor="end" class="tiny">${band[2]||''}</text>`;
+  niceTicks(ylo,yhi,5).forEach(t=>g+=`<line class="gl" x1="${m.l}" x2="${w-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${+t.toFixed(3)}</text>`);
+  xt.forEach(([v,l])=>g+=`<text x="${X(v)}" y="${h-m.b+15}" text-anchor="middle">${l}</text>`);
+  g+=`<line class="ax" x1="${m.l}" x2="${w-m.r}" y1="${h-m.b}" y2="${h-m.b}"/><text x="${(w+m.l)/2}" y="${h-4}" text-anchor="middle">Panels on one wing (log scale): span × chord</text><text transform="translate(12 ${(h-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;
+  for(const d of designs){const pts=d.pts.filter(q=>q.v!=null);
+    g+=`<polyline fill="none" stroke="var(--muted)" stroke-opacity=".45" stroke-width="1.2" points="${pts.map(q=>X(q.n).toFixed(1)+','+Y(q.v).toFixed(1)).join(' ')}"/>`;
+    for(const q of pts)g+=`<circle cx="${X(q.n)}" cy="${Y(q.v)}" r="2.2" fill="var(--muted)" fill-opacity=".6"/><circle class="hit" cx="${X(q.n)}" cy="${Y(q.v)}" r="6" fill="transparent" ${Number.isInteger(d.row)?`data-row="${d.row}" style="cursor:pointer"`:''} data-tip="${esc(d.tip+'<br>'+q.tip)}"/>`}
+  if(med){g+=`<polyline fill="none" stroke="${color}" stroke-width="3" points="${med.map(q=>X(q.n).toFixed(1)+','+Y(q.v).toFixed(1)).join(' ')}"/>`;
+    for(const q of med)g+=`<circle cx="${X(q.n)}" cy="${Y(q.v)}" r="5" fill="${color}" stroke="var(--surface)" stroke-width="2"/><text x="${X(q.n)+7}" y="${Y(q.v)+14}" class="tiny" fill="${color}">${q.label||''}</text><circle class="hit" cx="${X(q.n)}" cy="${Y(q.v)}" r="10" fill="transparent" data-tip="${esc(q.tip||'')}"/>`}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img" aria-label="${esc(ylabel)} against mesh size">${g}</svg>`}
+// grouped bars with a tolerance line
+function convBars({groups,series,ylabel,w=440,h=220,tol=null}){
+  const m={l:46,r:10,t:12,b:44},hi=Math.max(...series.flatMap(s=>s.vals),tol||0)*1.15||1,gw=(w-m.l-m.r)/groups.length,bw=Math.min(26,(gw-16)/series.length);
+  const Y=v=>h-m.b-(h-m.t-m.b)*v/hi;let g='';
+  niceTicks(0,hi,4).forEach(t=>g+=`<line class="gl" x1="${m.l}" x2="${w-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${t}</text>`);
+  groups.forEach((gr,i)=>{const x0=m.l+gw*i+(gw-bw*series.length-2*(series.length-1))/2;
+    series.forEach((se,k)=>{const v=se.vals[i];if(v==null)return;const x=x0+k*(bw+2);
+      g+=`<rect x="${x}" y="${Y(v)}" width="${bw}" height="${Y(0)-Y(v)}" rx="3" fill="${se.color}"/><text x="${x+bw/2}" y="${Y(v)-4}" text-anchor="middle" class="tiny">${fmt(v,1)}</text><rect class="hit" x="${x}" y="${m.t}" width="${bw}" height="${h-m.t-m.b}" fill="transparent" data-tip="${esc(se.name+', '+gr.replace(/<br>/g,' ')+': median '+fmt(v,2)+' %')}"/>`});
+    const ls=gr.split('<br>');ls.forEach((l,j)=>g+=`<text x="${m.l+gw*i+gw/2}" y="${h-m.b+14+12*j}" text-anchor="middle">${l}</text>`)});
+  if(tol!=null)g+=`<line x1="${m.l}" x2="${w-m.r}" y1="${Y(tol)}" y2="${Y(tol)}" stroke="var(--text)" stroke-dasharray="5 4"/><text x="${w-m.r-2}" y="${Y(tol)-4}" text-anchor="end" class="tiny">${tol} % tolerance</text>`;
+  g+=`<line class="ax" x1="${m.l}" x2="${w-m.r}" y1="${h-m.b}" y2="${h-m.b}"/><text transform="translate(12 ${(h-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img" aria-label="${esc(ylabel)}">${g}</svg>`}
+function renderConv(){
+  const sts=(D.convergence||[]).slice().sort((a,b)=>b.wings.length-a.wings.length),cv=sts[0];
+  let h=`<h2>Convergence: are the results independent of the mesh?</h2><p class="lede">Every result comes from a panel mesh on the wing (span panels × chord panels) and a time step. As in an FEA mesh study, a design is re-solved on systematically finer meshes; if the result stops changing, it is converged. Most of the atlas was searched on the coarsest mesh, 8 × 4 panels with 50 steps per cycle.</p>`;
+  if(!cv){$('#t-conv').innerHTML=h+'<div class="card"><p class="small">No convergence study in this snapshot. Write one with <code>python -m wingstudy convergence STUDY… --top 3 --sample 30 --favorites</code>, run it and publish it.</p></div>';return}
+  const S=cv.summary,cT=css('--s1'),cQ=css('--s3');
+  const ws=cv.wings.filter(w=>CONV_LV.every(([l])=>w.levels[l]&&w.levels[l].thrust_N!=null));
+  const stat=(q,k)=>{const W=ws.filter(w=>w[q]&&w[q].extrapolated);
+    const n=W.map(w=>CONV_LV.map(([l])=>w.levels[l][k]/w[q].extrapolated));
+    const d1=W.map(w=>100*Math.abs(w.levels.medium[k]/w.levels.base[k]-1)),d2=W.map(w=>100*Math.abs(w.levels.fine[k]/w.levels.medium[k]-1)),d3=W.map(w=>100*Math.abs(w[q].extrapolated/w.levels.fine[k]-1));
+    const gci=W.map(w=>w[q].gci_pct).filter(v=>v!=null);
+    // mesh needed for a fine-level error below the tolerance, from each design's own observed order
+    const need=W.filter(w=>w[q].behaviour==='monotone'&&!w[q].p_clamped&&w[q].p>0).map(w=>{const e=100*Math.abs(w.levels.fine[k]/w[q].extrapolated-1);return e<=CONV_TOL?1:Math.pow(e/CONV_TOL,1/w[q].p)});
+    const md=[0,1,2].map(j=>median(n.map(x=>x[j])));
+    return {W,n,med:md,d1:median(d1),d2:median(d2),d3:100*Math.abs(1-md[2]),gci:median(gci),ok:gci.filter(v=>v<CONV_TOL).length,ng:gci.length,p:median(W.map(w=>w[q].p)),need:median(need)}};
+  const T=stat('thrust','thrust_N'),Q=stat('torque','torque_Nm');
+  const conv=T.d2<CONV_TOL&&Q.d2<CONV_TOL;
+  const tile=(k,v,sub)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
+  const rN=T.need&&T.need>1?T.need:null,sp=rN?Math.round(18*rN):null,ch=rN?Math.round(9*rN):null;
+  h+=`<div class="card"><h3>Answer</h3>
+    <p style="max-width:960px"><b>${conv?'Converged':'Not yet converged in absolute value'}${S.rank_correlation_base_fine!=null&&S.rank_correlation_base_fine>0.95?'; converged in ranking':''}.</b> Going from 12 × 6 to 18 × 9 panels still changes thrust by <b>${fmt(T.d2,1)} %</b> and torque by <b>${fmt(Q.d2,1)} %</b> (median of ${T.W.length} designs), above the ${CONV_TOL} % tolerance an FEA study would accept. On the finest mesh the median design is still ${fmt(100*(1-T.med[2]),1)} % below its extrapolated (zero mesh size) thrust and ${fmt(100*(1-Q.med[2]),1)} % below its torque. The <b>order</b> of designs barely changes (Spearman ρ = ${fmt(S.rank_correlation_base_fine,3)} between 8 × 4 and 18 × 9), so comparisons and searches on the coarse mesh pick the right designs, but absolute thrust and torque should be quoted from a finer mesh or with the uncertainty below.</p>
+    <div class="tiles">${tile('Thrust change, 8 × 4 → 12 × 6',fmt(T.d1,1)+' %','median, all designs')}${tile('Thrust change, 12 × 6 → 18 × 9',fmt(T.d2,1)+' %',`tolerance ${CONV_TOL} %`)}${tile('Torque change, 12 × 6 → 18 × 9',fmt(Q.d2,1)+' %',`tolerance ${CONV_TOL} %`)}${tile('Fine-mesh uncertainty (GCI)',fmt(T.gci,1)+' %',`thrust, median; ${T.ok} of ${T.ng} designs below ${CONV_TOL} %`)}${tile('Ranking kept',fmt(S.rank_correlation_base_fine,3),'Spearman ρ, 8 × 4 vs 18 × 9 thrust')}${tile('Coarse-mesh bias',fmt(-S.median_abs_base_error_thrust_pct,1)+' %','8 × 4 thrust vs extrapolated, median')}</div>
+    ${rN?`<p class="small" style="max-width:960px"><b>Mesh needed for ${CONV_TOL} %.</b> With each design's observed order of convergence, the fine-mesh thrust error falls below ${CONV_TOL} % at about ${fmt(rN,1)}× finer spacing in both directions than 18 × 9: roughly <b>${sp} × ${ch} panels</b> (median of the designs that converge monotonically). The order varies widely between designs (median p = ${fmt(T.p,2)}), so treat this as an estimate.</p>`:''}</div>`;
+  // FEA-style plot: normalized result against mesh size
+  const xt=CONV_LV.map(([,a,b,l])=>[a*b,l]);
+  const des=(st,q,k,lab)=>st.W.map((w,j)=>({row:KEYROW.get(w.source_key),tip:`<b>${esc(w.wing||'')}</b> · ${Math.round(w.half_span_mm)} mm · ${esc(w.model)}<br>extrapolated ${lab} ${fmt(w[q].extrapolated,3)} · p = ${w[q].p==null?'–':fmt(w[q].p,2)} · GCI ${w[q].gci_pct==null?'–':fmt(w[q].gci_pct,1)+' %'}`,
+    pts:CONV_LV.map(([l,a,b,ll],i)=>({n:a*b,v:st.n[j][i],tip:`${ll}: ${fmt(w.levels[l][k],3)} (${fmt(100*st.n[j][i],1)} % of extrapolated)`}))}));
+  const medPts=(st,lab)=>CONV_LV.map(([,a,b,ll],i)=>({n:a*b,v:st.med[i],label:fmt(100*st.med[i],1)+' %',tip:`Median ${lab} at ${ll}: ${fmt(100*st.med[i],1)} % of the extrapolated value`}));
+  const lo=Math.min(0.8,...T.n.flat(),...Q.n.flat()),yl=Math.max(0.7,Math.floor(lo*20)/20);
+  h+=`<div class="card"><h3>Result against mesh size</h3><p class="small muted" style="max-width:960px">The standard convergence plot: each grey line is one design solved on three meshes, each 1.5× finer in both directions (32, 72 and 162 panels); its result is divided by its own extrapolated zero-mesh-size value (Richardson extrapolation), so 1.0 is the converged answer. The bold line is the median. Converged results sit flat inside the band; these are still rising toward 1.</p>
+    <div class="grid2"><div>${convPlot({designs:des(T,'thrust','thrust_N','thrust'),med:medPts(T,'thrust'),ylabel:'Thrust / extrapolated thrust',ylo:yl,yhi:1.08,band:[1-CONV_TOL/100,1+CONV_TOL/100,`±${CONV_TOL} %`],xt,color:cT})}</div>
+    <div>${convPlot({designs:des(Q,'torque','torque_Nm','torque'),med:medPts(Q,'torque'),ylabel:'Torque / extrapolated torque',ylo:yl,yhi:1.08,band:[1-CONV_TOL/100,1+CONV_TOL/100,`±${CONV_TOL} %`],xt,color:cQ})}</div></div>
+    <p class="tiny muted">Designs whose three results do not rise or fall steadily (oscillatory: ${S.behaviour.oscillatory}) or whose order had to be clamped have a less reliable extrapolation; hover a line for its order p and GCI. Click a point to open the design on the Wing map.</p></div>`;
+  // successive change, the FEA stopping test
+  h+=`<div class="card"><h3>How much does each refinement still change the result?</h3><p class="small muted" style="max-width:960px">The stopping test of an h-refinement study: refine until the next refinement changes the result by less than the tolerance. The last group is the remaining distance from the finest mesh to the extrapolated value.</p>
+    <div class="grid2"><div>${convBars({groups:['8 × 4 → 12 × 6','12 × 6 → 18 × 9','18 × 9 → extrapolated'],series:[{name:'Thrust',color:cT,vals:[T.d1,T.d2,T.d3]},{name:'Torque',color:cQ,vals:[Q.d1,Q.d2,Q.d3]}],ylabel:'Median |change| (%)',tol:CONV_TOL})}${legend([[cT,'Thrust'],[cQ,'Peak torque']])}</div>
+    <div>${(()=>{const ch=S.median_abs_change_thrust_pct||{},cq=S.median_abs_change_torque_pct||{},ks=[['span x2','Span panels ×2<br>(16 × 4)'],['chord x2','Chord panels ×2<br>(8 × 8)'],['time x2','Time steps ×2<br>(100 per cycle)']].filter(([k])=>ch[k]!=null);
+      return `${convBars({groups:ks.map(x=>x[1]),series:[{name:'Thrust',color:cT,vals:ks.map(([k])=>ch[k])},{name:'Torque',color:cQ,vals:ks.map(([k])=>cq[k])}],ylabel:'Median |change| from 8 × 4 (%)',tol:CONV_TOL})}<p class="tiny muted">Which direction needs refining: one setting doubled at a time from the 8 × 4 / 50 mesh. Chordwise panels matter most; the time step hardly at all (every elastic result is already checked at dt/2).</p>`})()}</div></div></div>`;
+  // FAAV standouts through the refinement runs
+  const R=D.refine_top,BL=D.refine_baseline;
+  if(R&&BL){const ser=[],pal=['--s1','--s3','--s4','--s7','--s2','--s5'];let k=0;
+    for(const x of R.seeds.filter(q=>RF(q)===1)){const b=BL.seeds.find(q=>q.id===x.id),st=x.start||{};if(!b||b.thrust==null)continue;const c=css(pal[k++%pal.length]);
+      ser.push({name:`≤ ${x.budget_Nm} N·m (${esc(x.id)})`,color:c,points:[{x:32,y:x.source.thrust_N,tip:`8 × 4: ${fmt(x.source.thrust_N,3)} N at ${fmt(x.source.torque_Nm,3)} N·m`},{x:84,y:st.thrust,tip:`21 × 4: ${fmt(st.thrust,3)} N at ${fmt(st.torque,3)} N·m`},{x:252,y:b.thrust,tip:`21 × 12: ${fmt(b.thrust,3)} N at ${fmt(b.torque,3)} N·m`}].filter(q=>q.y!=null)})}
+    if(ser.length)h+=`<div class="card"><h3>The FAAV standouts on finer meshes</h3><p class="small muted" style="max-width:960px">Each standout's original outline solved on the 8 × 4 search mesh, on 21 × 4 (one span panel per chord station) and on 21 × 12 (three times the chord panels). Thrust is still rising at 21 × 12, as the study above predicts, so the optimized wings' numbers are best read as a lower estimate of thrust and torque together.</p>${lineChart({series:ser,xlabel:'Panels on one wing (8 × 4 = 32, 21 × 4 = 84, 21 × 12 = 252)',ylabel:'Thrust (N)',w:900,h:240,ymin:Math.min(...ser.flatMap(s=>s.points.map(q=>q.y)))*0.9})}${legend(ser.map(s=>[s.color,s.name]))}</div>`}
+  // method
+  h+=`<div class="card"><h3>Method</h3><ol class="small" style="max-width:960px;margin:0;padding-left:18px">
+    <li><b>Systematic refinement.</b> Three meshes with a constant ratio r = 1.5 in every direction: 8 × 4 panels / 50 steps per cycle, 12 × 6 / 75, 18 × 9 / 112. Each setting is also doubled alone from the base to see which direction matters.</li>
+    <li><b>Observed order of convergence.</b> p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, from the three results f₃ (coarse), f₂, f₁ (fine). A monotone sequence is needed; oscillatory ones are flagged.</li>
+    <li><b>Richardson extrapolation.</b> f₀ = f₁ + (f₁ − f₂)/(r<sup>p</sup> − 1): the estimate of the zero-mesh-size result, the 1.0 line in the plots.</li>
+    <li><b>Grid convergence index.</b> GCI = 1.25 |(f₁ − f₂)/f₁| / (r<sup>p</sup> − 1): a 95 % uncertainty band on the fine result (Roache; Celik et al., ASME J. Fluids Eng. 130, 078001, 2008; ASME V&amp;V 20).</li>
+    <li><b>Stopping test.</b> As in an FEA h-refinement study, a result is converged when the next refinement changes it by less than ${CONV_TOL} %.</li></ol>
+    <p class="tiny muted">This is numerical convergence of the vortex-lattice model only. It says nothing about the model's physics (inviscid flow, no separation), which needs experiments.</p></div>`;
+  h+=`<details class="card" style="padding:10px 14px"><summary><b>Every design in the convergence studies</b> <span class="small muted">per-design results, order and GCI</span></summary>${convergenceCard()}</details>`;
+  $('#t-conv').innerHTML=h}
 function convergenceCard(){const sts=D.convergence||[];
   let h=`<div class="card"><h3>Convergence of the optimized designs</h3><p class="small muted" style="max-width:900px">As in an FEA mesh study: a convergence study re-solves each search's top designs and a random sample of the others on three uniformly refined settings (8 × 4 panels / 50 steps, 12 × 6 / 75, 18 × 9 / 112: ratio r = 1.5) and with span panels, chord panels and steps each doubled alone. From the three uniform levels: observed order p, Richardson-extrapolated value and the fine-grid convergence index (GCI, safety factor 1.25). <b>Base error</b> is how far the searches' own 8 × 4 / 50 numbers are from the extrapolated value; the <b>rank correlation</b> says whether the searches' ranking of designs holds on the fine mesh, which is what an optimization needs.</p>`;
   if(!sts.length)return h+'<p class="small">No convergence study in this snapshot. Write one from finished studies with <code>python -m wingstudy convergence STUDY… --top 3 --sample 30 --favorites</code>, run it, and publish it; it appears here.</p></div>';
@@ -1077,7 +1169,7 @@ function faavTopHTML(){
   if(!rows.length)return h+`<div class="card"><p>No verified FAAV wings at ${D.freqs[TOPS.f]} Hz.</p></div>`;
   h+=levelsCard(TOPS.sheet?rowsSheet:rows,rowsSheet)+sliceCard(allRows)
     +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&!FINE(i)&&SPAN[i]<=SHEET+0.5,`for the FAAV build within one ${SHEET} mm sheet, at every frequency simulated`)
-    +favouritesCard()+convergenceCard();
+    +favouritesCard()+`<div class="card"><h3>Convergence</h3><p class="small">Are these numbers mesh-converged? See the <a href="#" onclick="go('conv');return false">Convergence</a> tab.</p></div>`;
   return h}
 function renderWinners(){
   let h=faavTopHTML()+`<details class="card" style="padding:10px 14px"><summary><b>Earlier studies, other materials and models</b> <span class="small muted">every material and analysis type, the campaigns, the new-study cards and the rigid catalog</span></summary>`;
@@ -1380,7 +1472,7 @@ function renderElastic(){renderStiff();renderSpan()}
 const RENDERED={};
 function go(t){$$('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t===t);if(b.dataset.t===t&&b.scrollIntoView&&matchMedia('(max-width:760px)').matches)b.scrollIntoView({block:'nearest',inline:'nearest'})});$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   try{history.replaceState(null,'','#'+t)}catch(e){}
-  if(!RENDERED[t]){RENDERED[t]=1;({elastic:renderElastic,overview:renderOverview,winners:renderWinners,opt:renderOpt,map:()=>{initMapControls();drawMap()}})[t]()}
+  if(!RENDERED[t]){RENDERED[t]=1;({elastic:renderElastic,overview:renderOverview,winners:renderWinners,opt:renderOpt,conv:renderConv,map:()=>{initMapControls();drawMap()}})[t]()}
   else if(t==='map')requestDraw()}
 $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
 {const ft=$('#f-toggle');if(ft)ft.onclick=()=>{const c=ft.closest('.filters'),o=c.classList.toggle('open');ft.setAttribute('aria-expanded',o);ft.textContent=o?'Hide filters':'Filters'}}
