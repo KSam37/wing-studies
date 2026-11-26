@@ -222,18 +222,18 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                                   "panels and a smooth-curve search. See Optimized shapes.",
                          **({"run_date": stages[-1]["updated"]} if stages[-1].get("updated") else {})})
     mi = _model(D, "t0.50", "chordwise")
-    fi = _index(D["freqs"], 1.0)
     notes, outlines, rsearch = D.setdefault("row_notes", {}), D.setdefault("row_outline", {}), D.setdefault("row_search", {})
     ids = list(dict.fromkeys(x["id"] for st in stages for x in st["seeds"]))
     added = 0
     for sid_ in ids:
-        path, budget, source = [], None, None
+        path, budget, source, freq = [], None, None, 1.0
         for n, st in enumerate(stages):
             x = next((q for q in st["seeds"] if q["id"] == sid_), None)
             if not x:
                 continue
             budget, source = x["budget_Nm"], x["source"]
             num = x.get("numerics") or {}
+            freq = x.get("freq", num.get("freq", 1.0))
             mesh = f"{num.get('span_panels')} × {num.get('chord_panels')} panels"
             for h in x.get("history") or []:
                 if not (h.get("key") and _finite(h.get("thrust")) and _finite(h.get("torque")) and h.get("ctrl")):
@@ -242,6 +242,7 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                 path.append((h, ch, f"step {n + 1 if n == 0 else 3}{'' if h['round'] else ' start'}"
                                     f"{', round ' + str(h['round']) if h['round'] else ''} ({mesh}"
                                     f"{', smooth curve' if num.get('param') == 'pchip' else ''})"))
+        fi = _index(D["freqs"], freq)
         rows = []
         for h, ch, what in path:
             if h["key"] in keyrow:
@@ -258,7 +259,7 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                     cols[k].append(vals.get(k))
             keyrow[h["key"]] = row
             outlines[str(row)] = ch
-            notes[str(row)] = f"Optimized shapes, ≤ {budget:g} N·m standout ({sid_}): {what}"
+            notes[str(row)] = f"Optimized shapes, ≤ {budget:g} N·m standout at {freq:g} Hz ({sid_}): {what}"
             rsearch[str(row)] = {"objectives": [f"≤ {budget:g} N·m (fine-mesh refinement)"], "lambda": [],
                                  "torque_budget_Nm": [budget], "winner": False, "winner_of": [], "refine": True}
             rows.append(row)
@@ -269,7 +270,7 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
         if final is not None:
             seed = keyrow.get(source.get("key")) if source else None
             final.update({"winner": True, "winner_of": [sid_], "evolution": {
-                "search": f"Optimized shapes · ≤ {budget:g} N·m", "objective": f"most thrust with peak torque ≤ {budget:g} N·m",
+                "search": f"Optimized shapes · ≤ {budget:g} N·m · {freq:g} Hz", "objective": f"most thrust with peak torque ≤ {budget:g} N·m",
                 "lambda": None, "torque_budget_Nm": budget, "family": "wing", "seed_label": "study pick",
                 "seed_half_span_mm": source.get("half_span_mm") if source else None,
                 "steps": ([seed] if seed is not None else []) + list(dict.fromkeys(rows)),

@@ -97,15 +97,13 @@ def build(out: Path) -> None:
         print(f"planned studies: {len(planned)} ({study_atlas.merge(D, planned)} map rows)")
     fav = ROOT / "atlas" / "favorites.json"
     D["favorites"] = json.loads(fav.read_text(encoding="utf-8")).get("favorites", []) if fav.exists() else []
-    rt = ROOT / "atlas" / "refine-top.json"          # wingstudy.refine_top summary, copied in by hand
-    if rt.exists():
-        D["refine_top"] = json.loads(rt.read_text(encoding="utf-8"))
-    rc = ROOT / "atlas" / "refine-top-curve.json"    # second stage: 21 x 12 mesh and smooth-curve search
-    if rc.exists():
-        D["refine_curve"] = json.loads(rc.read_text(encoding="utf-8"))
-    rb = ROOT / "atlas" / "refine-top-baseline.json"  # refine_top --baseline: the study picks on the same fine mesh
-    if rb.exists():
-        D["refine_baseline"] = json.loads(rb.read_text(encoding="utf-8"))
+    # wingstudy.refine_top runs, one folder each under atlas/refine-top/: stage1.json (tripled chord stations,
+    # 21 x 4), stage2.json (21 x 12 and smooth curve), baseline.json (the starting wings on 21 x 12)
+    runs = sorted(d for d in (ROOT / "atlas" / "refine-top").glob("*") if d.is_dir())
+    for key, name in (("refine_top", "stage1"), ("refine_curve", "stage2"), ("refine_baseline", "baseline")):
+        parts = [json.loads((d / f"{name}.json").read_text(encoding="utf-8")) for d in runs if (d / f"{name}.json").exists()]
+        if parts:
+            D[key] = {**parts[0], "runs": [d.name for d in runs], "seeds": [s for x in parts for s in x["seeds"]]}
     n = study_atlas.merge_refinement(D, [D.get("refine_top"), D.get("refine_curve")])
     if n:
         print(f"optimized shapes: {n} map rows")

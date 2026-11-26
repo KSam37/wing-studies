@@ -118,8 +118,9 @@ def _solve(task):
     template, settings = _cases.load_case(7657)
     chords = chords_from_ctrl(task["ctrl"], num["stations"], num.get("param"))
     case = R.sections_case(template, settings, chords, task["span"], task["key"])
-    case["frequency_hz"] = FREQ
-    ov = {"dt_s": 1.0 / (num["steps_per_cycle"] * FREQ), "cycles": num["cycles"],
+    freq = num.get("freq", FREQ)                 # refine_top runs at other frequencies set numerics["freq"]
+    case["frequency_hz"] = freq
+    ov = {"dt_s": 1.0 / (num["steps_per_cycle"] * freq), "cycles": num["cycles"],
           "span_panels": num["span_panels"], "chord_panels": num["chord_panels"]}
     _, thick, rod = MODELS[task["model"]]
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
@@ -179,8 +180,9 @@ def _solve_exact(task):
     chords = [c for c in task["chords"] if c > 0]
     span = task["half_span"] * (len(chords) - 1) / (len(task["chords"]) - 1)
     case = R.sections_case(template, settings, chords, span, "coarse winner, fine mesh")
-    case["frequency_hz"] = FREQ
-    ov = {"dt_s": 1.0 / (num["steps_per_cycle"] * FREQ), "cycles": num["cycles"],
+    freq = num.get("freq", FREQ)                 # refine_top runs at other frequencies set numerics["freq"]
+    case["frequency_hz"] = freq
+    ov = {"dt_s": 1.0 / (num["steps_per_cycle"] * freq), "cycles": num["cycles"],
           "span_panels": num["span_panels"], "chord_panels": num["chord_panels"]}
     _, thick, rod = MODELS[task["model"]]
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
