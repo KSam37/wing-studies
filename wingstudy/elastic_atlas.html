@@ -1199,23 +1199,48 @@ function optimizeTop(){
   $('#opt-out').innerHTML=`<p class="small" style="margin-top:8px">Downloaded <code>spec.json</code>: ${designs.length} seeds × ${LEVELS.length} budgets, up to ${spec.budget.max_cases.toLocaleString()} solves (lineages usually stop after 30–60). Run it from the repository:</p>
     <pre class="small" style="white-space:pre-wrap">python -m wingstudy import spec.json\npython -m wingstudy plan ${id} --workers 16\npython -m wingstudy run ${id} --workers 16\npython -m wingstudy publish ${id}</pre>
     <p class="tiny muted">The same from the command line, for any finished studies: <code>python -m wingstudy polish STUDY… --top 3</code>.</p>`}
-// Triple-resolution refinement of the FAAV top performers (wingstudy/refine_top.py -> atlas/refine-top.json).
-function refineTopHTML(){const R=D.refine_top;
-  let h=`<div class="card"><h3>Refinement with three times the chord stations</h3><p class="small muted" style="max-width:900px">Each standout's outline redescribed with 3× as many chord stations (22 instead of 8, straight segments, so the starting shape is unchanged) on a mesh with one span panel per segment (21 instead of 8). A pattern search then moves every one of the 21 outboard chords (±10 mm, then ±5 mm) and the half-span (±20 mm, then ±10 mm, within one ${SHEET} mm sheet) under the budget the wing was picked for. <b>Coarse</b> is the study result; <b>start</b> is the same outline on the finer description and mesh, so coarse → start is the mesh effect and start → refined is the shape gain. On the finer mesh the torque rises as well, so a standout picked just under its budget can start above it; the search then first trades thrust to get back within the budget.</p>`;
+// Refinement of the FAAV top performers (wingstudy/refine_top.py): stage 1 = 3x chord stations on a
+// 21 x 4 mesh (atlas/refine-top.json); stage 2 = 3x chord panels (21 x 12) and a smooth-curve search
+// (atlas/refine-top-curve.json). GIFs of every accepted step: atlas/media/refine-top/<id>.gif.
+function refineTopHTML(){const R=D.refine_top,R2=D.refine_curve;
+  let h=`<div class="card"><h3>Refining the standouts: finer outline, finer mesh, smooth curve</h3><p class="small muted" style="max-width:920px">The best single-sheet FAAV wing at each torque budget, taken through three steps under the budget it was picked for. <b>1 · Three times the chord stations</b> (22 instead of 8) on a mesh with one span panel per segment (21 × 4), every chord and the half-span searched (±10 then ±5 mm; ±20 then ±10 mm). <b>2 · Three times the chord panels</b> (21 × 12): the refined outline re-solved. <b>3 · Smooth curve</b>: that outline fitted with a monotone cubic through the root and 6 control chords, and the 6 chords and the half-span searched again on the 21 × 12 mesh. A finer mesh raises thrust and torque together, so a wing chosen just under its budget can land above it; the search then trades thrust to get back within the budget.</p>`;
   if(!R||!R.seeds||!R.seeds.length)return h+'<p class="small">No refinement results in this snapshot yet. Run <code>python -m wingstudy.refine_top STUDY… --levels 0.75 1 1.25 --sheet-only</code> and copy its <code>summary.json</code> to <code>atlas/refine-top.json</code>.</p></div>';
-  const outline=(ch,span)=>activeOutline(ch,span),c=css('--s1');
+  const cA=css('--text-2'),c1=css('--s3'),c2=css('--s1'),cOver=css('--warn')||'#e08a00';
+  const W=440,HH=160,pad=6,sx=(W-2*pad)/(SHEET*1.02),sy=(HH-2*pad)/210;
+  const poly=(ch,span)=>{const n=ch.length,pts=ch.map((c,j)=>[span*j/(n-1),c]);return [...pts.map(p=>[pad+sx*p[0],pad]),...pts.slice().reverse().map(p=>[pad+sx*p[0],pad+sy*p[1]])].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')};
+  const act=src=>{const a=src.chords_mm.filter(c=>c>0);return [a,src.half_span_mm*(a.length-1)/(src.chords_mm.length-1)]};
   h+='<div class="grid2">';
-  for(const x of R.seeds){const s=x.source,st=x.start||{},f=x.final||{},fch=x.final_chords_mm,hist=(x.history||[]).filter(r=>r.thrust!=null);
-    const pct=(a,b)=>a&&b?(b>=a?'+':'')+fmt(100*(b-a)/a,1)+'%':'–';
-    const svg=(()=>{const w=440,hh=150,pad=6,sx=(w-2*pad)/(SHEET*1.02),sy=(hh-2*pad)/210;const poly=pts=>[...pts.map(p=>[pad+sx*p[0],pad]),...pts.slice().reverse().map(p=>[pad+sx*p[0],pad+sy*p[1]])].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
-      return `<svg viewBox="0 0 ${w} ${hh}" width="100%" style="display:block"><polygon points="${poly(outline(s.chords_mm,s.half_span_mm))}" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>${fch?`<polygon points="${poly(outline(fch,1000*f.span))}" fill="${c}" fill-opacity=".16" stroke="${c}" stroke-width="2"/>`:''}</svg>`})();
-    h+=`<div class="card"><h3>≤ ${x.budget_Nm} N·m${x.single_sheet?' · single sheet':''}</h3>${svg}
-      <table class="lb"><tr><th></th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Half-span</th><th class="n">Change</th></tr>
-      <tr><td>Coarse (8 stations, 8 × 4)</td><td class="n">${fmt(s.thrust_N,3)} N</td><td class="n">${fmt(s.torque_Nm,3)}</td><td class="n">${Math.round(s.half_span_mm)} mm</td><td></td></tr>
-      <tr><td>Start (22 stations, 21 × 4)</td><td class="n">${fmt(st.thrust,3)} N</td><td class="n">${fmt(st.torque,3)}</td><td class="n">${st.span?Math.round(1000*st.span):'–'} mm</td><td class="n">${pct(s.thrust_N,st.thrust)} mesh${st.torque>x.budget_Nm+1e-9?'<br><span class="tiny" style="color:var(--warn)">over budget</span>':''}</td></tr>
-      <tr><td><b>Refined</b></td><td class="n"><b>${fmt(f.thrust,3)} N</b></td><td class="n">${fmt(f.torque,3)}</td><td class="n">${f.span?Math.round(1000*f.span):'–'} mm</td><td class="n"><b>${pct(st.thrust,f.thrust)}</b> ${st.torque>x.budget_Nm+1e-9?'back within budget':'shape'}</td></tr></table>
-      ${hist.length>1?lineChart({series:[{name:'Thrust',color:c,points:hist.map(r=>({x:r.round,y:r.thrust,hollow:r.torque>x.budget_Nm,tip:`Round ${r.round}: ${fmt(r.thrust,3)} N at ${fmt(r.torque,3)} N·m, ${Math.round(1000*r.span)} mm${r.tag?'<br>'+esc(r.tag):''}`}))}],xlabel:'Round',ylabel:'Thrust (N)',w:420,h:170,ymin:Math.min(...hist.map(r=>r.thrust))*0.98}):''}
-      <p class="tiny muted">${x.rounds} rounds · ${esc(x.note||'running')}${fch?` · chords ${fch.map(v=>Math.round(v)).join(' · ')} mm`:''}</p></div>`}
+  for(const x of R.seeds){const s=x.source,st=x.start||{},f=x.final||{},y=R2&&R2.seeds?R2.seeds.find(q=>q.id===x.id):null,B=x.budget_Nm;
+    const [a0,sp0]=act(s);
+    // before / after outlines, to scale
+    let svg=`<svg viewBox="0 0 ${W} ${HH}" width="100%" style="display:block" role="img" aria-label="Outlines before and after">`
+      +`<polygon points="${poly(a0,sp0)}" fill="none" stroke="${cA}" stroke-width="1.4" stroke-dasharray="4 3"/>`;
+    if(x.final_chords_mm)svg+=`<polygon points="${poly(x.final_chords_mm,1000*f.span)}" fill="none" stroke="${c1}" stroke-width="1.6"/>`;
+    if(y&&y.final_chords_mm)svg+=`<polygon points="${poly(y.final_chords_mm,1000*y.final.span)}" fill="${c2}" fill-opacity=".16" stroke="${c2}" stroke-width="2"/>`;
+    svg+='</svg>';
+    const leg=legend([[cA,'Study result (8 stations, 8 × 4)'],[c1,'Step 1 refined (22 stations, 21 × 4)'],...(y&&y.final_chords_mm?[[c2,'Step 3 smooth curve (21 × 12)']]:[])]);
+    // the path through thrust-torque space, stage by stage
+    const P=[['Study result, 8 × 4',s.torque_Nm,s.thrust_N,s.half_span_mm/1000],['Same outline, 22 stations, 21 × 4',st.torque,st.thrust,st.span],['Step 1 refined, 21 × 4',f.torque,f.thrust,f.span]];
+    if(y){if(y.recheck)P.push(['Step 2: refined outline on 21 × 12',y.recheck.torque,y.recheck.thrust,y.recheck.span]);
+      if(y.start)P.push(['Smooth-curve fit, 21 × 12',y.start.torque,y.start.thrust,y.start.span]);
+      if(y.final&&y.final.thrust!=null)P.push(['Step 3 smooth curve, 21 × 12',y.final.torque,y.final.thrust,y.final.span])}
+    const Pv=P.filter(q=>q[1]!=null&&q[2]!=null);
+    const xs=Pv.map(q=>q[1]);
+    const path=Pv.length>1?lineChart({series:[{name:'Path',color:c2,points:Pv.map((q,k)=>({x:q[1],y:q[2],hollow:q[1]>B+1e-9,tip:`<b>${k}. ${q[0]}</b><br>${fmt(q[2],3)} N at ${fmt(q[1],3)} N·m${q[1]>B+1e-9?' (over budget)':''}<br>${Math.round(1000*q[3])} mm half-span`}))}],
+      xlabel:'Peak root torque (N·m)',ylabel:'Thrust (N)',w:420,h:190,ymin:Math.min(...Pv.map(q=>q[2]))*0.95,xfmt:v=>fmt(v,2),xband:[B,Math.max(...xs,B)+1,'over budget']}):'';
+    const pct=(a,b)=>a&&b?(b>=a?'+':'')+fmt(100*(b-a)/a,1)+'%':'';
+    const rows=P.map((q,k)=>`<tr${k===P.length-1?' style="font-weight:600"':''}><td>${q[0]}</td><td class="n">${q[2]!=null?fmt(q[2],3)+' N':'–'}</td><td class="n"${q[1]>B+1e-9?' style="color:var(--warn)"':''}>${q[1]!=null?fmt(q[1],3):'–'}</td><td class="n">${q[3]?Math.round(1000*q[3])+' mm':'–'}</td><td class="n">${k?pct(P[k-1][2],q[2]):''}</td></tr>`).join('');
+    // thrust per accepted step, both searches
+    const h1=(x.history||[]).filter(r=>r.thrust!=null),h2=y?(y.history||[]).filter(r=>r.thrust!=null):[];
+    const ser=[{name:'Step 1 (21 × 4)',color:c1,points:h1.map((r,k)=>({x:k,y:r.thrust,hollow:r.torque>B+1e-9,tip:`Step 1, round ${r.round}: ${fmt(r.thrust,3)} N at ${fmt(r.torque,3)} N·m, ${Math.round(1000*r.span)} mm${r.tag?'<br>'+esc(r.tag):''}`}))}];
+    if(h2.length)ser.push({name:'Step 3 (21 × 12, curve)',color:c2,points:h2.map((r,k)=>({x:h1.length+k,y:r.thrust,hollow:r.torque>B+1e-9,tip:`Step 3, round ${r.round}: ${fmt(r.thrust,3)} N at ${fmt(r.torque,3)} N·m, ${Math.round(1000*r.span)} mm${r.tag?'<br>'+esc(r.tag):''}`}))});
+    const prog=h1.length>1?lineChart({series:ser,xlabel:'Accepted step',ylabel:'Thrust (N)',w:420,h:170,ymin:Math.min(...[...h1,...h2].map(r=>r.thrust))*0.97}):'';
+    const gif=(D.refine_gifs||[]).includes(x.id)?`<details style="margin-top:6px"><summary class="small"><b>▶ Evolution GIF</b> <span class="muted">every accepted step from the study result, orange while over budget</span></summary><img src="media/refine-top/${encodeURIComponent(x.id)}.gif" alt="Outline evolution of the ${B} N·m standout" style="width:100%;margin-top:6px;border-radius:6px"></details>`:'';
+    const fin=y&&y.final_chords_mm?y:x;
+    h+=`<div class="card"><h3>≤ ${B} N·m · single sheet</h3>${svg}${leg}
+      <table class="lb" style="margin-top:6px"><tr><th>Stage</th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Half-span</th><th class="n">Change</th></tr>${rows}</table>
+      ${path?`<p class="tiny muted" style="margin:8px 0 0">The path through thrust and peak torque, one point per stage in the table (hover for each); hollow and shaded = over the ${B} N·m budget.</p>${path}`:''}${prog?`<p class="tiny muted" style="margin:6px 0 0">Thrust at each accepted step; hollow = over budget.</p>${prog}${legend(ser.map(q=>[q.color,q.name]))}`:''}${gif}
+      <p class="tiny muted">${esc(x.note||'')}${y?` · step 3: ${y.rounds} rounds, ${esc(y.note||'running')}`:' · steps 2 and 3 not run yet'}${fin.final_chords_mm?` · final chords ${fin.final_chords_mm.filter((_,j,a)=>j%3===0||j===a.length-1).map(v=>Math.round(v)).join(' · ')} mm (every 3rd station)`:''}</p></div>`}
   return h+'</div></div>'}
 function renderOpt(){
   const ba=refineTopHTML()+beforeAfterHTML();
