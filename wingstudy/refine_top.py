@@ -19,6 +19,13 @@ Solves go through ``elastic_refine._solve`` (same template case, material and ve
 ladder as the refinement tool). Every solve is cached in OUT/cache.jsonl, so a rerun resumes.
 OUT/summary.json lists, per seed: the coarse study result (before), the same outline on the
 fine description and mesh (start), and the refined result (after).
+
+Second stage, from a finished summary (``--from``): each refined outline is re-solved on a mesh
+with ``--chord-panels`` chordwise panels (``recheck``), then, with ``--curve N``, re-described as
+a smooth monotone cubic (PCHIP) through the root chord and N control chords at equal fractions of
+the half-span (the fit used by elastic_refine), and searched again on that mesh: +/- 10 mm then
+5 mm on each control chord and +/- 20 mm then 10 mm on the half-span, same budget score.
+``--gif DIR --summaries A B ...`` writes one evolution GIF per seed through every stage in order.
 """
 from __future__ import annotations
 
@@ -91,18 +98,47 @@ def refine_outline(chords_mm, half_span_mm, factor=FACTOR):
     return ctrl, round(span / 1000, 5)
 
 
-def numerics_for(n_segments: int) -> dict:
-    return {"stations": n_segments + 1, "span_panels": n_segments, "chord_panels": 4, "steps_per_cycle": 50,
-            "cycles": 4, "dt_refinements": [1, 2], "param": "exact"}
+def numerics_for(n_segments: int, chord_panels: int = 4, param: str = "exact") -> dict:
+    return {"stations": n_segments + 1, "span_panels": n_segments, "chord_panels": chord_panels, "steps_per_cycle": 50,
+            "cycles": 4, "dt_refinements": [1, 2], "param": param}
+
+
+def outline_mm(ctrl, numerics) -> list[float]:
+    """Chords (mm) at the mesh stations for a control vector, exact or PCHIP."""
+    if numerics.get("param") == "exact":
+        return [round(1000 * x, 2) for x in ER.chords_from_ctrl(ctrl, 0, "exact")]
+    return [round(1000 * x, 2) for x in ER.chords_from_ctrl(ctrl, numerics["stations"], numerics.get("param"))]
+
+
+def fit_curve(chords_mm, n_ctrl):
+    """PCHIP control chords (m) through a station outline: its values at k/n of the half-span, kept monotone."""
+    import numpy as np
+    ys = np.linspace(0, 1, len(chords_mm))
+    out, prev = [], ER.ROOT_CHORD
+    for k in range(1, n_ctrl + 1):
+        c = float(np.interp(k / n_ctrl, ys, chords_mm)) / 1000
+        prev = min(prev, max(ER.MIN_CHORD, round(c, 5)))
+        out.append(prev)
+    return out
 
 
 class Search:
-    def __init__(self, seed: dict, factor: int, max_rounds: int):
+    def __init__(self, seed: dict, factor: int, max_rounds: int, chord_panels: int = 4, curve: int = 0):
         self.seed, self.budget = seed, seed["budget"]
         c = seed["case"]
-        self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
+        self.recheck = None
+        if seed.get("ctrl"):                                    # second stage: start from a refined outline
+            n = len(seed["ctrl"])
+            self.recheck_numerics = numerics_for(n, chord_panels, "exact")
+            if curve:
+                self.ctrl, self.span = fit_curve(outline_mm(seed["ctrl"], {"param": "exact"}), curve), seed["span"]
+                self.numerics = numerics_for(n, chord_panels, "pchip")
+            else:
+                self.ctrl, self.span, self.numerics = list(seed["ctrl"]), seed["span"], self.recheck_numerics
+        else:
+            self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
+            self.numerics = numerics_for(len(self.ctrl), chord_panels)
         self.span_max = SHEET_M if seed["single_sheet"] else SPAN_LIMITS[1]
-        self.numerics = numerics_for(len(self.ctrl))
         self.step_i, self.rounds, self.max_rounds = 0, 0, max_rounds
         self.current, self.history, self.done, self.note = None, [], False, ""
 
@@ -111,10 +147,10 @@ class Search:
             return None
         return rec["thrust"] if rec["torque"] <= self.budget else -10.0 - (rec["torque"] - self.budget)
 
-    def task(self, ctrl, span, tag):
-        ctrl, span = [round(x, 5) for x in ctrl], round(span, 5)
-        return {"key": ER.key_of("t0.50", ctrl, span, self.numerics), "model": "t0.50", "ctrl": ctrl, "span": span,
-                "numerics": self.numerics, "tag": tag}
+    def task(self, ctrl, span, tag, numerics=None):
+        ctrl, span, num = [round(x, 5) for x in ctrl], round(span, 5), numerics or self.numerics
+        return {"key": ER.key_of("t0.50", ctrl, span, num), "model": "t0.50", "ctrl": ctrl, "span": span,
+                "numerics": num, "tag": tag}
 
     def candidates(self):
         cs, ss, out, n = CHORD_STEPS[self.step_i], SPAN_STEPS[self.step_i], [], len(self.ctrl)
@@ -155,15 +191,86 @@ class Search:
                 "source": {"key": c["key"], "chords_mm": c["chords_mm"], "half_span_mm": c["half_span_mm"],
                            "thrust_N": c["thrust_N"], "torque_Nm": c["torque_Nm"]},
                 "numerics": self.numerics, "rounds": self.rounds, "note": self.note,
+                "previous": self.seed.get("previous"),
+                "recheck": {k: self.recheck.get(k) for k in ("status", "thrust", "torque", "tip_twist", "span")} if self.recheck else None,
                 "start": {k: start.get(k) for k in ("status", "thrust", "torque", "tip_twist", "span", "ctrl")},
                 "final": {k: f.get(k) for k in ("status", "thrust", "torque", "tip_twist", "span", "ctrl")},
-                "final_chords_mm": [round(1000 * x, 2) for x in ER.chords_from_ctrl(f["ctrl"], 0, "exact")] if f.get("ctrl") else None,
-                "history": self.history}
+                "final_chords_mm": outline_mm(f["ctrl"], self.numerics) if f.get("ctrl") else None,
+                "history": [dict(h, chords_mm=outline_mm(h["ctrl"], self.numerics)) if h.get("ctrl") else h for h in self.history]}
+
+
+def seeds_from_summary(path: Path) -> list[dict]:
+    """Second-stage seeds: each refined final outline of a finished summary, same id and budget."""
+    out = []
+    for x in S.read_json(path)["seeds"]:
+        f = x.get("final") or {}
+        if f.get("ctrl") and f.get("status") in ("ok", "verified"):
+            out.append({"id": x["id"], "budget": x["budget_Nm"], "single_sheet": x["single_sheet"], "case": x["source"],
+                        "ctrl": f["ctrl"], "span": f["span"], "previous": {k: f.get(k) for k in ("thrust", "torque", "span")}})
+    return out
+
+
+def _xy(ch, span_mm):
+    n = len(ch)
+    ys = [span_mm * i / (n - 1) for i in range(n)]
+    return ys + ys[::-1] + [0.0], [0.0] * n + [-c for c in ch][::-1] + [0.0]
+
+
+def write_gifs(summaries: list[Path], out: Path) -> list[Path]:
+    """One GIF per seed id: the study outline (dashed) and every accepted step of every stage, to scale."""
+    import io
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    stages = [S.read_json(p) for p in summaries]
+    out.mkdir(parents=True, exist_ok=True)
+    written = []
+    for first in stages[0]["seeds"]:
+        sid, B, src = first["id"], first["budget_Nm"], first["source"]
+        steps = []
+        for st in stages:
+            x = next((q for q in st["seeds"] if q["id"] == sid), None)
+            if not x:
+                continue
+            num = x["numerics"]
+            label = f"{num['span_panels']} × {num['chord_panels']}" + (", smooth curve" if num.get("param") == "pchip" else "")
+            for h in x["history"]:
+                if h.get("ctrl") and h.get("thrust") is not None:
+                    steps.append((label, h["round"], h.get("chords_mm") or outline_mm(h["ctrl"], num), h["span"], h["thrust"], h["torque"]))
+        if not steps:
+            continue
+        act = [c for c in src["chords_mm"] if c > 0]
+        x0, y0 = _xy(act, src["half_span_mm"] * (len(act) - 1) / (len(src["chords_mm"]) - 1))
+        frames = []
+        for label, rnd, ch, span, T, Q in steps + [steps[-1]] * 6:
+            fig, ax = plt.subplots(figsize=(7, 3.2))
+            ax.plot(x0, y0, color="#b0afa9", lw=1, ls="--")
+            xs, ys = _xy(ch, span * 1000)
+            over = Q > B + 1e-9
+            col = "#e08a00" if over else "#2a78d6"
+            ax.fill(xs, ys, color=col, alpha=0.22, lw=0)
+            ax.plot(xs, ys, color=col, lw=1.6)
+            ax.set_aspect("equal"); ax.set_xlim(-5, 410); ax.set_ylim(-215, 8); ax.axis("off")
+            ax.set_title(f"≤ {B:g} N·m · {label} mesh, round {rnd}: {T:.3f} N at {Q:.3f} N·m"
+                         f"{' (over budget)' if over else ''}, {span * 1000:.0f} mm", fontsize=8.5, loc="left")
+            ax.text(0, -213, "dashed: study result (8 stations, 8 × 4 mesh)", fontsize=7, color="#77766f")
+            buf = io.BytesIO(); fig.savefig(buf, format="png", dpi=80, facecolor="white"); plt.close(fig)
+            buf.seek(0); frames.append(Image.open(buf).convert("P", palette=Image.ADAPTIVE))
+        path = out / f"{sid}.gif"
+        frames[0].save(path, save_all=True, append_images=frames[1:], duration=300, loop=0)
+        written.append(path)
+    return written
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m wingstudy.refine_top", description=__doc__.split("\n\n")[0])
-    ap.add_argument("studies", nargs="+", help="finished study ids to take the FAAV standouts from")
+    ap.add_argument("studies", nargs="*", help="finished study ids to take the FAAV standouts from")
+    ap.add_argument("--from", dest="from_summary", type=Path, help="second stage: start from this summary's refined outlines")
+    ap.add_argument("--chord-panels", type=int, default=4, help="chordwise panels (default 4; 12 = three times finer)")
+    ap.add_argument("--curve", type=int, default=0, help="with --from: search a PCHIP outline with this many control chords")
+    ap.add_argument("--gif", type=Path, help="write evolution GIFs to this folder from --summaries, then stop")
+    ap.add_argument("--summaries", type=Path, nargs="*", default=[], help="summaries in stage order, for --gif")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--factor", type=int, default=FACTOR, help="chord segments per original segment (default 3)")
     ap.add_argument("--max-rounds", type=int, default=20)
@@ -172,16 +279,24 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--dry", action="store_true", help="list the seeds and the first round's size, solve nothing")
     a = ap.parse_args(argv)
-    results = [S.read_json(S.study_dir(s) / "results.json") for s in a.studies if (S.study_dir(s) / "results.json").exists()]
-    seeds = pick_seeds(faav_cases(results), a.levels, a.sheet_only)
+    if a.gif:
+        for p in write_gifs(a.summaries, a.gif):
+            print("wrote", p)
+        return 0
+    if a.from_summary:
+        seeds = seeds_from_summary(a.from_summary)
+    else:
+        results = [S.read_json(S.study_dir(s) / "results.json") for s in a.studies if (S.study_dir(s) / "results.json").exists()]
+        seeds = pick_seeds(faav_cases(results), a.levels, a.sheet_only)
     if not seeds:
-        print("no verified FAAV wings in those studies")
+        print("no verified FAAV wings to start from")
         return 1
-    searches = [Search(s, a.factor, a.max_rounds) for s in seeds]
+    searches = [Search(s, a.factor, a.max_rounds, a.chord_panels, a.curve if a.from_summary else 0) for s in seeds]
     for s in searches:
         c = s.seed["case"]
-        print(f"{s.seed['id']}: {c['thrust_N']:.3f} N at {c['torque_Nm']:.3f} N·m, {effective_span_mm(c):.0f} mm -> "
-              f"{len(s.ctrl)} chords, {s.numerics['span_panels']} span panels, {len(s.candidates())} moves per round")
+        kind = "curve control chords" if s.numerics.get("param") == "pchip" else "chords"
+        print(f"{s.seed['id']}: {c['thrust_N']:.3f} N at {c['torque_Nm']:.3f} N·m -> {len(s.ctrl)} {kind}, "
+              f"{s.numerics['span_panels']} × {s.numerics['chord_panels']} panels, {len(s.candidates())} moves per round")
     if a.dry:
         return 0
     a.out.mkdir(parents=True, exist_ok=True)
@@ -205,11 +320,22 @@ def main(argv=None) -> int:
 
     def write():
         S.write_json(a.out / "summary.json", {"factor": a.factor, "levels": a.levels, "studies": a.studies,
+                                              "from": str(a.from_summary) if a.from_summary else None,
+                                              "chord_panels": a.chord_panels, "curve": a.curve,
                                               "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                                               "seeds": [s.summary() for s in searches]})
 
     with ProcessPoolExecutor(max_workers=a.workers) as pool:
-        starts = solve_all(pool, [s.task(s.ctrl, s.span, "start (same outline, tripled stations)") for s in searches])
+        if a.from_summary:                                      # the refined outline itself on the new mesh
+            checks = solve_all(pool, [s.task(s.seed["ctrl"], s.seed["span"], "recheck (refined outline, finer mesh)",
+                                             s.recheck_numerics) for s in searches])
+            for s, r in zip(searches, checks):
+                s.recheck = r
+        if a.from_summary:
+            start_tag = "start (smooth-curve fit of the refined outline)" if a.curve else "start (refined outline)"
+        else:
+            start_tag = "start (same outline, tripled stations)"
+        starts = solve_all(pool, [s.task(s.ctrl, s.span, start_tag) for s in searches])
         for s, r in zip(searches, starts):
             s.current = r
             s.history.append({"round": 0, **r, "score": s.score(r)})
