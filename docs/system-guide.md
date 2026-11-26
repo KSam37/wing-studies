@@ -541,3 +541,5 @@ Primary background already used: Causin, Gerbeau & Nobile (2005), DOI 10.1016/j.
 - **The FAAV standouts on 8 × 4, 21 × 4 and 21 × 12:** from the refinement runs.
 - **Method:** the formulas, followed by the per-design table (`convergenceCard`).
 
+**Mesh ladder for the recommended wings.** `python -m wingstudy.mesh_ladder SUMMARY… [--levels 21x12 32x18 47x27]` takes the recommended wing at each frequency and budget: the best smooth-curve final within budget over the given second-stage summaries. It solves each on finer meshes. The outline is sampled at one station per span panel; the time step is held at 50 steps per cycle, which changed results by under 1 % in the convergence study. It then applies Celik et al. (2008), which allows a non-constant refinement ratio r = √(N₁/N₂): the observed order, the extrapolated value and the GCI of the finest level. The first level comes from the summary. Results go to `outputs/mesh-ladder/ladder.json`.
+
