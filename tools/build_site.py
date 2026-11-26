@@ -106,6 +106,9 @@ def build(out: Path) -> None:
     rb = ROOT / "atlas" / "refine-top-baseline.json"  # refine_top --baseline: the study picks on the same fine mesh
     if rb.exists():
         D["refine_baseline"] = json.loads(rb.read_text(encoding="utf-8"))
+    n = study_atlas.merge_refinement(D, [D.get("refine_top"), D.get("refine_curve")])
+    if n:
+        print(f"optimized shapes: {n} map rows")
     gifs = ROOT / "atlas" / "media" / "refine-top"   # wingstudy.refine_top --gif output
     D["refine_gifs"] = sorted(g.stem for g in gifs.glob("*.gif")) if gifs.exists() else []
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")
