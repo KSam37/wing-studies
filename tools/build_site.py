@@ -97,6 +97,9 @@ def build(out: Path) -> None:
         print(f"planned studies: {len(planned)} ({study_atlas.merge(D, planned)} map rows)")
     fav = ROOT / "atlas" / "favorites.json"
     D["favorites"] = json.loads(fav.read_text(encoding="utf-8")).get("favorites", []) if fav.exists() else []
+    rt = ROOT / "atlas" / "refine-top.json"          # wingstudy.refine_top summary, copied in by hand
+    if rt.exists():
+        D["refine_top"] = json.loads(rt.read_text(encoding="utf-8"))
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")
     D["build_id"] = f"{now:%Y%m%d%H%M%S}-{commit}"
 

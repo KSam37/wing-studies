@@ -250,7 +250,9 @@ Reuse the template's CSS variables, themes, navigation, chips, chart helpers, to
 
 Matched comparisons are `D.span_comparisons`. Solved rows are registered into the Wing map arrays at load; `EXTRA` identifies them and `ORIGINAL_N` preserves the old catalog boundary. Never treat every appended row as historical catalog data. Rows from planned studies carry `src` bit 4; evolutionary studies add `D.row_search` (objectives, λ or torque budget, winner marks and the lineage's accepted steps), which drives the *Shape evolution* player without a campaign database.
 
-Every wing carries a **leading-edge boundary condition** tag, derived from its analysis type and construction, with its own filter and colour option. In every model the root is fixed to the flapping hub.
+Every wing carries a **leading-edge boundary condition** tag, derived from its analysis type and construction. On the Wing map this is the one *Model (leading edge)* filter and colour option: it replaces the separate analysis-type, construction and material rows, which it fully determines together with *Sheet thickness*. In every model the root is fixed to the flapping hub.
+
+**Study groups.** The map filters and colours by study group, not by single study: original campaigns (rod and plate), geometric sweeps (including planned geometry-sweep studies), span and shape searches (planned evolutionary studies), design sets and reruns, and the rigid catalog (`SGROUPS`, `SGROUP_OF`). Hover a group chip for its studies; the inspector still names a design's own study.
 
 | Tag | Model | What holds the sheet at the leading edge |
 |---|---|---|
@@ -267,16 +269,16 @@ No current model has a sheet hinged freely on a rod that also bends along the sp
 - R is the effective half-span and U = 0.5 m/s.
 - Elastic deflection is not included. This is exact for the chordwise models, whose leading edge stays straight.
 
-St is a Wing map axis, a range filter, an inspector row and a CSV column. *Top performing wings* plots the best thrust at ≤ 1 N·m against St, one line per frequency.
+St is a Wing map axis, a range filter, an inspector row and a CSV column. *Top performing wings* plots the best FAAV thrust at ≤ 1 N·m within one sheet against St, one line per frequency.
 
-**The FAAV build** is the wing that was made: a 0.5 mm carbon sheet on a stiff leading edge that the sheet pivots about and that itself neither bends nor twists. In the atlas that is `t0.50` with chordwise elasticity (`FAAV(i)` in the page). The Wing map's *FAAV build* toggle shows only those wings. **Single sheet:** a sheet is at most 400 mm (`SHEET`), so longer half-spans need a joined sheet. The map shades that zone whenever half-span is an axis, and wings carry a *single sheet* / *joined sheet* tag.
+**The FAAV build** is the wing that was made: a 0.5 mm carbon sheet on a stiff leading edge that the sheet pivots about and that itself neither bends nor twists. In the atlas that is `t0.50` with chordwise elasticity (`FAAV(i)` in the page). The Wing map's *Highlight FAAV build* toggle (on by default) colours those wings, draws every other wing in grey behind them and fits the view to the coloured wings; it hides nothing. **Single sheet:** a sheet is at most 400 mm (`SHEET`), so longer half-spans need a joined sheet. The map shades that zone whenever half-span is an axis, and wings carry a *single sheet* / *joined sheet* tag.
 
 **0.2 mm is left out.** It is not a standard sheet. `tools/atlas_data.py` `DROPPED_MODELS` removes its rows, winners and matched pairs at build time and renumbers every row reference (`drop_models`). The rows stay in `atlas/data`, which is never hand-edited.
 
-**Top performing wings** is computed in the page from the rows, so new studies appear without a rebuild of `atlas/data`. It is the at-a-glance view for the FAAV build: verified FAAV wings only, with a frequency switch and a *single sheet only* switch. It has, in order:
-- **Standout designs at each torque budget** (0.5, 0.75, 1, 1.25, 1.5, 2 N·m): the highest-thrust wing at or below each budget. Where that wing needs a joined sheet, the best single-sheet wing is given too. Below the cards, best thrust against budget for any span and for a single sheet.
-- **Torque slice:** every FAAV wing within a torque band (default 1 ± 0.05 N·m), and *n* of them (default 6) chosen by farthest-point sampling in thrust, normalized chords and span, with the best and worst always included. At equal torque, the thrust spread is the effect of shape.
-- The Strouhal plot for the FAAV build.
+**Top performing wings** is computed in the page from the rows, so new studies appear without a rebuild of `atlas/data`. It is the at-a-glance view for the FAAV build: verified FAAV wings within one 400 mm sheet only, with a frequency switch (longer wings are on the Wing map). It has, in order:
+- **Standout designs at each torque budget** (0.5, 0.75, 1, 1.25, 1.5, 2 N·m): the highest-thrust single-sheet wing at or below each budget, then best thrust against budget.
+- **Torque slice:** every FAAV wing within a torque band (default 1 ± 0.05 N·m), and *n* of them (default 6) chosen by farthest-point sampling in thrust, normalized chords and span, with the best and worst always included. At equal torque, the thrust spread is the effect of shape. No joined-sheet shading: every wing shown fits one sheet.
+- The Strouhal plot for the FAAV build within one sheet, one line per frequency simulated.
 - **Favourites:** shared ones from `atlas/favorites.json`, plus stars saved in this browser (`localStorage`). `python -m wingstudy favorite KEY --note "…"` adds a shared one; commit the file in a PR.
 - **Convergence** results (below).
 - A collapsed *Earlier studies, other materials and models* section: the per-material leaderboard, the all-materials Strouhal plot, the planned-study cards, the campaign winners and the rigid catalog.
@@ -288,6 +290,10 @@ St is a Wing map axis, a range filter, an inspector row and a CSV column. *Top p
 `convergence-report ID` and the atlas give, per design and for thrust and torque: observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, the Richardson value f₁ + (f₁ − f₂)/(rᵖ − 1), the fine-grid GCI 1.25 |(f₁ − f₂)/f₁| / (rᵖ − 1) (p clamped to 0.5–6), and the base setting's error against the extrapolated value. Oscillatory triples get half their range as the band. Across designs, the Spearman correlation of base against fine thrust says whether the search's ranking holds on the fine mesh. Any design-set study with more than one numerics setting is treated this way: its cases go to `D.convergence`, not to map rows. That includes the earlier 2026-11-19 mesh-sensitivity study.
 
 **Before and after (polish).** `python -m wingstudy polish STUDY… [--top 3] [--step 10] [--span-step 20] [--max-span 800]` writes an evolutionary study whose lineages start from the source searches' best designs, with finer chord steps and the half-span free, under the source objectives. The Optimized shapes tab's *Optimize top performers* button writes the same kind of spec in the browser from the FAAV standouts, for `python -m wingstudy import`. The merge records every lineage's seed and best rows in `D.lineage_pairs`. Optimized shapes draws each lineage seeded from an existing design as before (dashed) and after (filled), with the thrust change.
+
+**Optimized shapes** covers the FAAV wing only (rigid and spanwise models stay on the Wing map and in Elasticity effects): the triple-resolution refinement, before/after pairs whose seed and result are both FAAV wings, and the earlier fine-mesh refinement of the bare 0.5 mm plate.
+
+**Triple-resolution refinement.** `python -m wingstudy.refine_top STUDY… [--levels 0.75 1 1.25] [--sheet-only] [--factor 3] [--max-rounds 20] [--workers N] [--out DIR] [--dry]` picks the best FAAV wing at each torque budget from the studies' results, redescribes its outline with 3× the chord stations (8 → 22, linear, so the start shape is unchanged) on a mesh with one span panel per segment (21 × 4, 50 steps per cycle), and runs a pattern search: each round tries ±10 mm then ±5 mm on every outboard chord (monotone, above the minimum chord) and ±20 mm then ±10 mm on the half-span (150 mm to one sheet with `--sheet-only`), accepting the best improving move under the seed's budget. Solves go through `elastic_refine._solve` in a process pool and are cached in `OUT/cache.jsonl`; `OUT/summary.json` (default `outputs/refine-top/`) holds coarse, start, refined and the round history. Copy it to `atlas/refine-top.json` in a PR; `tools/build_site.py` loads it as `D.refine_top`. Coarse → start is the mesh effect, start → refined the shape gain.
 
 **Overview** now opens with *How the results were obtained*: the wing and motion, the fluid model, the structural models and boundary condition, verification, the objective functions (torque budget and λ, with their scores), the search, convergence and the derived quantities.
 

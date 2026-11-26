@@ -188,8 +188,8 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
       <span class="fh">View</span>
       <label>X <select id="ax-x"></select></label>
       <label>Y <select id="ax-y"></select></label>
-      <label>Colour by <select id="colorby"><option value="study">study</option><option value="struct">analysis type</option><option value="constr">construction</option><option value="bc">leading-edge boundary condition</option><option value="thk">sheet thickness</option><option value="model">material (thickness + rod)</option><option value="freq">frequency</option></select></label>
-      <button class="chip off" id="f-faav" aria-pressed="false" title="Only the wing that was built: 0.5 mm carbon sheet, chordwise elasticity, pivoting freely on a stiff leading edge that neither bends nor twists">FAAV build</button>
+      <label>Colour by <select id="colorby"><option value="study">study group</option><option value="bc">model (leading edge)</option><option value="thk">sheet thickness</option><option value="freq">frequency</option></select></label>
+      <button class="chip" id="f-faav" aria-pressed="true" title="Colour only the wing that was built (0.5 mm carbon sheet, chordwise elasticity, pivoting freely on a stiff leading edge that neither bends nor twists); every other wing is drawn in grey behind it. Nothing is hidden.">Highlight FAAV build</button>
       <button class="chip off" id="f-fav" aria-pressed="false" title="Only designs starred as favourites (shared and your own)">♥ Favourites</button>
       <span style="flex:1"></span>
       <button class="iconbtn ftoggle" id="f-toggle" style="width:auto;padding:0 10px" aria-expanded="false">Filters</button>
@@ -198,13 +198,11 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
     </div>
     <div class="fgrid">
       <fieldset class="fg"><legend>Analysis</legend>
-        <div class="frow"><span class="fl">Analysis type</span><div class="chips" id="f-struct"></div></div>
-        <div class="frow"><span class="fl">Construction</span><div class="chips" id="f-constr"></div></div>
-        <div class="frow"><span class="fl">Leading-edge boundary condition</span><div class="chips" id="f-bc"></div></div>
+        <div class="frow"><span class="fl">Model (leading edge)</span><div class="chips" id="f-bc"></div></div>
         <div class="frow"><span class="fl">Sheet thickness</span><div class="chips" id="f-thk"></div></div>
         <div class="frow"><span class="fl">Torque penalty λ</span><div class="chips" id="f-lambda"></div></div>
-        <div class="frow"><span class="fl">Study</span><div class="chips" id="f-study"></div></div>
-        <p class="tiny muted" style="margin:2px 0 0">Analysis type is the physics a wing was simulated with. Rigid wings have no material, so construction and thickness apply to the elastic analyses only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge. The boundary condition says how the model holds the sheet at the leading edge (hover a chip for the details); it follows from analysis type and construction, and in every model the root is fixed to the flapping hub.
+        <div class="frow"><span class="fl">Study group</span><div class="chips" id="f-study"></div></div>
+        <p class="tiny muted" style="margin:2px 0 0">The model is the analysis type and construction together, named by how it holds the sheet at the leading edge (hover a chip for the details); in every model the root is fixed to the flapping hub. Rigid wings have no material, so thickness applies to the elastic models only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube along the leading edge. Study groups gather studies of the same kind; a design's own study is named when you select it.
         λ is the torque penalty in the search score S = T/T<sub>ref</sub> − λ·M/M<sub>ref</sub>: a larger λ steers the search toward lower root torque. Designs found any other way (the torque-budget search, shape maps, sweeps, reruns) have no λ.</p>
       </fieldset>
       <fieldset class="fg"><legend>Geometry, conditions &amp; quality</legend>
@@ -287,7 +285,10 @@ const STUDY=Object.fromEntries(D.studies.map((s,i)=>[s.id,{...s,i}]));
 // Fixed colour per entity (never by rank). Rod models take the first slots: they are the hardware.
 const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','t0.20':'--s5','t1.00':'--s7','rigid':'--neutral','span-flex':'--s2','chord-rerun':'--s1'};
 const STUDY_VAR_ID={rod:'--s1',weekend:'--s2',sweep:'--s3',spanfree:'--s7',catalog:'--neutral'}, FREQ_VAR=['--f1','--f2','--f3'];
-const modelColor=id=>css(MODEL_VAR[id]||(id.startsWith('span-flex')?'--s2':'--s1')); const studyColor=i=>css(STUDY_VAR_ID[D.studies[i].id]||'--s5'); const freqColor=i=>css(FREQ_VAR[i%FREQ_VAR.length]);
+// Study groups: studies of the same kind share a chip and a colour on the Wing map.
+const SGROUPS=[[0,'Original campaigns (rod and plate)','--s1'],[1,'Geometric sweeps','--s3'],[2,'Span and shape searches','--s7'],[3,'Design sets and reruns','--s4'],[4,'Rigid catalog','--neutral']];
+const SGROUP_OF=D.studies.map(s=>s.id==='rod'||s.id==='weekend'?0:s.id==='sweep'||s.kind==='geometry-sweep'?1:s.id==='catalog'?4:s.kind==='evolutionary'||s.id==='spanfree'?2:3);
+const modelColor=id=>css(MODEL_VAR[id]||(id.startsWith('span-flex')?'--s2':'--s1')); const studyColor=i=>css(SGROUPS[SGROUP_OF[i]][2]); const freqColor=i=>css(FREQ_VAR[i%FREQ_VAR.length]);
 const STATUS=D.statuses, GOOD=new Set(['verified','ok']);
 const statusPill=s=>`<span class="pill ${GOOD.has(s)?'good':s==='uncertain'?'warn':'bad'}">${s==='ok'?'settled (rigid)':s}</span>`;
 
@@ -462,7 +463,7 @@ function coverageCard(){
   h+=`<tr><td><b>Total</b></td>${colTot.map(n=>`<td class="n"><b>${n.toLocaleString()}</b></td>`).join('')}<td class="n"><b>${N.toLocaleString()}</b></td></tr></table></div></div>`;
   return h;
 }
-function coverageGo(mi,k){Object.assign(M,mapDefaults(),{view:null,until:TL.length-1,stLo:ST_LIM[0],stHi:ST_LIM[1]});M.models=new Set([mi]);M.struct=new Set([k]);
+function coverageGo(mi,k){Object.assign(M,mapDefaults(),{view:null,until:TL.length-1,stLo:ST_LIM[0],stHi:ST_LIM[1]});M.bc=new Set([k===0?0:(k===1?1:3)+(MODEL[D.models[mi].id]?.rod?1:0)]);{const t=MODEL[D.models[mi].id]?.thickness;if(t!=null)M.thk=new Set([THKS.indexOf(t)])}
   M.freqs=new Set(D.freqs.map((_,i)=>i));M.quality=new Set(QUALS.map(q=>q[0]));go('map');drawMap()}
 
 function methodsCard(){
@@ -564,6 +565,8 @@ const QUAL_OF=st=>GOOD.has(st)?0:st==='uncertain'?1:2;
 // The FAAV build: 0.5 mm carbon sheet on a stiff leading edge it pivots about (the edge neither bends
 // nor twists) = the chordwise model without rod. SHEET: longest half-span cut from one sheet.
 const FAAV=i=>BASE_OF[C.m[i]]==='t0.50'&&STRUCT_OF[C.m[i]]===1, SHEET=400;
+// Model chips: the five leading-edge conditions, short names (BCS has the long ones).
+const BC_SHORT=['Rigid','Pivots on a stiff leading edge (FAAV)','Bonded to the rod, twists with it','Free sheet: bends and pitches','Clamped to a rod that bends'];
 const sheetTag=i=>SPAN[i]>SHEET+0.5?`<span class="pill" title="Half-span above the ${SHEET} mm single-sheet limit: needs a joined sheet">joined sheet</span>`:`<span class="pill" title="Fits in one ${SHEET} mm sheet">single sheet</span>`;
 const KEYROW=new Map();for(let i=0;i<D.cols.s.length;i++)if(!KEYROW.has(D.cols.k[i])&&!(D.catalog&&i>=D.catalog.first&&i<(D.catalog.end??D.cols.s.length)))KEYROW.set(D.cols.k[i],i);
 /* ---------- favourites: shared ones from atlas/favorites.json, plus this browser's own ---------- */
@@ -590,7 +593,7 @@ const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low t
 const LAMBDA_BITS=2|4|8;
 const lambdaPass=i=>{const o=C.obj[i]&LAMBDA_BITS;if(!o)return M.lambda.has(0);for(const b of [2,4,8])if(o&b&&M.lambda.has(b))return true;return false};
 const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),
-  studies:new Set(D.studies.map((_,i)=>i)),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:false,favOnly:false});
+  studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];M.until=TL.length-1;
@@ -658,11 +661,9 @@ function chipRow(el,items,set,colorFn){
 }
 function renderChips(){
   for(const [id,on] of [['f-faav',M.faav],['f-fav',M.favOnly]]){const b=$('#'+id);if(b){b.classList.toggle('off',!on);b.setAttribute('aria-pressed',on)}}
-  chipRow($('#f-study'),D.studies.map((s,i)=>[i,s.label]).filter(([i])=>!D.studies[i].convergence),M.studies,M.color==='study'?studyColor:null);
+  chipRow($('#f-study'),SGROUPS.filter(g=>SGROUP_OF.some((x,i)=>x===g[0]&&!D.studies[i].convergence)).map(g=>[g[0],g[1],D.studies.filter((s,i)=>SGROUP_OF[i]===g[0]&&!s.convergence).map(s=>s.label).join('\n')]),M.studies,M.color==='study'?k=>css(SGROUPS[k][2]):null);
   chipRow($('#f-lambda'),LAMBDAS,M.lambda,null);
-  chipRow($('#f-struct'),STRUCTS,M.struct,M.color==='struct'?structColor:null);
-  chipRow($('#f-constr'),CONSTRS,M.constr,M.color==='constr'?constrColor:null);
-  chipRow($('#f-bc'),BCS,M.bc,M.color==='bc'?bcColor:null);
+  chipRow($('#f-bc'),BCS.map(([k,l,t])=>[k,BC_SHORT[k],l+'. '+t]),M.bc,M.color==='bc'?bcColor:null);
   chipRow($('#f-thk'),THKS.map((t,k)=>[k,t+' mm']),M.thk,M.color==='thk'?thkColor:null);
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
   chipRow($('#f-lim'),[[0,`≤ ${LIM} N·m`],[1,`> ${LIM} N·m`]],M.lim,null);
@@ -672,10 +673,9 @@ function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   for(let i=0;i<N;i++){
     const m=C.m[i];
-    if(!M.studies.has(C.s[i])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))continue;
+    if(!M.studies.has(SGROUP_OF[C.s[i]])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))continue;
     if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
     if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
-    if(M.faav&&!FAAV(i))continue;
     if(M.favOnly&&!isFav(C.k[i]))continue;
     if(!lambdaPass(i))continue;
     if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
@@ -686,15 +686,17 @@ function filtered(){
     out.push(i);
   }
   // stiff / rigid first so the soft and rod sheets draw on top; reruns over their source campaign
-  const order=[0,1,2,3,4,6,5],rank=i=>(order[MAT_OF[C.m[i]]]??9)*4+STRUCT_OF[C.m[i]]; out.sort((a,b)=>rank(a)-rank(b));
+  const order=[0,1,2,3,4,6,5],rank=i=>(M.faav&&FAAV(i)?100:0)+(order[MAT_OF[C.m[i]]]??9)*4+STRUCT_OF[C.m[i]]; out.sort((a,b)=>rank(a)-rank(b));
   return out;
 }
-function colorOf(i){const m=C.m[i];if(M.color==='constr'||M.color==='thk'){const k=M.color==='constr'?ROD_OF[m]:THK_OF[m];return k==null?css('--neutral'):M.color==='constr'?constrColor(k):thkColor(k)}
+const GREYED=i=>M.faav&&!FAAV(i);
+function colorOf(i){const m=C.m[i];if(GREYED(i))return css('--muted');if(M.color==='constr'||M.color==='thk'){const k=M.color==='constr'?ROD_OF[m]:THK_OF[m];return k==null?css('--neutral'):M.color==='constr'?constrColor(k):thkColor(k)}
   return M.color==='model'?modelColor(BASE_OF[m]):M.color==='struct'?structColor(STRUCT_OF[m]):M.color==='bc'?bcColor(BC_OF[m]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
 const PAD={l:62,r:16,t:14,b:46};
 function fitView(){
   const gx=AXES[M.x].get,gy=AXES[M.y].get;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
-  for(const i of VIS){const x=gx(i),y=gy(i);if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  const lit=M.faav?VIS.filter(i=>!GREYED(i)):VIS;
+  for(const i of lit.length?lit:VIS){const x=gx(i),y=gy(i);if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
   if(!VIS.length){x0=0;x1=1;y0=0;y1=1}
   if(['torque','thrust','area','span','st','twist','ratio'].includes(M.x))x0=Math.min(0,x0);
   if(['torque','thrust','area','span','st','twist','ratio'].includes(M.y))y0=Math.min(0,y0);
@@ -740,8 +742,9 @@ function paint(){
   for(let k=0;k<VIS.length;k++){const i=VIS[k],x=X(gx(i)),y=Y(gy(i));SX[k]=x;SY[k]=y;
     if(x<PAD.l-4||x>W-PAD.r+4||y<PAD.t-4||y>H-PAD.b+4)continue;
     const c=colorOf(i);if(c!==last){ctx.fillStyle=c;ctx.strokeStyle=c;last=c}
-    if(STATUS[C.S[i]]==='uncertain'){ctx.globalAlpha=.9;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+1.2,0,7);ctx.stroke()}
-    else{ctx.globalAlpha=.72;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}}
+    const g=GREYED(i);
+    if(STATUS[C.S[i]]==='uncertain'){ctx.globalAlpha=g?.35:.9;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+1.2,0,7);ctx.stroke()}
+    else{ctx.globalAlpha=g?.22:.72;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}}
   ctx.globalAlpha=1;
   // winners as stars
   for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!WIN_ROWS.has(i))continue;star(SX[k],SY[k],8,colorOf(i),surf)}
@@ -758,10 +761,10 @@ function paint(){
 function star(x,y,R,fill,ring){ctx.beginPath();for(let j=0;j<10;j++){const a=-Math.PI/2+j*Math.PI/5,rr=j%2?R*.45:R;ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}ctx.closePath();
   ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=ring;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=css('--text');ctx.stroke()}
 function updateCounts(){
-  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),l,k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?D.studies.map((s,i)=>[studyColor(i),s.label,i]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
-  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?C.s[i]:C.f[i];
-  const cnt={};for(const i of VIS){const k=key(i);cnt[k]=(cnt[k]||0)+1}
-  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span><span>◇ favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
+  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),BC_SHORT[k],k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?SGROUPS.map(g=>[css(g[2]),g[1],g[0]]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
+  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?SGROUP_OF[C.s[i]]:C.f[i];
+  const cnt={};let nGrey=0;for(const i of VIS){if(GREYED(i)){nGrey++;continue}const k=key(i);cnt[k]=(cnt[k]||0)+1}
+  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span><span>◇ favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
 
   const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
   $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} top performers). Shift-click a chip to show only that one. Hollow = uncertain.`;
@@ -952,7 +955,7 @@ function plannedCard(si){const st=D.studies[si];
   return h+'</div></div>'}
 
 /* ---------- Top performing wings: the FAAV build first ---------- */
-const TOPS={f:D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0,sheet:false,c:1.0,tol:0.05,n:6};
+const TOPS={f:D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0,sheet:true,c:1.0,tol:0.05,n:6};   // the tab shows single-sheet wings only
 const LEVELS=[0.5,0.75,1,1.25,1.5,2];
 function setTop(k,v){TOPS[k]=v;renderWinners()}
 // Verified FAAV wings at the chosen frequency, one row per design key.
@@ -962,10 +965,10 @@ function faavRows(sheet=TOPS.sheet){const out=[],seen=new Set();
   return out}
 const bestUnder=(rows,B)=>{let b=null;for(const i of rows)if(C.Q[i]<=B+1e-9&&(b==null||C.T[i]>C.T[b]))b=i;return b};
 // to-scale outline for any span: scale set by the caller so a group of cards compares
-function wingSVG(i,{w=260,h=80,spanMax=700,chordMax=210,color='var(--accent)',ghost=null}={}){
+function wingSVG(i,{w=260,h=80,spanMax=700,chordMax=210,color='var(--accent)',ghost=null,zone=true}={}){
   const pad=4,sx=(w-2*pad)/spanMax,sy=(h-2*pad)/chordMax,poly=pts=>[...pts.map(p=>[pad+sx*p[0],pad]),...pts.slice().reverse().map(p=>[pad+sx*p[0],pad+sy*p[1]])].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
   const xs=pad+sx*SHEET;
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img" aria-label="Wing outline">${xs<w-pad?`<rect x="${xs}" y="0" width="${w-xs}" height="${h}" fill="var(--warn)" fill-opacity=".07"/><line x1="${xs}" x2="${xs}" y1="0" y2="${h}" stroke="var(--warn)" stroke-dasharray="3 3" stroke-opacity=".6"/>`:''}${ghost?`<polygon points="${poly(ghost)}" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>`:''}<polygon points="${poly(designOutline(i))}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="2"/></svg>`}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img" aria-label="Wing outline">${zone&&xs<w-pad-1?`<rect x="${xs}" y="0" width="${w-xs}" height="${h}" fill="var(--warn)" fill-opacity=".07"/><line x1="${xs}" x2="${xs}" y1="0" y2="${h}" stroke="var(--warn)" stroke-dasharray="3 3" stroke-opacity=".6"/>`:''}${ghost?`<polygon points="${poly(ghost)}" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>`:''}<polygon points="${poly(designOutline(i))}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="2"/></svg>`}
 function topCell(i,{title='',best=false,spanMax=700,note=''}={}){const m=D.models[C.m[i]],media=mediaForRow(i),id='t'+i;
   if(media)MEDIA_REG[id]={media,title:`${title||m.label} · ${Math.round(SPAN[i])} mm`,info:''};
   return `<div class="wcell ${best?'best':''}" ${media?`onclick="openViewer('${id}')" title="Play the Ptera animation"`:''}>
@@ -974,16 +977,16 @@ function topCell(i,{title='',best=false,spanMax=700,note=''}={}){const m=D.model
     <div class="t"><b>${fmt(C.T[i],2)} N</b> at ${fmt(C.Q[i],2)} N·m<br>${Math.round(SPAN[i])} mm half-span ${sheetTag(i)} · St ${fmt(ST[i],2)}${C.W[i]!=null?` · ±${fmt(C.W[i],0)}° twist`:''}${note?`<br>${note}`:''}<br><span class="tiny muted">${esc(studyOf(i))}</span></div>
     ${media?'<span class="playbtn">▶ animation</span> ':''}${RS(i)&&RS(i).evolution?`<button class="playbtn" onclick="event.stopPropagation();openEvolution(${i})">▶ shape evolution</button> `:''}<button class="playbtn" onclick="event.stopPropagation();showOnMap(${i})">◎ on map</button> ${SHARED_FAV.has(C.k[i])?'<span class="pill">♥ shared</span>':`<button class="playbtn" onclick="event.stopPropagation();toggleFav(${i})">${isFav(C.k[i])?'♥ favourite':'♡ favourite'}</button>`}</div>`}
 function levelsCard(rows,rowsSheet){
-  const spanMax=Math.max(450,...rows.map(i=>SPAN[i]))*1.02;
-  let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust FAAV wing whose peak root torque is at or below each budget. Outlines share one scale; the shaded strip is beyond the ${SHEET} mm single-sheet limit. Where the best wing needs a joined sheet, the best single-sheet wing is given underneath.</p><div class="grid3">`;
+  const spanMax=SHEET*1.02;
+  let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust FAAV wing within one ${SHEET} mm sheet whose peak root torque is at or below each budget. Outlines share one scale.</p><div class="grid3">`;
   let prev=null;for(const B of LEVELS){const i=bestUnder(rows,B);if(i==null)continue;if(i===prev){h+=`<div class="wcell" style="cursor:default"><div class="small" style="font-weight:600">≤ ${B} N·m</div><div class="t">Same wing as the previous budget: nothing verified uses the extra torque yet.</div></div>`;continue}prev=i;const j=SPAN[i]>SHEET+0.5?bestUnder(rowsSheet,B):null;
     h+=topCell(i,{title:`≤ ${B} N·m`,best:B===LIM,spanMax,note:j!=null?`<span class="small">Single sheet: <b>${fmt(C.T[j],2)} N</b> at ${Math.round(SPAN[j])} mm (${fmt(100*(C.T[j]-C.T[i])/C.T[i],1)}%) <button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎</button></span>`:''})}
   h+='</div>';
   // frontier: best thrust against budget, all spans and single sheet
   const grid=[];for(let B=0.3;B<=2.5+1e-9;B+=0.05)grid.push(+B.toFixed(2));
   const ser=(rs,name,color)=>({name,color,points:grid.map(B=>{const i=bestUnder(rs,B);return i==null?null:{x:B,y:C.T[i],row:i,tip:`<b>≤ ${B} N·m: ${fmt(C.T[i],3)} N</b><br>${wingSVG(i,{w:220,h:64,spanMax,color})}${Math.round(SPAN[i])} mm · ${fmt(C.Q[i],3)} N·m · St ${fmt(ST[i],2)}<br><span class="muted">Click to open on the Wing map</span>`}}).filter(Boolean)});
-  const series=[ser(rows,'Any half-span',css('--s1')),ser(rowsSheet,`Single sheet (≤ ${SHEET} mm)`,css('--s3'))].filter(x=>x.points.length);
-  if(series.length)h+=`<h3 style="margin-top:14px">Best thrust against torque budget</h3>${lineChart({series,xlabel:'Peak-torque budget (N·m)',ylabel:'Best thrust (N)',w:900,h:280,xfmt:v=>fmt(v,2)})}${legend(series.map(x=>[x.color,x.name]))}<p class="tiny muted">Each point is the best verified FAAV wing at or below that budget, so the curves only rise. The gap between them is the thrust the ${SHEET} mm sheet limit costs.</p>`;
+  const series=[ser(rowsSheet,`Single sheet (≤ ${SHEET} mm)`,css('--s1'))].filter(x=>x.points.length);
+  if(series.length)h+=`<h3 style="margin-top:14px">Best thrust against torque budget</h3>${lineChart({series,xlabel:'Peak-torque budget (N·m)',ylabel:'Best thrust (N)',w:900,h:280,xfmt:v=>fmt(v,2)})}<p class="tiny muted">Each point is the best verified FAAV wing within one sheet at or below that budget, so the curve only rises. Click a point to open the wing on the Wing map.</p>`;
   return h+'</div>'}
 // Spaced-out designs in a torque slice: farthest-point picks in (thrust, outline, span), best and worst first.
 function sliceSelect(rows,n){
@@ -1001,13 +1004,13 @@ function sliceCard(all){
   let h=`<div class="card" id="slice-card"><h3>Torque slice: what shape does to thrust at equal torque</h3><p class="small muted" style="max-width:900px">Every verified FAAV wing whose peak torque lies within the band, and ${TOPS.n} of them picked to be as different as possible in thrust, outline and span (the best and the worst always included). At equal torque, the spread in thrust is the effect of shape.</p>
     <div class="chips" style="gap:12px;margin-bottom:8px">${num('c',0.05,64,'Torque')} ${num('tol',0.01,58,'± (N·m)')} ${num('n',1,48,'Designs')}</div>`;
   if(band.length<2)return h+`<p class="small">Only ${band.length} FAAV wing${band.length===1?'':'s'} in ${fmt(TOPS.c,2)} ± ${fmt(TOPS.tol,2)} N·m at ${D.freqs[TOPS.f]} Hz${TOPS.sheet?` within ${SHEET} mm`:''}. Widen the band.</p></div>`;
-  const T=band.map(i=>C.T[i]),lo=Math.min(...T),hi=Math.max(...T),spanMax=Math.max(...pick.map(i=>SPAN[i]),300)*1.02;
+  const T=band.map(i=>C.T[i]),lo=Math.min(...T),hi=Math.max(...T),spanMax=SHEET*1.02;
   h+=`<p class="small"><b>${band.length.toLocaleString()} wings</b> within ${fmt(TOPS.c,2)} ± ${fmt(TOPS.tol,2)} N·m: thrust ${fmt(lo,2)}–${fmt(hi,2)} N, so the best outline gives <b>${fmt(100*(hi-lo)/lo,0)}% more thrust</b> than the worst at the same torque.</p>`;
   const step=Math.max(1,Math.ceil(band.length/600)),bg=band.filter((_,k)=>k%step===0&&!pick.includes(band[k]));
   const tipOf=(i,c)=>`<b>${fmt(C.T[i],3)} N</b> at ${fmt(C.Q[i],3)} N·m<br>${wingSVG(i,{w:220,h:64,spanMax:Math.max(spanMax,SPAN[i]*1.02),color:c})}${Math.round(SPAN[i])} mm · St ${fmt(ST[i],2)}<br><span class="muted">Click to open on the Wing map</span>`;
   h+=lineChart({series:[{name:'In the band',color:css('--muted'),line:false,points:bg.map(i=>({x:SPAN[i],y:C.T[i],hollow:true,row:i,tip:tipOf(i,css('--muted'))}))},
     {name:'Picked',color:css('--accent'),line:false,points:pick.map(i=>({x:SPAN[i],y:C.T[i],row:i,tip:tipOf(i,css('--accent'))}))}],
-    xlabel:'Effective half-span (mm)',ylabel:'Mean thrust (N)',w:900,h:240,ymin:Math.max(0,lo*0.9),xfmt:v=>Math.round(v),xband:[SHEET,1e4,'joined sheet']});
+    xlabel:'Effective half-span (mm)',ylabel:'Mean thrust (N)',w:900,h:240,ymin:Math.max(0,lo*0.9),xfmt:v=>Math.round(v)});
   h+='<div class="grid3" style="margin-top:8px">'+pick.map((i,k)=>topCell(i,{title:`#${k+1} of ${pick.length} · ${fmt(100*(C.T[i]-hi)/hi,0)}% vs best`,best:k===0,spanMax})).join('')+'</div>';
   return h+'</div>'}
 function favouritesCard(){const fs=favList();
@@ -1035,11 +1038,11 @@ function convergenceCard(){const sts=D.convergence||[];
 function faavTopHTML(){
   const rows=faavRows(),rowsSheet=faavRows(true),allRows=TOPS.sheet?rowsSheet:rows;
   const fs=D.freqs.map((f,k)=>k).filter(k=>{for(let i=0;i<N;i++)if(C.f[i]===k&&FAAV(i))return true;return false});
-  let h=`<h2>Top performing wings</h2><p class="lede">At a glance: the standout designs worth building, for <b>the FAAV build</b> (a 0.5 mm carbon-fibre sheet pivoting freely on a stiff leading edge that neither bends nor twists: the chordwise model without rod), verified results only, root chord 200 mm. Choose the frequency, and whether to stay within the ${SHEET} mm single-sheet limit. Other materials and the earlier studies are at the bottom.</p>
-   <div class="chips" style="margin:0 0 10px">${fs.map(f=>`<button class="chip ${f===TOPS.f?'':'off'}" aria-pressed="${f===TOPS.f}" onclick="setTop('f',${f})">${D.freqs[f]} Hz</button>`).join('')} <button class="chip ${TOPS.sheet?'':'off'}" aria-pressed="${TOPS.sheet}" onclick="setTop('sheet',${!TOPS.sheet})">Single sheet only (≤ ${SHEET} mm)</button></div>`;
+  let h=`<h2>Top performing wings</h2><p class="lede">At a glance: the standout designs worth building, for <b>the FAAV build</b> (a 0.5 mm carbon-fibre sheet pivoting freely on a stiff leading edge that neither bends nor twists: the chordwise model without rod), cut from one sheet (half-span ≤ ${SHEET} mm), verified results only, root chord 200 mm. Longer wings are on the Wing map. Other materials and the earlier studies are at the bottom.</p>
+   <div class="chips" style="margin:0 0 10px">${fs.map(f=>`<button class="chip ${f===TOPS.f?'':'off'}" aria-pressed="${f===TOPS.f}" onclick="setTop('f',${f})">${D.freqs[f]} Hz</button>`).join('')}</div>`;
   if(!rows.length)return h+`<div class="card"><p>No verified FAAV wings at ${D.freqs[TOPS.f]} Hz.</p></div>`;
   h+=levelsCard(TOPS.sheet?rowsSheet:rows,rowsSheet)+sliceCard(allRows)
-    +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&C.f[i]===TOPS.f&&(!TOPS.sheet||SPAN[i]<=SHEET+0.5),`for the FAAV build at ${D.freqs[TOPS.f]} Hz`)
+    +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&SPAN[i]<=SHEET+0.5,`for the FAAV build within one ${SHEET} mm sheet, at every frequency simulated`)
     +favouritesCard()+convergenceCard();
   return h}
 function renderWinners(){
@@ -1088,7 +1091,7 @@ function renderWinners(){
   h+='</details>';
   $('#t-winners').innerHTML=h;
 }
-function showOnMap(i){if(!FAAV(i))M.faav=false;M.favOnly=false;M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([C.s[i]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.until=TL.length-1;M.stLo=ST_LIM[0];M.stHi=ST_LIM[1];stSync();M.view=null;go('map');drawMap();selectDesign(i)}
+function showOnMap(i){M.favOnly=false;M.struct.add(STRUCT_OF[C.m[i]]);M.bc.add(BC_OF[C.m[i]]);if(ROD_OF[C.m[i]]!=null){M.constr.add(ROD_OF[C.m[i]]);M.thk.add(THK_OF[C.m[i]])}M.quality.add(QUAL_OF(STATUS[C.S[i]]));{const o=C.obj[i]&LAMBDA_BITS;if(!o)M.lambda.add(0);for(const b of [2,4,8])if(o&b)M.lambda.add(b)}M.lim.add(C.Q[i]>LIM?1:0);M.studies=new Set([SGROUP_OF[C.s[i]]]);M.freqs=new Set([C.f[i]]);M.models=new Set(MATS);M.until=TL.length-1;M.stLo=ST_LIM[0];M.stHi=ST_LIM[1];stSync();M.view=null;go('map');drawMap();selectDesign(i)}
 
 /* ======================================================================================
    Elasticity effects, part 1: rigid → chordwise
@@ -1158,9 +1161,9 @@ function renderEffect(){
 
 // Before / after: every lineage that started from an existing design (polish studies, seeded studies).
 function beforeAfterHTML(){
-  const pairs=(D.lineage_pairs||[]).filter(p=>p.family==='wing'&&p.before!=null&&p.after!=null);
-  let h=`<div class="card"><h3>Optimize the top performers</h3><p class="small muted" style="max-width:900px">Takes the FAAV standouts (the best wing at each torque budget ${LEVELS.join(', ')} N·m, and the best single-sheet wing where it differs) and writes a follow-up search that starts from them: chord step 10 mm (half-step 5 mm) instead of 20, the half-span free in 20 mm steps, under every one of those budgets. Each seed is the <b>before</b>; its lineage's best is the <b>after</b>, shown below once the study has run and been published.</p>
-    <div class="chips"><button class="iconbtn" style="width:auto;padding:0 12px" onclick="optimizeTop()">⤓ Optimize top performers (download study spec)</button> <span class="small muted">at ${D.freqs[TOPS.f]} Hz${TOPS.sheet?`, single sheet`:''} (the frequency and sheet choice on the Top performing wings tab)</span></div><div id="opt-out"></div></div>`;
+  const pairs=(D.lineage_pairs||[]).filter(p=>p.family==='wing'&&p.before!=null&&p.after!=null&&FAAV(p.before)&&FAAV(p.after));
+  let h=`<div class="card"><h3>Optimize the top performers</h3><p class="small muted" style="max-width:900px">Takes the FAAV standouts (the best single-sheet wing at each torque budget ${LEVELS.join(', ')} N·m) and writes a follow-up search that starts from them: chord step 10 mm (half-step 5 mm) instead of 20, the half-span free in 20 mm steps, under every one of those budgets. Each seed is the <b>before</b>; its lineage's best is the <b>after</b>, shown below once the study has run and been published.</p>
+    <div class="chips"><button class="iconbtn" style="width:auto;padding:0 12px" onclick="optimizeTop()">⤓ Optimize top performers (download study spec)</button> <span class="small muted">at ${D.freqs[TOPS.f]} Hz, within one ${SHEET} mm sheet (the frequency chosen on the Top performing wings tab)</span></div><div id="opt-out"></div></div>`;
   if(!pairs.length)return h+`<div class="card"><h3>Before and after</h3><p class="small">No re-optimized seeds in this snapshot yet.</p></div>`;
   const by=new Map();for(const p of pairs){const k=p.study;if(!by.has(k))by.set(k,[]);by.get(k).push(p)}
   for(const [sid,ps] of by){const st=D.studies[STUDY[sid]?.i]||{label:sid};
@@ -1178,12 +1181,12 @@ function beforeAfterHTML(){
 const seedOK=ch=>{const a=ch.findIndex(c=>c===0),n=a<0?ch.length:a;if(n<2)return false;
   for(let j=0;j<ch.length;j++){if(j>=n&&ch[j]!==0)return false;if(j<n&&(ch[j]<10||ch[j]>400))return false;if(j&&ch[j]>ch[j-1])return false}return true};
 function optimizeTop(){
-  const rows=faavRows(),rowsSheet=faavRows(true),use=TOPS.sheet?rowsSheet:rows,seeds=[];
+  const rowsSheet=faavRows(true),use=rowsSheet,seeds=[];
   for(const B of LEVELS)for(const i of [bestUnder(use,B),bestUnder(rowsSheet,B)])if(i!=null&&!seeds.includes(i))seeds.push(i);
   const designs=seeds.map(i=>({name:'seed '+C.k[i],chords_mm:chordsOf(i).map(c=>Math.round(c*10)/10),half_span_mm:Math.round(C.H[i]*10)/10}))
     .filter(w=>seedOK(w.chords_mm)&&w.half_span_mm>=150&&w.half_span_mm<=800);
   if(!designs.length){$('#opt-out').innerHTML='<p class="small">No FAAV standouts to seed from.</p>';return}
-  const d=new Date(),day=d.toISOString().slice(0,10),id=`${day}-polish-faav-top`,solves=150,maxSpan=TOPS.sheet?SHEET:800;
+  const d=new Date(),day=d.toISOString().slice(0,10),id=`${day}-polish-faav-top`,solves=150,maxSpan=SHEET;
   const spec={schema:'wingstudy/study-spec@1',id,title:'Polish the FAAV top performers: finer chord steps, free span',author:'sam',
     question:`Starting from the ${designs.length} FAAV standouts (best wing at each torque budget${TOPS.sheet?' within one sheet':''}, ${D.freqs[TOPS.f]} Hz), how much more thrust does a search with a 10 mm chord step and the half-span free find under each budget, and how do the outlines change?`,
     kind:'evolutionary',structure:'chordwise',models:['t0.50'],frequencies_hz:[D.freqs[TOPS.f]],
@@ -1196,11 +1199,31 @@ function optimizeTop(){
   $('#opt-out').innerHTML=`<p class="small" style="margin-top:8px">Downloaded <code>spec.json</code>: ${designs.length} seeds × ${LEVELS.length} budgets, up to ${spec.budget.max_cases.toLocaleString()} solves (lineages usually stop after 30–60). Run it from the repository:</p>
     <pre class="small" style="white-space:pre-wrap">python -m wingstudy import spec.json\npython -m wingstudy plan ${id} --workers 16\npython -m wingstudy run ${id} --workers 16\npython -m wingstudy publish ${id}</pre>
     <p class="tiny muted">The same from the command line, for any finished studies: <code>python -m wingstudy polish STUDY… --top 3</code>.</p>`}
+// Triple-resolution refinement of the FAAV top performers (wingstudy/refine_top.py -> atlas/refine-top.json).
+function refineTopHTML(){const R=D.refine_top;
+  let h=`<div class="card"><h3>Refinement with three times the chord stations</h3><p class="small muted" style="max-width:900px">Each standout's outline redescribed with 3× as many chord stations (22 instead of 8, straight segments, so the starting shape is unchanged) on a mesh with one span panel per segment (21 instead of 8). A pattern search then moves every one of the 21 outboard chords (±10 mm, then ±5 mm) and the half-span (±20 mm, then ±10 mm, within one ${SHEET} mm sheet) under the budget the wing was picked for. <b>Coarse</b> is the study result; <b>start</b> is the same outline on the finer description and mesh, so coarse → start is the mesh effect and start → refined is the shape gain.</p>`;
+  if(!R||!R.seeds||!R.seeds.length)return h+'<p class="small">No refinement results in this snapshot yet. Run <code>python -m wingstudy.refine_top STUDY… --levels 0.75 1 1.25 --sheet-only</code> and copy its <code>summary.json</code> to <code>atlas/refine-top.json</code>.</p></div>';
+  const outline=(ch,span)=>activeOutline(ch,span),c=css('--s1');
+  h+='<div class="grid2">';
+  for(const x of R.seeds){const s=x.source,st=x.start||{},f=x.final||{},fch=x.final_chords_mm,hist=(x.history||[]).filter(r=>r.thrust!=null);
+    const pct=(a,b)=>a&&b?(b>=a?'+':'')+fmt(100*(b-a)/a,1)+'%':'–';
+    const svg=(()=>{const w=440,hh=150,pad=6,sx=(w-2*pad)/(SHEET*1.02),sy=(hh-2*pad)/210;const poly=pts=>[...pts.map(p=>[pad+sx*p[0],pad]),...pts.slice().reverse().map(p=>[pad+sx*p[0],pad+sy*p[1]])].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
+      return `<svg viewBox="0 0 ${w} ${hh}" width="100%" style="display:block"><polygon points="${poly(outline(s.chords_mm,s.half_span_mm))}" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>${fch?`<polygon points="${poly(outline(fch,1000*f.span))}" fill="${c}" fill-opacity=".16" stroke="${c}" stroke-width="2"/>`:''}</svg>`})();
+    h+=`<div class="card"><h3>≤ ${x.budget_Nm} N·m${x.single_sheet?' · single sheet':''}</h3>${svg}
+      <table class="lb"><tr><th></th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Half-span</th><th class="n">Change</th></tr>
+      <tr><td>Coarse (8 stations, 8 × 4)</td><td class="n">${fmt(s.thrust_N,3)} N</td><td class="n">${fmt(s.torque_Nm,3)}</td><td class="n">${Math.round(s.half_span_mm)} mm</td><td></td></tr>
+      <tr><td>Start (22 stations, 21 × 4)</td><td class="n">${fmt(st.thrust,3)} N</td><td class="n">${fmt(st.torque,3)}</td><td class="n">${st.span?Math.round(1000*st.span):'–'} mm</td><td class="n">${pct(s.thrust_N,st.thrust)} mesh</td></tr>
+      <tr><td><b>Refined</b></td><td class="n"><b>${fmt(f.thrust,3)} N</b></td><td class="n">${fmt(f.torque,3)}</td><td class="n">${f.span?Math.round(1000*f.span):'–'} mm</td><td class="n"><b>${pct(st.thrust,f.thrust)}</b> shape</td></tr></table>
+      ${hist.length>1?lineChart({series:[{name:'Thrust',color:c,points:hist.map(r=>({x:r.round,y:r.thrust,hollow:r.torque>x.budget_Nm,tip:`Round ${r.round}: ${fmt(r.thrust,3)} N at ${fmt(r.torque,3)} N·m, ${Math.round(1000*r.span)} mm${r.tag?'<br>'+esc(r.tag):''}`}))}],xlabel:'Round',ylabel:'Thrust (N)',w:420,h:170,ymin:Math.min(...hist.map(r=>r.thrust))*0.98}):''}
+      <p class="tiny muted">${x.rounds} rounds · ${esc(x.note||'running')}${fch?` · chords ${fch.map(v=>Math.round(v)).join(' · ')} mm`:''}</p></div>`}
+  return h+'</div></div>'}
 function renderOpt(){
-  const ba=beforeAfterHTML();
-  if(!D.refined.length){$('#t-opt').innerHTML='<h2>Optimized shapes</h2>'+ba;return}
-  const SW=D.refined.filter(r=>r.set==='sweep'),CA=D.refined.filter(r=>(r.set||'campaign')==='campaign');
-  let hh=`<h2>Optimized shapes</h2><p class="lede">Two kinds of follow-up optimization: re-running the search from the best designs (before and after, first), and the earlier fine-mesh refinements of the campaign winners (below).</p>${ba}<h2 style="margin-top:18px">Fine-mesh refinements (1 Hz)</h2><p class="lede">All optimizations are at the 1 Hz target frequency, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns) with the ${LIM} N·m budget applied on that mesh. Two searches were run: the newer one starts from the geometry-sweep winner and compares every candidate at exactly the budget; the earlier one starts from each model's overall campaign winner.</p>`;
+  const ba=refineTopHTML()+beforeAfterHTML();
+  // Earlier fine-mesh refinements: only the bare 0.5 mm plate is the FAAV wing (rigid and rod models are left out).
+  const FREF=D.refined.filter(r=>r.model==='t0.50');
+  if(!FREF.length){$('#t-opt').innerHTML='<h2>Optimized shapes: the FAAV wing</h2>'+ba;return}
+  const SW=FREF.filter(r=>r.set==='sweep'),CA=FREF.filter(r=>(r.set||'campaign')==='campaign');
+  let hh=`<h2>Optimized shapes: the FAAV wing</h2><p class="lede">Follow-up optimization of the wing being built: a 0.5 mm sheet pivoting on a stiff leading edge, within one ${SHEET} mm sheet. First the refinement with three times the chord stations, then before and after for searches restarted from the best designs, then the earlier fine-mesh refinement of the bare 0.5 mm plate. Rigid and spanwise-elastic models are on the Wing map and in Elasticity effects.</p>${ba}<h2 style="margin-top:18px">Earlier fine-mesh refinement (1 Hz)</h2><p class="lede">All optimizations are at the 1 Hz target frequency, on a 24 × 6 panel mesh (3× finer spanwise than the campaigns) with the ${LIM} N·m budget applied on that mesh. Two searches were run: the newer one starts from the geometry-sweep winner and compares every candidate at exactly the budget; the earlier one starts from each model's overall campaign winner.</p>`;
   if(SW.length)hh+=optSet(SW,'sweep');
   if(CA.length)hh+=optSet(CA,'campaign');
   $('#t-opt').innerHTML=hh;
