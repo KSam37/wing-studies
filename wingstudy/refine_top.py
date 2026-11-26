@@ -61,6 +61,35 @@ def faav_cases(results: list[dict], freq: float = 1.0) -> list[dict]:
     return out
 
 
+def atlas_cases(freq: float = 1.0) -> list[dict]:
+    """FAAV cases from the whole atlas (atlas/data plus completed studies), in the study results' case format.
+
+    The original campaigns (rod, plate) are only in atlas/data, so --atlas is how their standouts become seeds.
+    """
+    import sys
+    sys.path.insert(0, str(S.ROOT / "tools"))
+    import atlas_data
+    from .studies import atlas as A
+    D = atlas_data.assemble(S.ROOT / "atlas" / "data")
+    atlas_data.drop_models(D)
+    A.merge(D, A.completed(S.ROOT / "studies"))
+    c, n = D["cols"], len(D["cols"]["s"])
+    mi = next(i for i, m in enumerate(D["models"]) if m["id"] == "t0.50")
+    end = (D.get("catalog") or {}).get("end", n)
+    out, seen = [], set()
+    for i in range(n):
+        if D.get("catalog") and D["catalog"].get("first", n) <= i < end:
+            continue
+        if (c["m"][i] != mi or abs(D["freqs"][c["f"][i]] - freq) > 1e-9 or D["statuses"][c["S"][i]] != "verified"
+                or not c["T"][i] or not c["Q"][i] or c["k"][i] in seen):
+            continue
+        seen.add(c["k"][i])
+        out.append({"key": c["k"][i], "model": "t0.50", "structure": "chordwise", "freq": freq, "status": "verified",
+                    "chords_mm": list(c["C"][8 * i:8 * i + 8]), "half_span_mm": c["H"][i],
+                    "thrust_N": c["T"][i], "torque_Nm": c["Q"][i], "study": D["studies"][c["s"][i]]["id"]})
+    return out
+
+
 def effective_span_mm(c: dict) -> float:
     ch = c["chords_mm"]
     n = next((j for j, x in enumerate(ch) if x == 0), len(ch))
@@ -274,6 +303,7 @@ def main(argv=None) -> int:
     ap.add_argument("--curve", type=int, default=0, help="with --from: search a PCHIP outline with this many control chords")
     ap.add_argument("--gif", type=Path, help="write evolution GIFs to this folder from --summaries, then stop")
     ap.add_argument("--summaries", type=Path, nargs="*", default=[], help="summaries in stage order, for --gif")
+    ap.add_argument("--atlas", action="store_true", help="pick seeds from every FAAV wing in the atlas (campaigns included), not only the named studies")
     ap.add_argument("--baseline", action="store_true", help="with --from: solve the original study outlines on the --chord-panels mesh only")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--factor", type=int, default=FACTOR, help="chord segments per original segment (default 3)")
@@ -291,7 +321,11 @@ def main(argv=None) -> int:
         seeds = seeds_from_summary(a.from_summary)
     else:
         results = [S.read_json(S.study_dir(s) / "results.json") for s in a.studies if (S.study_dir(s) / "results.json").exists()]
-        seeds = pick_seeds(faav_cases(results), a.levels, a.sheet_only)
+        cases = faav_cases(results)
+        if a.atlas:
+            have = {c["key"] for c in cases}
+            cases += [c for c in atlas_cases() if c["key"] not in have]
+        seeds = pick_seeds(cases, a.levels, a.sheet_only)
     if not seeds:
         print("no verified FAAV wings to start from")
         return 1
