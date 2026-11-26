@@ -415,7 +415,7 @@ function lineChart({series,links=[],cats=null,xlabel='',ylabel='',w=460,h=250,ym
   let g='';
   if(xband){const a=Math.max(xlo,xband[0]),b=Math.min(xhi,xband[1]);if(b>a)g+=`<rect x="${X(a)}" y="${m.t}" width="${X(b)-X(a)}" height="${h-m.t-m.b}" fill="var(--text-2)" fill-opacity=".08"/><text x="${(X(a)+X(b))/2}" y="${m.t+12}" text-anchor="middle">${xband[2]||''}</text>`}
   niceTicks(ymin,hi,5).forEach(t=>g+=`<line class="gl" x1="${m.l}" x2="${w-m.r}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">${t}</text>`);
-  (cats?cats.map((c,i)=>[i,c]):([...new Set(xs)].length>12?niceTicks(xlo,xhi,6):[...new Set(xs)].sort((a,b)=>a-b)).map(v=>[v,xfmt(v)])).forEach(([v,l])=>g+=`<text x="${X(v)}" y="${h-m.b+15}" text-anchor="middle">${l}</text>`);
+  (cats?cats.map((c,i)=>[i,c]):([...new Set(xs)].length>12?niceTicks(xlo,xhi,6):[...new Set(xs)].sort((a,b)=>a-b)).map(v=>[v,xfmt(v)])).reduce((k,t)=>(cats||!k.length||X(t[0])-X(k[k.length-1][0])>=30?k.push(t):0,k),[]).forEach(([v,l])=>g+=`<text x="${X(v)}" y="${h-m.b+15}" text-anchor="middle">${l}</text>`);
   g+=`<line class="ax" x1="${m.l}" x2="${w-m.r}" y1="${h-m.b}" y2="${h-m.b}"/>`;
   if(hline!=null&&hline<=hi)g+=`<line x1="${m.l}" x2="${w-m.r}" y1="${Y(hline)}" y2="${Y(hline)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
   g+=`<text x="${(w+m.l)/2}" y="${h-4}" text-anchor="middle">${xlabel}</text><text transform="translate(12 ${(h-m.b+m.t)/2}) rotate(-90)" text-anchor="middle">${ylabel}</text>`;
