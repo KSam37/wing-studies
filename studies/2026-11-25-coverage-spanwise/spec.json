@@ -1,0 +1,41 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-25-coverage-spanwise",
+ "title": "Fill the spanwise coverage gaps: Sobol outlines for every standard sheet, 0.75-1.25 Hz",
+ "author": "sam",
+ "question": "The coverage matrix has under 50 verified spanwise + chordwise wings for most materials (0.25 mm and 0.5 mm free sheets have 1-3, 1.0 mm has 25). Across a space-filling set of outlines and half-spans from 150 to 450 mm, how often does the spanwise model verify for each standard sheet, and where does it?",
+ "kind": "geometry-sweep",
+ "structure": "spanwise",
+ "models": [
+  "t1.00",
+  "t0.50",
+  "t0.25",
+  "t0.50r",
+  "t0.25r"
+ ],
+ "frequencies_hz": [
+  0.75,
+  1.0,
+  1.25
+ ],
+ "numerics": [
+  {
+   "span_panels": 8,
+   "chord_panels": 4,
+   "steps_per_cycle": 50,
+   "cycles": 4
+  }
+ ],
+ "sweep": {
+  "count": 96,
+  "half_span_mm": [
+   150,
+   450
+  ],
+  "seed": 7
+ },
+ "notes": "Coverage fill: 96 scrambled-Sobol outlines (the geometric sweep's generator: 200 mm root, each station 0.3-1.0 of the previous) solved with spanwise bending for every standard sheet with and without the rod, at all three frequencies, so each material x spanwise cell gets well over 50 wings. Earlier spanwise runs were matched reruns of top performers, mostly at 400 mm and above, where the free 0.25 and 0.5 mm sheets rarely verified; smaller spans are included here on purpose. 0.2 mm is left out (not a standard sheet).",
+ "budget": {
+  "max_cases": 1440
+ }
+}
