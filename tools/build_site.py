@@ -103,6 +103,9 @@ def build(out: Path) -> None:
     rc = ROOT / "atlas" / "refine-top-curve.json"    # second stage: 21 x 12 mesh and smooth-curve search
     if rc.exists():
         D["refine_curve"] = json.loads(rc.read_text(encoding="utf-8"))
+    rb = ROOT / "atlas" / "refine-top-baseline.json"  # refine_top --baseline: the study picks on the same fine mesh
+    if rb.exists():
+        D["refine_baseline"] = json.loads(rb.read_text(encoding="utf-8"))
     gifs = ROOT / "atlas" / "media" / "refine-top"   # wingstudy.refine_top --gif output
     D["refine_gifs"] = sorted(g.stem for g in gifs.glob("*.gif")) if gifs.exists() else []
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")

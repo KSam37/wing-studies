@@ -25,6 +25,9 @@ with ``--chord-panels`` chordwise panels (``recheck``), then, with ``--curve N``
 a smooth monotone cubic (PCHIP) through the root chord and N control chords at equal fractions of
 the half-span (the fit used by elastic_refine), and searched again on that mesh: +/- 10 mm then
 5 mm on each control chord and +/- 20 mm then 10 mm on the half-span, same budget score.
+``--baseline`` (with ``--from``): instead of searching, solve each seed's original study outline
+(tripled stations, straight segments) on the ``--chord-panels`` mesh and write OUT/baseline.json,
+so the study pick and the optimized wing can be compared on the same mesh.
 ``--gif DIR --summaries A B ...`` writes one evolution GIF per seed through every stage in order.
 """
 from __future__ import annotations
@@ -271,6 +274,7 @@ def main(argv=None) -> int:
     ap.add_argument("--curve", type=int, default=0, help="with --from: search a PCHIP outline with this many control chords")
     ap.add_argument("--gif", type=Path, help="write evolution GIFs to this folder from --summaries, then stop")
     ap.add_argument("--summaries", type=Path, nargs="*", default=[], help="summaries in stage order, for --gif")
+    ap.add_argument("--baseline", action="store_true", help="with --from: solve the original study outlines on the --chord-panels mesh only")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--factor", type=int, default=FACTOR, help="chord segments per original segment (default 3)")
     ap.add_argument("--max-rounds", type=int, default=20)
@@ -324,6 +328,25 @@ def main(argv=None) -> int:
                                               "chord_panels": a.chord_panels, "curve": a.curve,
                                               "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                                               "seeds": [s.summary() for s in searches]})
+
+    if a.baseline:
+        if not a.from_summary:
+            print("--baseline needs --from")
+            return 1
+        tasks = []
+        for s in searches:
+            ctrl, span = refine_outline(s.seed["case"]["chords_mm"], s.seed["case"]["half_span_mm"], a.factor)
+            tasks.append(s.task(ctrl, span, "study outline on the finer mesh", numerics_for(len(ctrl), a.chord_panels)))
+        with ProcessPoolExecutor(max_workers=a.workers) as pool:
+            recs = solve_all(pool, tasks)
+        out = [{"id": s.seed["id"], "budget_Nm": s.budget, "key": r["key"], "numerics": t["numerics"],
+                **{k: r.get(k) for k in ("status", "thrust", "torque", "tip_twist", "span")}} for s, t, r in zip(searches, tasks, recs)]
+        S.write_json(a.out / "baseline.json", {"from": str(a.from_summary), "chord_panels": a.chord_panels, "factor": a.factor,
+                                               "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "seeds": out})
+        for x in out:
+            print(f"{x['id']}: study outline on {x['numerics']['span_panels']} x {x['numerics']['chord_panels']}: "
+                  f"{x['thrust']} N at {x['torque']} N·m ({x['status']})")
+        return 0
 
     with ProcessPoolExecutor(max_workers=a.workers) as pool:
         if a.from_summary:                                      # the refined outline itself on the new mesh

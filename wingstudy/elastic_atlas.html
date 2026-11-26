@@ -171,8 +171,8 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
   <nav id="nav">
     <button data-t="overview" class="on">Overview</button>
     <button data-t="map">Wing map</button>
-    <button data-t="winners">Top performing wings</button>
     <button data-t="opt">Optimized shapes</button>
+    <button data-t="winners">Top performing wings</button>
     <button data-t="elastic">Elasticity effects</button>
   </nav>
   <a class="iconbtn" id="newstudy" href="../new/" title="Set up a study with the wings you picked">New study</a>
@@ -965,10 +965,10 @@ function faavRows(sheet=TOPS.sheet){const out=[],seen=new Set();
   return out}
 const bestUnder=(rows,B)=>{let b=null;for(const i of rows)if(C.Q[i]<=B+1e-9&&(b==null||C.T[i]>C.T[b]))b=i;return b};
 // to-scale outline for any span: scale set by the caller so a group of cards compares
-function wingSVG(i,{w=260,h=80,spanMax=700,chordMax=210,color='var(--accent)',ghost=null,zone=true}={}){
+function wingSVG(i,{w=260,h=80,spanMax=700,chordMax=210,color='var(--accent)',ghost=null,zone=true,pts=null}={}){
   const pad=4,sx=(w-2*pad)/spanMax,sy=(h-2*pad)/chordMax,poly=pts=>[...pts.map(p=>[pad+sx*p[0],pad]),...pts.slice().reverse().map(p=>[pad+sx*p[0],pad+sy*p[1]])].map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ');
   const xs=pad+sx*SHEET;
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img" aria-label="Wing outline">${zone&&xs<w-pad-1?`<rect x="${xs}" y="0" width="${w-xs}" height="${h}" fill="var(--warn)" fill-opacity=".07"/><line x1="${xs}" x2="${xs}" y1="0" y2="${h}" stroke="var(--warn)" stroke-dasharray="3 3" stroke-opacity=".6"/>`:''}${ghost?`<polygon points="${poly(ghost)}" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>`:''}<polygon points="${poly(designOutline(i))}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="2"/></svg>`}
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block" role="img" aria-label="Wing outline">${zone&&xs<w-pad-1?`<rect x="${xs}" y="0" width="${w-xs}" height="${h}" fill="var(--warn)" fill-opacity=".07"/><line x1="${xs}" x2="${xs}" y1="0" y2="${h}" stroke="var(--warn)" stroke-dasharray="3 3" stroke-opacity=".6"/>`:''}${ghost?`<polygon points="${poly(ghost)}" fill="none" stroke="var(--text-2)" stroke-width="1.5" stroke-dasharray="4 3"/>`:''}<polygon points="${poly(pts||designOutline(i))}" fill="${color}" fill-opacity=".16" stroke="${color}" stroke-width="2"/></svg>`}
 function topCell(i,{title='',best=false,spanMax=700,note=''}={}){const m=D.models[C.m[i]],media=mediaForRow(i),id='t'+i;
   if(media)MEDIA_REG[id]={media,title:`${title||m.label} · ${Math.round(SPAN[i])} mm`,info:''};
   return `<div class="wcell ${best?'best':''}" ${media?`onclick="openViewer('${id}')" title="Play the Ptera animation"`:''}>
@@ -976,11 +976,24 @@ function topCell(i,{title='',best=false,spanMax=700,note=''}={}){const m=D.model
     ${wingSVG(i,{spanMax,color:modelColor(m.id)})}
     <div class="t"><b>${fmt(C.T[i],2)} N</b> at ${fmt(C.Q[i],2)} N·m<br>${Math.round(SPAN[i])} mm half-span ${sheetTag(i)} · St ${fmt(ST[i],2)}${C.W[i]!=null?` · ±${fmt(C.W[i],0)}° twist`:''}${note?`<br>${note}`:''}<br><span class="tiny muted">${esc(studyOf(i))}</span></div>
     ${media?'<span class="playbtn">▶ animation</span> ':''}${RS(i)&&RS(i).evolution?`<button class="playbtn" onclick="event.stopPropagation();openEvolution(${i})">▶ shape evolution</button> `:''}<button class="playbtn" onclick="event.stopPropagation();showOnMap(${i})">◎ on map</button> ${SHARED_FAV.has(C.k[i])?'<span class="pill">♥ shared</span>':`<button class="playbtn" onclick="event.stopPropagation();toggleFav(${i})">${isFav(C.k[i])?'♥ favourite':'♡ favourite'}</button>`}</div>`}
+// Optimized standouts (Optimized shapes, refine-top-curve.json) shown on the Top tab when they beat the study
+// pick on the same 21 x 12 mesh (refine-top-baseline.json): the pick breaks the budget there, or gives less thrust.
+function optFor(B){if(D.freqs[TOPS.f]!==1||!D.refine_curve||!D.refine_baseline)return null;
+  const y=D.refine_curve.seeds.find(q=>Math.abs(q.budget_Nm-B)<1e-9),f=y&&y.final;
+  if(!f||f.thrust==null||!(f.torque<=B+1e-9)||!y.final_chords_mm)return null;
+  const b=D.refine_baseline.seeds.find(q=>q.id===y.id);if(!b||b.thrust==null)return null;
+  return b.torque>B+1e-9||f.thrust>b.thrust?{y,b}:null}
+function optCell({y,b},B,spanMax){const f=y.final,over=b.torque>B+1e-9,n=D.refine_baseline.chord_panels||12,m=(y.numerics&&y.numerics.span_panels)||21;
+  return `<div class="wcell best" style="cursor:pointer" title="Open its before / after card on Optimized shapes" onclick="go('opt');setTimeout(()=>{const e=document.getElementById('rt-${esc(y.id)}');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},60)">
+    <div class="small" style="font-weight:600;margin-bottom:4px">≤ ${B} N·m · optimized <span class="pill">${m} × ${n} mesh</span></div>
+    ${wingSVG(null,{pts:activeOutline(y.final_chords_mm,1000*f.span),spanMax,color:css('--s1')})}
+    <div class="t"><b>${fmt(f.thrust,2)} N</b> at ${fmt(f.torque,2)} N·m<br>${Math.round(1000*f.span)} mm half-span · smooth curve, single sheet<br><span class="small">Study pick on the same mesh: ${fmt(b.thrust,2)} N at <span${over?' style="color:var(--warn)"':''}>${fmt(b.torque,2)} N·m${over?', over budget':''}</span></span></div>
+    <span class="playbtn">▶ before / after and evolution</span></div>`}
 function levelsCard(rows,rowsSheet){
   const spanMax=SHEET*1.02;
-  let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust FAAV wing within one ${SHEET} mm sheet whose peak root torque is at or below each budget. Outlines share one scale.</p><div class="grid3">`;
-  let prev=null;for(const B of LEVELS){const i=bestUnder(rows,B);if(i==null)continue;if(i===prev){h+=`<div class="wcell" style="cursor:default"><div class="small" style="font-weight:600">≤ ${B} N·m</div><div class="t">Same wing as the previous budget: nothing verified uses the extra torque yet.</div></div>`;continue}prev=i;const j=SPAN[i]>SHEET+0.5?bestUnder(rowsSheet,B):null;
-    h+=topCell(i,{title:`≤ ${B} N·m`,best:B===LIM,spanMax,note:j!=null?`<span class="small">Single sheet: <b>${fmt(C.T[j],2)} N</b> at ${Math.round(SPAN[j])} mm (${fmt(100*(C.T[j]-C.T[i])/C.T[i],1)}%) <button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎</button></span>`:''})}
+  let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust FAAV wing within one ${SHEET} mm sheet whose peak root torque is at or below each budget. Outlines share one scale. Where a wing from Optimized shapes beats the study pick when both are solved on the same finer mesh (the pick breaks the budget there, or gives less thrust), the optimized wing is shown first and the study pick after it.</p><div class="grid3">`;
+  let prev=null;for(const B of LEVELS){const i=bestUnder(rows,B),o=optFor(B);if(o)h+=optCell(o,B,spanMax);if(i==null)continue;if(i===prev){h+=`<div class="wcell" style="cursor:default"><div class="small" style="font-weight:600">≤ ${B} N·m</div><div class="t">Same wing as the previous budget: nothing verified uses the extra torque yet.</div></div>`;continue}prev=i;const j=SPAN[i]>SHEET+0.5?bestUnder(rowsSheet,B):null;
+    h+=topCell(i,{title:`≤ ${B} N·m${o?' · study pick (8 × 4 mesh)':''}`,best:B===LIM&&!o,spanMax,note:j!=null?`<span class="small">Single sheet: <b>${fmt(C.T[j],2)} N</b> at ${Math.round(SPAN[j])} mm (${fmt(100*(C.T[j]-C.T[i])/C.T[i],1)}%) <button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎</button></span>`:''})}
   h+='</div>';
   // frontier: best thrust against budget, all spans and single sheet
   const grid=[];for(let B=0.3;B<=2.5+1e-9;B+=0.05)grid.push(+B.toFixed(2));
@@ -1237,7 +1250,7 @@ function refineTopHTML(){const R=D.refine_top,R2=D.refine_curve;
     const prog=h1.length>1?lineChart({series:ser,xlabel:'Accepted step',ylabel:'Thrust (N)',w:420,h:170,ymin:Math.min(...[...h1,...h2].map(r=>r.thrust))*0.97}):'';
     const gif=(D.refine_gifs||[]).includes(x.id)?`<details style="margin-top:6px"><summary class="small"><b>▶ Evolution GIF</b> <span class="muted">every accepted step from the study result, orange while over budget</span></summary><img src="media/refine-top/${encodeURIComponent(x.id)}.gif" alt="Outline evolution of the ${B} N·m standout" style="width:100%;margin-top:6px;border-radius:6px"></details>`:'';
     const fin=y&&y.final_chords_mm?y:x;
-    h+=`<div class="card"><h3>≤ ${B} N·m · single sheet</h3>${svg}${leg}
+    h+=`<div class="card" id="rt-${esc(x.id)}"><h3>≤ ${B} N·m · single sheet</h3>${svg}${leg}
       <table class="lb" style="margin-top:6px"><tr><th>Stage</th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Half-span</th><th class="n">Change</th></tr>${rows}</table>
       ${path?`<p class="tiny muted" style="margin:8px 0 0">The path through thrust and peak torque, one point per stage in the table (hover for each); hollow and shaded = over the ${B} N·m budget.</p>${path}`:''}${prog?`<p class="tiny muted" style="margin:6px 0 0">Thrust at each accepted step; hollow = over budget.</p>${prog}${legend(ser.map(q=>[q.color,q.name]))}`:''}${gif}
       <p class="tiny muted">${esc(x.note||'')}${y?` · step 3: ${y.rounds} rounds, ${esc(y.note||'running')}`:' · steps 2 and 3 not run yet'}${fin.final_chords_mm?` · final chords ${fin.final_chords_mm.filter((_,j,a)=>j%3===0||j===a.length-1).map(v=>Math.round(v)).join(' · ')} mm (every 3rd station)`:''}</p></div>`}

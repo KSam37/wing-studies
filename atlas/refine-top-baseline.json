@@ -1,0 +1,74 @@
+{
+ "from": "atlas\\refine-top.json",
+ "chord_panels": 12,
+ "factor": 3,
+ "updated": "2026-11-26T16:28:59Z",
+ "seeds": [
+  {
+   "id": "B0.75-sheet-fc1900bd",
+   "budget_Nm": 0.75,
+   "key": "c3fb5e0936174f850be2",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact"
+   },
+   "status": "verified",
+   "thrust": 2.1247333344333597,
+   "torque": 1.0469892374074101,
+   "tip_twist": 47.36889684097699,
+   "span": 0.31
+  },
+  {
+   "id": "B1-sheet-e5effbc5",
+   "budget_Nm": 1.0,
+   "key": "fb4cc8f0de549dd4d506",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact"
+   },
+   "status": "verified",
+   "thrust": 3.1695959728949687,
+   "torque": 1.114678897634449,
+   "tip_twist": 54.55264917890176,
+   "span": 0.4
+  },
+  {
+   "id": "B1.25-sheet-1c187a1d",
+   "budget_Nm": 1.25,
+   "key": "6a25351f810570d06dd6",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact"
+   },
+   "status": "verified",
+   "thrust": 3.4517389912438534,
+   "torque": 1.4373959947620003,
+   "tip_twist": 62.550240969609945,
+   "span": 0.39
+  }
+ ]
+}
