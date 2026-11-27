@@ -110,6 +110,9 @@ def build(out: Path) -> None:
     ml = ROOT / "atlas" / "mesh-ladder.json"        # wingstudy.mesh_ladder output: the recommended wings on finer meshes
     if ml.exists():
         D["mesh_ladder"] = json.loads(ml.read_text(encoding="utf-8"))
+    fs = ROOT / "atlas" / "frequency-sweep.json"    # wingstudy.frequency_sweep output: optimized wings at every frequency
+    if fs.exists():
+        D["frequency_sweep"] = json.loads(fs.read_text(encoding="utf-8"))
     gifs = ROOT / "atlas" / "media" / "refine-top"   # wingstudy.refine_top --gif output
     D["refine_gifs"] = sorted(g.stem for g in gifs.glob("*.gif")) if gifs.exists() else []
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")
