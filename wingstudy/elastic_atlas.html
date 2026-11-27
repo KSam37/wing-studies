@@ -127,7 +127,7 @@ canvas#map{display:block;width:100%;height:560px;cursor:crosshair;touch-action:n
 .wgrid{display:grid;gap:10px}
 .wcell{background:var(--surface-2);border-radius:10px;padding:8px 10px;cursor:pointer;border:1px solid transparent;min-width:0;position:relative}
 .hbtn{position:absolute;top:4px;right:6px;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--text-2);padding:2px 4px}
-.hbtn:hover{color:#e0457b}.hbtn.on{color:#e0457b}.hbtn:disabled{cursor:default}
+.hbtn:hover{color:#e8a317}.hbtn.on{color:#e8a317}.hbtn:disabled{cursor:default}
 .wcell:hover{border-color:var(--axis)}
 .wcell.best{border-color:var(--accent)}
 .wcell .t{font-size:12.5px;color:var(--text-2)}
@@ -193,7 +193,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
       <label>Y <select id="ax-y"></select></label>
       <label>Colour by <select id="colorby"><option value="study">study group</option><option value="bc">model (leading edge)</option><option value="thk">sheet thickness</option><option value="freq">frequency</option></select></label>
       <button class="chip" id="f-faav" aria-pressed="true" title="Colour only the wing that was built (0.5 mm carbon sheet, chordwise elasticity, pivoting freely on a stiff leading edge that neither bends nor twists); every other wing is drawn in grey behind it. Nothing is hidden.">Highlight FAAV build</button>
-      <button class="chip off" id="f-fav" aria-pressed="false" title="Only designs starred as favourites (shared and your own)">♥ Favourites</button>
+      <button class="chip off" id="f-fav" aria-pressed="false" title="Only designs starred as favourites (shared and your own)">★ Favourites</button>
       <button class="chip off" id="f-steps" aria-pressed="false" title="Searches solve many wings on the way to their result. By default the map shows each search's final variants only (search winners, the end of every lineage, the campaign winners and the optimized standouts), plus favourites. Turn this on to show every wing every search solved, trial and intermediate steps included.">Show every search step</button>
       <span style="flex:1"></span>
       <button class="iconbtn ftoggle" id="f-toggle" style="width:auto;padding:0 10px" aria-expanded="false">Filters</button>
@@ -589,14 +589,14 @@ function toggleFav(i){const k=C.k[i];if(SHARED_FAV.has(k))return;let l=localFav(
 const CONV=new Map();for(const st of D.convergence||[])for(const w of st.wings)if(w.source_key&&!CONV.has(w.source_key))CONV.set(w.source_key,{...w,study:st.study});
 function convRow(i){const c=CONV.get(C.k[i]);if(!c)return '';const t=c.thrust||{},q=c.torque||{},b=c.levels.base||{},f=c.levels.fine||{};
   return `<div>Convergence</div><div class="small">${t.behaviour?`<b>${t.behaviour}</b> under refinement`:'partly solved'}${t.extrapolated!=null?` · extrapolated thrust ${fmt(t.extrapolated,3)} N (base ${t.base_error_pct>=0?'+':''}${fmt(t.base_error_pct,1)}%, GCI ${fmt(t.gci_pct,1)}%)`:''}${q.base_error_pct!=null?` · torque base ${q.base_error_pct>=0?'+':''}${fmt(q.base_error_pct,1)}%`:''}${f.thrust_N!=null?`<br><span class="muted">fine 18 × 9 / 112: ${fmt(f.thrust_N,3)} N at ${fmt(f.torque_Nm,3)} N·m · ${esc(c.study)}</span>`:''}</div>`}
-const HEART='#e0457b';
-// One-click heart for cards: shared favourites show a filled heart that cannot be removed here.
+const FAVC='#e8a317';
+// One-click star for cards: shared favourites show a filled star that cannot be removed here.
 function heartBtn(i){const k=C.k[i];if(isCat(i))return '';const sh=SHARED_FAV.has(k),on=sh||isFav(k);
-  return `<button class="hbtn${on?' on':''}" aria-pressed="${on}" ${sh?'disabled ':''}title="${sh?'Shared favourite (atlas/favorites.json)':on?'Remove from favourites':'Add to favourites (this browser)'}" onclick="event.stopPropagation();toggleFav(${i})">${on?'♥':'♡'}</button>`}
+  return `<button class="hbtn${on?' on':''}" aria-pressed="${on}" ${sh?'disabled ':''}title="${sh?'Shared favourite (atlas/favorites.json)':on?'Remove from favourites':'Add to favourites (this browser)'}" onclick="event.stopPropagation();toggleFav(${i})">${on?'★':'☆'}</button>`}
 const favCmd=keys=>`python -m wingstudy favorite ${keys.join(' ')} --note "…"`;
 function favButton(i){const k=C.k[i];if(isCat(i))return '';
-  if(SHARED_FAV.has(k))return `<span id="fav-btn" class="pill" title="${esc(SHARED_FAV.get(k).note||'')}">♥ shared favourite</span>`;
-  return `<button class="iconbtn" id="fav-btn" onclick="toggleFav(${i})" title="Saved in this browser; to share it, add it to atlas/favorites.json">${isFav(k)?'♥ Favourite (remove)':'♡ Favourite'}</button>`}
+  if(SHARED_FAV.has(k))return `<span id="fav-btn" class="pill" title="${esc(SHARED_FAV.get(k).note||'')}">★ shared favourite</span>`;
+  return `<button class="iconbtn" id="fav-btn" onclick="toggleFav(${i})" title="Saved in this browser; to share it, add it to atlas/favorites.json">${isFav(k)?'★ Favourite (remove)':'☆ Favourite'}</button>`}
 const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / unresolved']];
 // Torque penalty lambda (objective bits 2/4/8). A design may have been found by several lambda searches.
 const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low torque'],[0,'No λ (other searches, maps, sweeps, reruns)']];
@@ -763,12 +763,8 @@ function paint(){
     if(STATUS[C.S[i]]==='uncertain'){ctx.globalAlpha=g?.35:.9;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+1.2,0,7);ctx.stroke()}
     else{ctx.globalAlpha=g?.22:.72;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}}
   ctx.globalAlpha=1;
-  // winners as stars
-  for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!WIN_ROWS.has(i))continue;star(SX[k],SY[k],8,colorOf(i),surf)}
-  // favourites: a heart
-  for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!isFav(C.k[i]))continue;const x=SX[k],y=SY[k]+1,r=7;
-    ctx.beginPath();ctx.moveTo(x,y+r*.95);ctx.bezierCurveTo(x-r*1.5,y-r*.05,x-r*.75,y-r*1.25,x,y-r*.4);ctx.bezierCurveTo(x+r*.75,y-r*1.25,x+r*1.5,y-r*.05,x,y+r*.95);ctx.closePath();
-    ctx.globalAlpha=1;ctx.fillStyle=HEART;ctx.fill();ctx.lineWidth=1.6;ctx.strokeStyle=surf;ctx.stroke();ctx.lineWidth=1}
+  // favourites: a star (the only marker drawn over the points)
+  for(let k=0;k<VIS.length;k++){const i=VIS[k];if(!isFav(C.k[i]))continue;star(SX[k],SY[k],9,FAVC,surf)}
   // hover + selection rings
   for(const [i,col,w] of [[HOVER,css('--text'),1.5],[M.sel,css('--text'),2.2]]){if(i==null)continue;const k=VIS.indexOf(i);if(k<0)continue;
     ctx.strokeStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.arc(SX[k],SY[k],7,0,7);ctx.stroke()}
@@ -781,10 +777,10 @@ function updateCounts(){
   const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),BC_SHORT[k],k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?SGROUPS.map(g=>[css(g[2]),g[1],g[0]]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
   const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?SGROUP_OF[C.s[i]]:C.f[i];
   const cnt={};let nGrey=0;for(const i of VIS){if(GREYED(i)){nGrey++;continue}const k=key(i);cnt[k]=(cnt[k]||0)+1}
-  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span>★ top performer in its category (≤ ${LIM} N·m)</span><span><span style="color:${HEART}">♥</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
+  $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span><span style="color:${FAVC}">★</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
 
-  const nW=VIS.filter(i=>WIN_ROWS.has(i)).length;
-  $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nW} top performers). Shift-click a chip to show only that one. Hollow = uncertain.`;
+  const nF=VIS.filter(i=>isFav(C.k[i])).length;
+  $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Shift-click a chip to show only that one. Hollow = uncertain.`;
 }
 function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
 const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75'],[512,'matched elasticity comparison']];
@@ -818,9 +814,9 @@ const evoRow=(w,i)=>{const x=RS(i);if(x&&x.evolution){const e=x.evolution;return
   return w&&w.evolution?`<div>Evolution</div><div class="small">${w.evolution.steps} accepted steps from a ${esc(w.evolution.family)} seed at ${Math.round(w.evolution.seed_half_span_mm)} mm (${esc(w.evolution.search)})</div>`:''};
 function rowTip(i){
   const st=STATUS[C.S[i]],w=WIN_ROWS.get(i);
-  if(isCat(i)){const r=i-CAT0;return `<b>Rigid catalog</b> · #${CAT.number[r]} ${esc(CAT.name[r])}${w?' · ★ winner':''}<br>${polySVG(polyOf(i),{w:260,h:90,color:colorOf(i)})}
+  if(isCat(i)){const r=i-CAT0;return `<b>Rigid catalog</b> · #${CAT.number[r]} ${esc(CAT.name[r])}${w?' · category winner':''}<br>${polySVG(polyOf(i),{w:260,h:90,color:colorOf(i)})}
     Thrust <b>${fmt(C.T[i],3)} N</b> · torque <b>${fmt(C.Q[i],3)} N·m</b><br>Span ${Math.round(SPAN[i])} mm · root ${Math.round(ROOT[i])} mm · St ${fmt(ST[i],2)}<br><span class="muted">${esc(CAT.studies[CAT.study[r]].name)}<br>dt ${CAT.cohorts[CAT.cohort[r]].dt} s · ${CAT.cohorts[CAT.cohort[r]].waveform} stroke · ${st==='ok'?'settled':'not settled'}${C.obj[i]?' · '+objText(i):''}</span>`}
-  return `<b>${MODEL[D.models[C.m[i]].id].label}</b> · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}${w?' · ★ winner':''}<br>${outlineSVG(designOutline(i),{w:260,h:90,color:modelColor(D.models[C.m[i]].id)})}
+  return `<b>${MODEL[D.models[C.m[i]].id].label}</b> · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}${w?' · category winner':''}<br>${outlineSVG(designOutline(i),{w:260,h:90,color:modelColor(D.models[C.m[i]].id)})}
   Thrust <b>${fmt(C.T[i],3)} N</b> · torque <b>${fmt(C.Q[i],3)} N·m</b><br>Half-span ${Math.round(SPAN[i])} mm · St ${fmt(ST[i],2)}${C.W[i]!=null?` · tip twist ±${fmt(C.W[i],0)}°`:''}<br><span class="muted">${st==='ok'?'settled (rigid)':st} · ${C.src[i]&1?'search':''}${C.src[i]===3?' + ':''}${C.src[i]&2?'map':''}${C.src[i]&4?'planned study':''}${C.obj[i]?'<br>'+objText(i):''}</span>`;
 }
 cv.addEventListener('mousemove',e=>{
@@ -876,7 +872,7 @@ function selectDesign(i){
       <div>Span</div><div>${Math.round(SPAN[i])} mm</div><div>Strouhal number</div><div>${fmt(ST[i],3)} <span class="muted small">(tip excursion ${Math.round(TIPA[i])} mm)</span></div><div>Root chord</div><div>${Math.round(ROOT[i])} mm</div><div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
       <div>Conditions</div><div class="small">dt ${co.dt} s · ${co.panels} panels · ${co.waveform} stroke (${co.count.toLocaleString()} runs share these)</div>
       <div>Quality</div><div>${statusPill(STATUS[C.S[i]])}</div>${C.obj[i]?`<div>Objective</div><div class="small">${objText(i)}</div>`:''}<div>Key</div><div><code>${C.k[i]}</code></div></div>`;
-    $('#detail').innerHTML=`<h3>${w?'★ ':''}Rigid catalog · #${CAT.number[r]}</h3>${w?`<p class="small" style="margin-top:-2px">Winner: ${esc(w.group)}.</p>`:''}${polySVG(polyOf(i),{w:320,h:118,color:colorOf(i),labels:true})}
+    $('#detail').innerHTML=`<h3>Rigid catalog · #${CAT.number[r]}</h3>${w?`<p class="small" style="margin-top:-2px">Winner: ${esc(w.group)}.</p>`:''}${polySVG(polyOf(i),{w:320,h:118,color:colorOf(i),labels:true})}
       <div style="margin:10px 0">${media?posterButton(media,`Rigid catalog #${CAT.number[r]}`,info):'<p class="tiny muted">The full-size flapping animation for this case, if one was saved, is in the master catalog app.</p>'}</div>${info}`;return}
   const st=STATUS[C.S[i]],w=WIN_ROWS.get(i),m=D.models[C.m[i]],col=modelColor(m.id),rg=D.ranges[i];
   const others=[];for(let j=0;j<N;j++)if(j!==i&&C.k[j]===C.k[i])others.push(D.studies[C.s[j]].short);
@@ -894,12 +890,12 @@ function selectDesign(i){
     <div>Quality</div><div>${statusPill(st)}</div>
     <div>Found by</div><div class="small">${[C.src[i]&8?'fine-mesh refinement (Optimized shapes)':C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):'',C.src[i]&4?'a planned study':''].filter(Boolean).join(' and ')||'–'}</div>
     ${D.row_notes&&D.row_notes[i]?`<div>Numerics</div><div class="small">${esc(D.row_notes[i])}</div>`:''}
-    <div>Objective</div><div class="small">${RS(i)?(RS(i).trial?'trial step (not accepted)':esc(RS(i).objectives.join(' · '))+(RS(i).winner?' · <b>★ search winner</b>':'')):C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
+    <div>Objective</div><div class="small">${RS(i)?(RS(i).trial?'trial step (not accepted)':esc(RS(i).objectives.join(' · '))+(RS(i).winner?' · <b>search winner</b>':'')):C.obj[i]?objText(i):(C.src[i]&2?'none (fixed outline set, no climbing)':'–')}</div>
     ${lambdaRow(i,w)}${evoRow(w,i)}
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
   if(EXTRA[i]){const e=EXTRA[i],em=e.result.media;$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}<div style="margin:10px 0">${em&&em.poster?posterButton(em,`${e.kind==='spanwise'?'Spanwise + chordwise':'Chordwise only'} · ${esc(e.pair.source.material_label||'')} · ${D.freqs[C.f[i]]} Hz`,info)+` <button class="iconbtn" data-span-pair="${esc(e.pair.source.key)}">▶ Compare both models side by side</button>`:'<p class="tiny muted">No animation rendered for this matched pair.</p>'}</div>${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button> ${basketButton(i)}`;return}
-  $('#detail').innerHTML=`<h3>${w?'★ ':''}${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
+  $('#detail').innerHTML=`<h3>${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:8px 0 0">${favButton(i)} ${basketButton(i)}</div>
     <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(FINE(i)?'<p class="tiny muted">No animation rendered for this design. It was solved by the fine-mesh refinement; rerunning it reuses the cached solves:<br><code>python -m wingstudy.refine_top --from atlas/refine-top.json --chord-panels 12 --curve 6 --out outputs/refine-top-curve</code></p>':C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
@@ -1051,9 +1047,9 @@ function sliceCard(all){
   return h+'</div>'}
 function favouritesCard(){const fs=favList();
   let h=`<div class="card"><h3>Favourites</h3><p class="small muted" style="max-width:900px">Designs starred as worth building. <b>Shared</b> favourites come from <code>atlas/favorites.json</code> in the repository; stars you add here are saved in this browser only. To share yours, run the command below and open a pull request with the changed file.</p>`;
-  if(!fs.length)return h+'<p class="small">No favourites yet. Open a design (on the map or here) and press ♡ Favourite.</p></div>';
+  if(!fs.length)return h+'<p class="small">No favourites yet. Open a design (on the map or here) and press ☆ Favourite.</p></div>';
   const rows=fs.map(f=>[f,KEYROW.get(f.key)]),spanMax=Math.max(450,...rows.filter(r=>r[1]!=null).map(r=>SPAN[r[1]]))*1.02;
-  h+='<div class="grid3">'+rows.map(([f,i])=>i==null?`<div class="wcell"><div class="small"><code>${esc(f.key)}</code></div><div class="t">Not in this atlas build${f.note?`<br>${esc(f.note)}`:''}</div></div>`:topCell(i,{title:`${f.shared?'♥ shared':'♡ this browser'}${f.note?' · '+esc(f.note):''}`,spanMax,note:`<span class="tiny muted">${matLabel(C.m[i])} · ${D.freqs[C.f[i]]} Hz${f.added?' · added '+esc(f.added):''}</span>`})).join('')+'</div>';
+  h+='<div class="grid3">'+rows.map(([f,i])=>i==null?`<div class="wcell"><div class="small"><code>${esc(f.key)}</code></div><div class="t">Not in this atlas build${f.note?`<br>${esc(f.note)}`:''}</div></div>`:topCell(i,{title:`${f.shared?'★ shared':'☆ this browser'}${f.note?' · '+esc(f.note):''}`,spanMax,note:`<span class="tiny muted">${matLabel(C.m[i])} · ${D.freqs[C.f[i]]} Hz${f.added?' · added '+esc(f.added):''}</span>`})).join('')+'</div>';
   const mine=fs.filter(f=>!f.shared).map(f=>f.key);
   if(mine.length)h+=`<p class="small" style="margin-top:8px">Share this browser's ${mine.length}: <code id="fav-cmd">${esc(favCmd(mine))}</code> <button class="iconbtn" style="width:auto;padding:0 8px" onclick="navigator.clipboard&&navigator.clipboard.writeText($('#fav-cmd').textContent)">Copy</button></p>`;
   return h+'</div>'}
@@ -1317,7 +1313,7 @@ function beforeAfterHTML(){
     const spanMax=Math.max(450,...ps.flatMap(p=>[SPAN[p.before],SPAN[p.after]]))*1.02;
     h+=`<div class="card"><h3>Before and after: ${esc(st.label)}</h3><p class="small muted" style="max-width:900px">${ps.length} lineages started from existing designs. Dashed: the seed (before); filled: the lineage's best (after), at one scale, shaded beyond ${SHEET} mm. Median thrust change ${fmt(gains[gains.length>>1],1)}% (range ${fmt(gains[0],1)} to +${fmt(gains[gains.length-1],1)}%). A seed found under another budget first moves to this budget, so its change includes that move.</p><div class="grid3">`;
     for(const p of ps){const a=p.before,b=p.after,d=100*(C.T[b]-C.T[a])/C.T[a],c=modelColor(D.models[C.m[b]].id);
-      h+=`<div class="wcell${p.winner?' best':''}"><div class="small" style="font-weight:600;margin-bottom:4px">${esc(p.objective)} · ${esc(p.lineage)}${p.winner?' · ★ search winner':''}</div>${wingSVG(b,{spanMax,color:c,ghost:designOutline(a)})}
+      h+=`<div class="wcell${p.winner?' best':''}"><div class="small" style="font-weight:600;margin-bottom:4px">${esc(p.objective)} · ${esc(p.lineage)}${p.winner?' · search winner':''}</div>${wingSVG(b,{spanMax,color:c,ghost:designOutline(a)})}
         <div class="t">Before <b>${fmt(C.T[a],2)} N</b> at ${fmt(C.Q[a],2)} N·m, ${Math.round(SPAN[a])} mm<br>After <b>${fmt(C.T[b],2)} N</b> at ${fmt(C.Q[b],2)} N·m, ${Math.round(SPAN[b])} mm ${sheetTag(b)}<br><b>${d>=0?'+':''}${fmt(d,1)}% thrust</b> · ${p.accepted} accepted moves in ${p.solves} solves</div>
         <button class="playbtn" onclick="showOnMap(${a})">◎ before</button> <button class="playbtn" onclick="showOnMap(${b})">◎ after</button>${RS(b)&&RS(b).evolution?` <button class="playbtn" onclick="openEvolution(${b})">▶ evolution</button>`:''}</div>`}
     h+='</div></div>'}
