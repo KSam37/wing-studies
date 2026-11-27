@@ -2,7 +2,7 @@
 
 Draft of 2026-11-27, written from the live atlas (build 8e314e0).
 
-**Setup for every number below:**
+Every number below uses the same setup:
 - one wing at 1 Hz, unless a frequency is given;
 - 0.5 m/s forward speed;
 - a −26° to +34° stroke;
@@ -10,17 +10,15 @@ Draft of 2026-11-27, written from the live atlas (build 8e314e0).
 
 Thrust is the mean per wing; torque is the peak root torque.
 
-**Which mesh each number comes from:**
+Numbers come from three meshes:
 - "Coarse" means the 8 × 4 mesh the studies were searched on. Coarse numbers run about 15% low on both thrust and torque (finding 8).
 - "Fine" means the 21 × 12 mesh used for the final refinement. Fine numbers run 0.5–2.4% low on thrust and 1.2–3.1% low on torque.
 - "Converged" means extrapolated to zero mesh size from 21 × 12, 32 × 18 and 47 × 27, with the grid convergence index (GCI) as a 95% band (finding 8).
 
-**Confidence:**
-- **high:** the ranking or trend holds on finer meshes and across studies;
-- **medium:** the result rests on the model in a regime where it is less reliable, or on limited data;
-- **open:** not yet tested.
-
----
+Each finding ends with a confidence rating:
+- high: the ranking or trend holds on finer meshes and across studies;
+- medium: the result rests on the model in a regime where it is less reliable, or on limited data;
+- open: not yet tested.
 
 ## 1 · Recommended wings for the FAAV build (single 400 mm sheet)
 
@@ -32,15 +30,15 @@ At 1 Hz:
 | **1 N·m** | **2.73 N** | **0.999 N·m** | **2.80 N ± 1.3%** | **1.042 N·m (+4.2% over)** | **360 mm** | **±49°** |
 | **1.25 N·m** | **3.11 N** | **1.250 N·m** | **3.24 N ± 2.1%** | **1.323 N·m (+5.8% over)** | **350 mm** | **±48°** |
 
-**Where they came from.** The search was refined on the fine mesh from the best wings anywhere in the atlas.
+The fine-mesh search started from the best wings anywhere in the atlas.
 - The 0.75 and 1 N·m wings started from plate-campaign wings.
 - The 1.25 N·m wing started from the free-span study.
 - At 0.75 N·m the plate-campaign start beat the free-span start by 50% (2.26 N against 1.51 N).
-- At 1 N·m the two starts finished level: 2.73 N against 2.72 N, both at 360 mm. That gap is smaller than the mesh uncertainty, so either wing will do. The ♥ favourite is the earlier one.
+- At 1 N·m the two starts finished level: 2.73 N against 2.72 N, both at 360 mm. That gap is smaller than the mesh uncertainty, so either wing will do. The ★ favourite is the earlier one.
 
-**Shape.** All three use the full 200 mm root and taper steeply over the inner sixth of the span. The outer half is slender. The 0.75 N·m wing has a near-constant 25 mm chord along its outer two-thirds.
+All three use the full 200 mm root and taper steeply over the inner sixth of the span. The outer half is slender. The 0.75 N·m wing has a near-constant 25 mm chord along its outer two-thirds.
 
-**Torque margin.** Each wing sits exactly on its budget on the fine mesh. Once converged, each is 3–6% over. To stay strictly within budget, either size the motor with that margin or shorten the span slightly.
+Each wing sits exactly on its budget on the fine mesh but is 3–6% over once converged. To stay strictly within budget, either size the motor with that margin or shorten the span slightly.
 
 **Confidence: medium.** The outlines and numbers are mesh-converged. The remaining risk is the tip twist of ±48–54°, which is large for an inviscid model (finding 9).
 
@@ -52,10 +50,10 @@ Best coarse FAAV wing within one sheet, at each budget:
 |---|---|---|---|---|---|---|
 | Thrust (N) | 1.52 | 2.27 | 2.87 | 3.06 | 3.35 | 3.42 |
 
-- **Up to 1 N·m:** each extra 0.25 N·m buys about 0.6–0.75 N of thrust.
-- **Above 1 N·m:** each extra 0.25 N·m buys about 0.2 N or less.
+- Up to 1 N·m, each extra 0.25 N·m buys about 0.6–0.75 N of thrust.
+- Above 1 N·m, each extra 0.25 N·m buys about 0.2 N or less.
 
-The reason is that the span is capped at the 400 mm sheet. Once the wing reaches that span, extra torque can only go into chord, which is less efficient.
+The span is capped at the 400 mm sheet, so once the wing reaches it, extra torque can only go into chord, which is less efficient.
 
 **Confidence: high for the shape of the curve.** The individual levels are about 15% low.
 
@@ -63,15 +61,15 @@ The reason is that the span is capped at the 400 mm sheet. Once the wing reaches
 
 There are 891 verified FAAV single-sheet wings at 1 ± 0.05 N·m.
 
-- **Spread:** thrust runs from 2.18 N to 2.93 N (+34%). The middle 80% span 2.33 N to 2.80 N (+20%).
-- **Top 5% (45 wings):**
-  - half-span 390–400 mm, at the sheet limit;
-  - mean chords 200 · 166 · 89 · 59 · 47 · 32 · 25 · 11 mm.
-- **Bottom 10%:**
-  - mean half-span 321 mm;
-  - broad outlines, mean chords 200 · 182 · 155 · 121 · 108 · 86 · 70 · 34 mm.
+- Thrust runs from 2.18 N to 2.93 N (+34%). The middle 80% span 2.33 N to 2.80 N (+20%).
+- The top 5% (45 wings) have
+  - half-spans of 390–400 mm, at the sheet limit;
+  - mean chords of 200 · 166 · 89 · 59 · 47 · 32 · 25 · 11 mm.
+- The bottom 10% have
+  - a mean half-span of 321 mm;
+  - broad outlines, with mean chords of 200 · 182 · 155 · 121 · 108 · 86 · 70 · 34 mm.
 
-**Design rule:** spend the torque budget on span, not on outboard chord area. Use the full root, taper fast, and make the wing as long as the budget allows.
+Design rule: spend the torque budget on span rather than outboard chord area. Use the full root, taper fast, and make the wing as long as the budget allows.
 
 **Confidence: high.** The thrust ranking holds on finer meshes (Spearman ρ = 0.981 over 52 designs).
 
@@ -83,7 +81,7 @@ There are 891 verified FAAV single-sheet wings at 1 ± 0.05 N·m.
 
 **Confidence: medium.** The best span depends on the mesh.
 
-## 5 · Passive pitching of the 0.5 mm sheet is the biggest lever, but only at the right stiffness
+## 5 · Passive pitching of the 0.5 mm sheet adds 25% over a rigid wing, but only at the right stiffness
 
 Best coarse wing within one sheet at ≤ 1 N·m, 1 Hz:
 
@@ -96,9 +94,9 @@ Best coarse wing within one sheet at ≤ 1 N·m, 1 Hz:
 | 0.25 mm, pivots freely | 2.14 N | ±63° |
 | 1.0 mm, pivots freely | 2.10 N | ±5° |
 
-- **The FAAV sheet beats a rigid wing by 25%** at the same torque.
-- **There is an optimal stiffness.** Too soft (0.25 mm) or too stiff (1.0 mm) both do worse than rigid.
-- **The rod removes the benefit.** Bonding the sheet to the rod stops it twisting, so the wing behaves as rigid. Rod winners re-solved as rigid plates perform about the same.
+- At the same torque, the FAAV sheet gives 25% more thrust than a rigid wing.
+- Stiffness has an optimum: a softer (0.25 mm) or stiffer (1.0 mm) free sheet does worse than rigid.
+- The rod removes the benefit. Bonded to the rod, the sheet cannot twist, and rod winners re-solved as rigid plates perform about the same.
 
 **Confidence: medium.** The benefit depends on 50–70° of passive pitch, which is where an inviscid model is least reliable (finding 9).
 
@@ -112,16 +110,16 @@ Recommended FAAV single-sheet wing at each frequency and budget, refined on the 
 | 1 N·m | 1.92 N (340 mm) | 2.80 N (360 mm) | 3.13 N (320 mm) |
 | 1.25 N·m | 2.32 N (360 mm) | 3.24 N (350 mm) | 4.52 N (400 mm) |
 
-- **From 0.75 to 1 Hz,** thrust rises about 40% at the same torque, at every budget.
-- **From 1 to 1.25 Hz,** thrust rises about 12% at 0.75 and 1 N·m, and 40% at 1.25 N·m.
-- **At 1.25 Hz the wing gets shorter.** Faster flapping costs torque, so under the 0.75 and 1 N·m budgets the search pays for it with span, ending at 320 mm.
-- **At 0.75 Hz the wing gets broader.** Slower flapping leaves torque to spare, so the best wings carry more chord outboard.
-- **The FAAV sheet gains more from frequency than a rigid wing does.** On the coarse mesh at ≤ 1 N·m, the best rigid wing goes from 1.73 to 2.30 to 2.49 N across the three frequencies. The FAAV sheet goes from 2.14 to 2.87 to 3.58 N.
+- From 0.75 to 1 Hz, thrust rises about 40% at the same torque, at every budget.
+- From 1 to 1.25 Hz, thrust rises about 12% at 0.75 and 1 N·m, and 40% at 1.25 N·m.
+- At 1.25 Hz the wing gets shorter. Faster flapping costs torque, so under the 0.75 and 1 N·m budgets the search pays for it with span, ending at 320 mm.
+- At 0.75 Hz the wing gets broader. Slower flapping leaves torque to spare, so the best wings carry more chord outboard.
+- The FAAV sheet gains more from frequency than a rigid wing. On the coarse mesh at ≤ 1 N·m, the best rigid wing goes from 1.73 to 2.30 to 2.49 N across the three frequencies. The FAAV sheet goes from 2.14 to 2.87 to 3.58 N.
 
-**Open questions:**
-- **The jump at 1.25 Hz may be overstated.** The 1.25 Hz, 1 N·m search started 16% over budget and stopped at 320 mm. Meanwhile the 1.25 N·m wing reached 400 mm and 4.52 N. The 1 N·m search may have stopped in a local optimum. Re-running it from the 1.25 N·m wing would settle this.
-- **The 1.25 Hz, 1.25 N·m wing twists ±60°,** the most of any recommended wing (finding 9).
-- **Motor limits are not modelled.** Whether the motor can drive 1.25 Hz at these torques, given its power and speed limits, is outside the study.
+Open questions:
+- The jump at 1.25 Hz may be overstated. The 1.25 Hz, 1 N·m search started 16% over budget and stopped at 320 mm. Meanwhile the 1.25 N·m wing reached 400 mm and 4.52 N. The 1 N·m search may have stopped in a local optimum. Re-running it from the 1.25 N·m wing would settle this.
+- The 1.25 Hz, 1.25 N·m wing twists ±60°, the most of any recommended wing (finding 9).
+- The study does not model the motor, so whether it can drive 1.25 Hz at these torques is open.
 
 **Confidence: high for the trend with frequency; medium for the size of the 1.25 Hz gain.** The gain rests on the same twist regime as finding 5.
 
@@ -136,8 +134,8 @@ Matched reruns compare the same wing with chordwise elasticity only and with spa
 | 1.0 mm free sheet | 25 | −60% | −36% |
 | 0.5 mm free sheet | 7 | 0% | 0% (one case −83%) |
 
-- **Rod builds:** thrust barely changes. However, peak torque on the 0.5 mm + rod build rises 30%, so chordwise-only results understate the motor load for rod builds.
-- **The FAAV build:** its leading edge is stiff by construction, which is what the chordwise model assumes. The spanwise model instead lets the sheet bend freely, so it does not describe the FAAV build directly.
+- For rod builds thrust barely changes, but peak torque on the 0.5 mm + rod build rises 30%, so chordwise-only results understate the motor load.
+- The FAAV build has a leading edge that is stiff by construction, as the chordwise model assumes. The spanwise model lets the sheet bend freely, so it does not describe the FAAV build directly.
 
 **Confidence: medium for rod builds. Open for the FAAV build:** a test on the physical wing or a model with a stiff leading edge would settle it.
 
@@ -155,19 +153,19 @@ From 52 designs solved at several mesh and time-step levels:
 | Doubling the span panels alone | changes results about 5% |
 | Halving the time step | changes results under 1% |
 
-**Consequence:** a wing picked just under budget on the coarse mesh is over budget on the fine mesh. The 0.75, 1 and 1.25 N·m study picks rose 53%, 14% and 20% in torque. That is why the recommendations were re-optimized on the fine mesh (finding 1).
+A wing picked just under budget on the coarse mesh is over budget on the fine mesh. The 0.75, 1 and 1.25 N·m study picks rose 53%, 14% and 20% in torque. That is why the recommendations were re-optimized on the fine mesh (finding 1).
 
-**The recommended wings are converged.** All nine wings in findings 1 and 6 were solved again on 32 × 18 and 47 × 27 panels:
+The recommended wings are converged. All nine wings in findings 1 and 6 were solved again on 32 × 18 and 47 × 27 panels:
 
 | Check | Result |
 |---|---|
-| Largest change, 32 × 18 → 47 × 27 | 1.4% thrust, 1.7% torque: within the 2% stopping test |
+| Largest change, 32 × 18 to 47 × 27 | 1.4% thrust, 1.7% torque: within the 2% stopping test |
 | Converged thrust | GCI 0.6–3.1% |
 | Converged torque | GCI 1.3–4.0% |
 | Fine-mesh (21 × 12) values against converged | 0.5–2.4% low on thrust, 1.2–3.1% low on torque |
 | Observed order of convergence | p ≈ 0.8–1.2, monotone for every wing |
 
-Because thrust and torque rise together with the mesh, every recommended wing is 1.9–7.9% over its budget once converged. The 1.25 Hz, 1.25 N·m wing has the largest margin.
+Because thrust and torque rise together with the mesh, every recommended wing is 1.9–7.9% over its budget once converged. The 1.25 Hz, 1.25 N·m wing is furthest over.
 
 **Confidence: high.**
 
@@ -175,14 +173,12 @@ Because thrust and torque rise together with the mesh, every recommended wing is
 
 The method is an inviscid unsteady vortex-lattice model coupled to plate torsion.
 
-- **Large twist.** Every high-thrust FAAV wing twists ±46–70°. At those pitch angles, flow separation and dynamic stall are likely. These effects are not modelled and would usually reduce thrust.
-- **Narrow tips.** The 10 mm tip chords carry viscous drag that the model ignores.
+- Every high-thrust FAAV wing twists ±46–70°. At those pitch angles flow separation and dynamic stall are likely; the model leaves both out, and both usually reduce thrust.
+- The 10 mm tip chords carry viscous drag that the model ignores.
 
 So findings 1, 5 and 6 are the most exposed: the elastic advantage may be smaller in water than predicted.
 
-**Status: open.** This needs an experimental check (thrust and torque on the built wing) or a higher-fidelity simulation of one recommended wing.
-
----
+**Confidence: open.** This needs an experimental check (thrust and torque on the built wing) or a higher-fidelity simulation of one recommended wing.
 
 ## Open items before the conclusions are final
 
