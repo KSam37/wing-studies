@@ -111,17 +111,16 @@ Recommended FAAV single-sheet wing at each frequency and budget, refined on the 
 | 1.25 N·m | 2.32 N (360 mm) | 3.24 N (350 mm) | 4.52 N (400 mm) |
 
 - From 0.75 to 1 Hz, thrust rises about 40% at the same torque, at every budget.
-- From 1 to 1.25 Hz, thrust rises about 12% at 0.75 and 1 N·m, and 40% at 1.25 N·m.
+- From 1 to 1.25 Hz, thrust rises about 12% at 0.75 and 1 N·m, and 40% at 1.25 N·m. The jump between 1 and 1.25 N·m at 1.25 Hz is real. Re-searched under 1 N·m from the 1.25 N·m wing (at 400 mm and at 380 mm), both runs shrank it to the same 320 mm wing with 3.06 N, within 1% of the recommended one. At 1.25 Hz a 400 mm wing needs about 1.25 N·m.
 - At 1.25 Hz the wing gets shorter. Faster flapping costs torque, so under the 0.75 and 1 N·m budgets the search pays for it with span, ending at 320 mm.
 - At 0.75 Hz the wing gets broader. Slower flapping leaves torque to spare, so the best wings carry more chord outboard.
 - The FAAV sheet gains more from frequency than a rigid wing. On the coarse mesh at ≤ 1 N·m, the best rigid wing goes from 1.73 to 2.30 to 2.49 N across the three frequencies. The FAAV sheet goes from 2.14 to 2.87 to 3.58 N.
 
 Open questions:
-- The jump at 1.25 Hz may be overstated. The 1.25 Hz, 1 N·m search started 16% over budget and stopped at 320 mm. Meanwhile the 1.25 N·m wing reached 400 mm and 4.52 N. The 1 N·m search may have stopped in a local optimum. Re-running it from the 1.25 N·m wing would settle this.
 - The 1.25 Hz, 1.25 N·m wing twists ±60°, the most of any recommended wing (finding 9).
 - The study does not model the motor, so whether it can drive 1.25 Hz at these torques is open.
 
-**Confidence: high for the trend with frequency; medium for the size of the 1.25 Hz gain.** The gain rests on the same twist regime as finding 5.
+**Confidence: high for the trend with frequency; medium for its size.** The gain rests on the same twist regime as finding 5.
 
 ## 7 · Bending along the span: small for rod builds, large for a thick free sheet, untested for the FAAV leading edge
 
@@ -183,7 +182,6 @@ So findings 1, 5 and 6 are the most exposed: the elastic advantage may be smalle
 ## Open items before the conclusions are final
 
 1. Validate the large-twist regime on the built FAAV wing (findings 1, 5, 6 and 9).
-2. Re-run the 1.25 Hz, 1 N·m search from the 1.25 N·m wing, to check the jump between those budgets (finding 6).
-3. Check that the drive can reach 1.25 Hz at these torques (finding 6).
-4. Decide whether each budget is a hard limit. If it is, shorten each recommended wing until its converged torque fits, or size the motor with a 3–8% margin (findings 1 and 8).
-5. Test spanwise bending of the FAAV leading edge (finding 7).
+2. Check that the drive can reach 1.25 Hz at these torques (finding 6).
+3. Decide whether each budget is a hard limit. If it is, shorten each recommended wing until its converged torque fits, or size the motor with a 3–8% margin (findings 1 and 8).
+4. Test spanwise bending of the FAAV leading edge (finding 7).
