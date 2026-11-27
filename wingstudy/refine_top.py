@@ -61,13 +61,42 @@ def faav_cases(results: list[dict], freq: float = 1.0) -> list[dict]:
     return out
 
 
+def atlas_cases(freq: float = 1.0) -> list[dict]:
+    """FAAV cases from the whole atlas (atlas/data plus completed studies), in the study results' case format.
+
+    The original campaigns (rod, plate) are only in atlas/data, so --atlas is how their standouts become seeds.
+    """
+    import sys
+    sys.path.insert(0, str(S.ROOT / "tools"))
+    import atlas_data
+    from .studies import atlas as A
+    D = atlas_data.assemble(S.ROOT / "atlas" / "data")
+    atlas_data.drop_models(D)
+    A.merge(D, A.completed(S.ROOT / "studies"))
+    c, n = D["cols"], len(D["cols"]["s"])
+    mi = next(i for i, m in enumerate(D["models"]) if m["id"] == "t0.50")
+    end = (D.get("catalog") or {}).get("end", n)
+    out, seen = [], set()
+    for i in range(n):
+        if D.get("catalog") and D["catalog"].get("first", n) <= i < end:
+            continue
+        if (c["m"][i] != mi or abs(D["freqs"][c["f"][i]] - freq) > 1e-9 or D["statuses"][c["S"][i]] != "verified"
+                or not c["T"][i] or not c["Q"][i] or c["k"][i] in seen):
+            continue
+        seen.add(c["k"][i])
+        out.append({"key": c["k"][i], "model": "t0.50", "structure": "chordwise", "freq": freq, "status": "verified",
+                    "chords_mm": list(c["C"][8 * i:8 * i + 8]), "half_span_mm": c["H"][i],
+                    "thrust_N": c["T"][i], "torque_Nm": c["Q"][i], "study": D["studies"][c["s"][i]]["id"]})
+    return out
+
+
 def effective_span_mm(c: dict) -> float:
     ch = c["chords_mm"]
     n = next((j for j, x in enumerate(ch) if x == 0), len(ch))
     return c["half_span_mm"] * (n - 1) / (len(ch) - 1)
 
 
-def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False) -> list[dict]:
+def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False, freq: float = 1.0) -> list[dict]:
     seeds = []
     for B in levels:
         ok = [c for c in cases if c["torque_Nm"] <= B]
@@ -77,8 +106,8 @@ def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False) -> li
         for c, single in pairs:
             if c is None or any(s["case"]["key"] == c["key"] and s["budget"] == B for s in seeds):
                 continue
-            seeds.append({"id": f"B{B:g}-{'sheet' if single else 'any'}-{c['key'][:8]}", "budget": B,
-                          "single_sheet": single, "case": c})
+            seeds.append({"id": f"{'' if abs(freq - 1.0) < 1e-9 else f'F{freq:g}-'}B{B:g}-{'sheet' if single else 'any'}-{c['key'][:8]}",
+                          "budget": B, "single_sheet": single, "case": c, "freq": freq})
     return seeds
 
 
@@ -101,9 +130,13 @@ def refine_outline(chords_mm, half_span_mm, factor=FACTOR):
     return ctrl, round(span / 1000, 5)
 
 
-def numerics_for(n_segments: int, chord_panels: int = 4, param: str = "exact") -> dict:
-    return {"stations": n_segments + 1, "span_panels": n_segments, "chord_panels": chord_panels, "steps_per_cycle": 50,
-            "cycles": 4, "dt_refinements": [1, 2], "param": param}
+def numerics_for(n_segments: int, chord_panels: int = 4, param: str = "exact", freq: float = 1.0) -> dict:
+    """Solve settings; "freq" is only added away from 1 Hz, so the 1 Hz cache keys stay as they were."""
+    out = {"stations": n_segments + 1, "span_panels": n_segments, "chord_panels": chord_panels, "steps_per_cycle": 50,
+           "cycles": 4, "dt_refinements": [1, 2], "param": param}
+    if abs(freq - 1.0) > 1e-9:
+        out["freq"] = freq
+    return out
 
 
 def outline_mm(ctrl, numerics) -> list[float]:
@@ -128,19 +161,20 @@ def fit_curve(chords_mm, n_ctrl):
 class Search:
     def __init__(self, seed: dict, factor: int, max_rounds: int, chord_panels: int = 4, curve: int = 0):
         self.seed, self.budget = seed, seed["budget"]
+        f = seed.get("freq", 1.0)
         c = seed["case"]
         self.recheck = None
         if seed.get("ctrl"):                                    # second stage: start from a refined outline
             n = len(seed["ctrl"])
-            self.recheck_numerics = numerics_for(n, chord_panels, "exact")
+            self.recheck_numerics = numerics_for(n, chord_panels, "exact", f)
             if curve:
                 self.ctrl, self.span = fit_curve(outline_mm(seed["ctrl"], {"param": "exact"}), curve), seed["span"]
-                self.numerics = numerics_for(n, chord_panels, "pchip")
+                self.numerics = numerics_for(n, chord_panels, "pchip", f)
             else:
                 self.ctrl, self.span, self.numerics = list(seed["ctrl"]), seed["span"], self.recheck_numerics
         else:
             self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
-            self.numerics = numerics_for(len(self.ctrl), chord_panels)
+            self.numerics = numerics_for(len(self.ctrl), chord_panels, freq=f)
         self.span_max = SHEET_M if seed["single_sheet"] else SPAN_LIMITS[1]
         self.step_i, self.rounds, self.max_rounds = 0, 0, max_rounds
         self.current, self.history, self.done, self.note = None, [], False, ""
@@ -191,6 +225,7 @@ class Search:
         c, f = self.seed["case"], self.current or {}
         start = self.history[0] if self.history else {}
         return {"id": self.seed["id"], "budget_Nm": self.budget, "single_sheet": self.seed["single_sheet"],
+                "freq": self.seed.get("freq", 1.0),
                 "source": {"key": c["key"], "chords_mm": c["chords_mm"], "half_span_mm": c["half_span_mm"],
                            "thrust_N": c["thrust_N"], "torque_Nm": c["torque_Nm"]},
                 "numerics": self.numerics, "rounds": self.rounds, "note": self.note,
@@ -209,7 +244,8 @@ def seeds_from_summary(path: Path) -> list[dict]:
         f = x.get("final") or {}
         if f.get("ctrl") and f.get("status") in ("ok", "verified"):
             out.append({"id": x["id"], "budget": x["budget_Nm"], "single_sheet": x["single_sheet"], "case": x["source"],
-                        "ctrl": f["ctrl"], "span": f["span"], "previous": {k: f.get(k) for k in ("thrust", "torque", "span")}})
+                        "ctrl": f["ctrl"], "span": f["span"], "previous": {k: f.get(k) for k in ("thrust", "torque", "span")},
+                        "freq": x.get("freq", (x.get("numerics") or {}).get("freq", 1.0))})
     return out
 
 
@@ -274,6 +310,8 @@ def main(argv=None) -> int:
     ap.add_argument("--curve", type=int, default=0, help="with --from: search a PCHIP outline with this many control chords")
     ap.add_argument("--gif", type=Path, help="write evolution GIFs to this folder from --summaries, then stop")
     ap.add_argument("--summaries", type=Path, nargs="*", default=[], help="summaries in stage order, for --gif")
+    ap.add_argument("--atlas", action="store_true", help="pick seeds from every FAAV wing in the atlas (campaigns included), not only the named studies")
+    ap.add_argument("--freq", type=float, default=1.0, help="flapping frequency in Hz (default 1; seeds are picked at this frequency)")
     ap.add_argument("--baseline", action="store_true", help="with --from: solve the original study outlines on the --chord-panels mesh only")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--factor", type=int, default=FACTOR, help="chord segments per original segment (default 3)")
@@ -291,7 +329,11 @@ def main(argv=None) -> int:
         seeds = seeds_from_summary(a.from_summary)
     else:
         results = [S.read_json(S.study_dir(s) / "results.json") for s in a.studies if (S.study_dir(s) / "results.json").exists()]
-        seeds = pick_seeds(faav_cases(results), a.levels, a.sheet_only)
+        cases = faav_cases(results, a.freq)
+        if a.atlas:
+            have = {c["key"] for c in cases}
+            cases += [c for c in atlas_cases(a.freq) if c["key"] not in have]
+        seeds = pick_seeds(cases, a.levels, a.sheet_only, a.freq)
     if not seeds:
         print("no verified FAAV wings to start from")
         return 1
@@ -336,7 +378,8 @@ def main(argv=None) -> int:
         tasks = []
         for s in searches:
             ctrl, span = refine_outline(s.seed["case"]["chords_mm"], s.seed["case"]["half_span_mm"], a.factor)
-            tasks.append(s.task(ctrl, span, "study outline on the finer mesh", numerics_for(len(ctrl), a.chord_panels)))
+            tasks.append(s.task(ctrl, span, "study outline on the finer mesh",
+                                numerics_for(len(ctrl), a.chord_panels, freq=s.seed.get("freq", 1.0))))
         with ProcessPoolExecutor(max_workers=a.workers) as pool:
             recs = solve_all(pool, tasks)
         out = [{"id": s.seed["id"], "budget_Nm": s.budget, "key": r["key"], "numerics": t["numerics"],

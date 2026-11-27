@@ -1,0 +1,632 @@
+{
+ "levels": [
+  "21x12",
+  "32x18",
+  "47x27"
+ ],
+ "method": "Celik et al. 2008 (ASME JFE 130:078001), r = sqrt(N1/N2)",
+ "updated": "2026-11-27T13:13:28Z",
+ "wings": [
+  {
+   "id": "F0.75-B0.75-sheet-74fb8fc1",
+   "freq": 0.75,
+   "budget_Nm": 0.75,
+   "summary": "outputs\\refine-top-f0.75-curve\\summary.json",
+   "half_span_mm": 380.0,
+   "ctrl": [
+    0.08582,
+    0.05527,
+    0.0255,
+    0.0255,
+    0.0255,
+    0.0255
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 1.6318715993048936,
+     "torque": 0.7436650594706535,
+     "tip_twist": 42.47362887279297
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "dbbc5bd0fe128dac76d7",
+     "thrust": 1.638010047739022,
+     "torque": 0.7500005418188639,
+     "tip_twist": 41.70223505742156,
+     "elapsed_s": 1253.8
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "2adfdee36ee4acd972ec",
+     "thrust": 1.6422890504075787,
+     "torque": 0.754234091335706,
+     "tip_twist": 41.184263566072275,
+     "elapsed_s": 3085.5
+    }
+   ],
+   "thrust": {
+    "fine": 1.6422890504075787,
+    "change_last_pct": 0.2605511293821681,
+    "behaviour": "monotone",
+    "p": 0.7792801389491846,
+    "extrapolated": 1.6541624751788953,
+    "gci_pct": 0.9037252583802389,
+    "fine_error_pct": -0.717790721859557
+   },
+   "torque": {
+    "fine": 0.754234091335706,
+    "change_last_pct": 0.5613044498352886,
+    "behaviour": "monotone",
+    "p": 0.8836156063904562,
+    "extrapolated": 0.7643716111693003,
+    "gci_pct": 1.680101700196546,
+    "fine_error_pct": -1.3262554084245037
+   }
+  },
+  {
+   "id": "F0.75-B1-sheet-cbf15d97",
+   "freq": 0.75,
+   "budget_Nm": 1.0,
+   "summary": "outputs\\refine-top-f0.75-curve\\summary.json",
+   "half_span_mm": 340.0,
+   "ctrl": [
+    0.1838,
+    0.09903,
+    0.0784,
+    0.0563,
+    0.0563,
+    0.01
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 1.893635394554529,
+     "torque": 0.999530802767016,
+     "tip_twist": 36.11312676000392
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "d5541064aabef0c3688b",
+     "thrust": 1.903269375519468,
+     "torque": 1.010823533359918,
+     "tip_twist": 35.29052323434344,
+     "elapsed_s": 419.0
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "9521e9f802fcc7c83e4e",
+     "thrust": 1.9089618903576604,
+     "torque": 1.0174052847890556,
+     "tip_twist": 34.74214927718663,
+     "elapsed_s": 1245.7
+    }
+   ],
+   "thrust": {
+    "fine": 1.9089618903576604,
+    "change_last_pct": 0.29819950135965206,
+    "behaviour": "monotone",
+    "p": 1.1870562561316995,
+    "extrapolated": 1.9184795879499223,
+    "gci_pct": 0.6232246987444412,
+    "fine_error_pct": -0.49610627353260384
+   },
+   "torque": {
+    "fine": 1.0174052847890556,
+    "change_last_pct": 0.6469153962083222,
+    "behaviour": "monotone",
+    "p": 1.2208660736857566,
+    "extrapolated": 1.028028207918021,
+    "gci_pct": 1.305148902775724,
+    "fine_error_pct": -1.0333299268586282
+   }
+  },
+  {
+   "id": "F0.75-B1.25-sheet-6ec1be78",
+   "freq": 0.75,
+   "budget_Nm": 1.25,
+   "summary": "outputs\\refine-top-f0.75-curve\\summary.json",
+   "half_span_mm": 360.0,
+   "ctrl": [
+    0.2,
+    0.16167,
+    0.10333,
+    0.09333,
+    0.09333,
+    0.01
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 2.2209354818814186,
+     "torque": 1.224169889005568,
+     "tip_twist": 43.28204102985702
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "ad8acb124c40ca1655e8",
+     "thrust": 2.257764492185452,
+     "torque": 1.2569582955987626,
+     "tip_twist": 42.40772017947303,
+     "elapsed_s": 415.4
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "1b938e9e13c926e1a605",
+     "thrust": 2.2802632327881613,
+     "torque": 1.2755193271473542,
+     "tip_twist": 41.78244201554546,
+     "elapsed_s": 1245.9
+    }
+   ],
+   "thrust": {
+    "fine": 2.2802632327881613,
+    "change_last_pct": 0.9866729542097417,
+    "behaviour": "monotone",
+    "p": 1.1049012633693678,
+    "extrapolated": 2.3213885270824663,
+    "gci_pct": 2.254415943242856,
+    "fine_error_pct": -1.771581698389435
+   },
+   "torque": {
+    "fine": 1.2755193271473542,
+    "change_last_pct": 1.4551744652981888,
+    "behaviour": "monotone",
+    "p": 1.2927259952635042,
+    "extrapolated": 1.3033802687676506,
+    "gci_pct": 2.730352749986002,
+    "fine_error_pct": -2.1375911764138444
+   }
+  },
+  {
+   "id": "B0.75-sheet-62a23e20",
+   "freq": 1.0,
+   "budget_Nm": 0.75,
+   "summary": "outputs\\refine-top-curve-2\\summary.json",
+   "half_span_mm": 380.0,
+   "ctrl": [
+    0.06082,
+    0.03977,
+    0.0255,
+    0.0255,
+    0.0255,
+    0.0205
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 2.2635539806245144,
+     "torque": 0.7483389138011158,
+     "tip_twist": 54.077499479342464
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "58d402a17f0b5d1f7864",
+     "thrust": 2.276209835381897,
+     "torque": 0.7556210931949874,
+     "tip_twist": 53.37714092083584,
+     "elapsed_s": 1250.8
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "871f654d074f0bc5b3a8",
+     "thrust": 2.2846290419941893,
+     "torque": 0.7603476266712065,
+     "tip_twist": 52.91744940807276,
+     "elapsed_s": 3084.0
+    }
+   ],
+   "thrust": {
+    "fine": 2.2846290419941893,
+    "change_last_pct": 0.3685152581682682,
+    "behaviour": "monotone",
+    "p": 0.8946688083532092,
+    "extrapolated": 2.304494383590102,
+    "gci_pct": 1.0869019231768096,
+    "fine_error_pct": -0.862026036486363
+   },
+   "torque": {
+    "fine": 0.7603476266712065,
+    "change_last_pct": 0.6216279646866011,
+    "behaviour": "monotone",
+    "p": 0.9554509591712143,
+    "extrapolated": 0.7706584214654684,
+    "gci_pct": 1.6950790718257231,
+    "fine_error_pct": -1.337920213037458
+   }
+  },
+  {
+   "id": "B1-sheet-fc1c1d2a",
+   "freq": 1.0,
+   "budget_Nm": 1.0,
+   "summary": "outputs\\refine-top-curve-2\\summary.json",
+   "half_span_mm": 360.0,
+   "ctrl": [
+    0.13109,
+    0.0585,
+    0.05043,
+    0.0366,
+    0.02685,
+    0.0216
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 2.7266617945335248,
+     "torque": 0.9986480737306594,
+     "tip_twist": 48.75115060284297
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "3182418a0ac18c849ece",
+     "thrust": 2.7534986302593887,
+     "torque": 1.0142587716147737,
+     "tip_twist": 47.74951432715904,
+     "elapsed_s": 1338.6
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "58fb78d3a5f475729e6d",
+     "thrust": 2.7696798880061877,
+     "torque": 1.0238706720205046,
+     "tip_twist": 47.098769621699,
+     "elapsed_s": 3336.2
+    }
+   ],
+   "thrust": {
+    "fine": 2.7696798880061877,
+    "change_last_pct": 0.5842284452030099,
+    "behaviour": "monotone",
+    "p": 1.1371938295464017,
+    "extrapolated": 2.7982215307811233,
+    "gci_pct": 1.2881291308488338,
+    "fine_error_pct": -1.01999225082684
+   },
+   "torque": {
+    "fine": 1.0238706720205046,
+    "change_last_pct": 0.9387807140488545,
+    "behaviour": "monotone",
+    "p": 1.0854874957014713,
+    "extrapolated": 1.0418280650509149,
+    "gci_pct": 2.1923414647395445,
+    "fine_error_pct": -1.7236426655037995
+   }
+  },
+  {
+   "id": "B1.25-sheet-1c187a1d",
+   "freq": 1.0,
+   "budget_Nm": 1.25,
+   "summary": "atlas\\refine-top\\1-free-span-seeds\\stage2.json",
+   "half_span_mm": 350.0,
+   "ctrl": [
+    0.18929,
+    0.11429,
+    0.07143,
+    0.05333,
+    0.04429,
+    0.01
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 3.1064891829284704,
+     "torque": 1.2496610804507142,
+     "tip_twist": 47.702800991888274
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "cd6624cb538f47f2e6b4",
+     "thrust": 3.1546289128591924,
+     "torque": 1.2766671534319194,
+     "tip_twist": 46.697097960600274,
+     "elapsed_s": 418.3
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "fa6b92940a1375972cfc",
+     "thrust": 3.1838828222137896,
+     "torque": 1.2931223268154455,
+     "tip_twist": 46.03347966211561,
+     "elapsed_s": 1250.3
+    }
+   ],
+   "thrust": {
+    "fine": 3.1838828222137896,
+    "change_last_pct": 0.9188123743277895,
+    "behaviour": "monotone",
+    "p": 1.1178926026519505,
+    "extrapolated": 3.2365891465695515,
+    "gci_pct": 2.0692628819453276,
+    "fine_error_pct": -1.628452731222474
+   },
+   "torque": {
+    "fine": 1.2931223268154455,
+    "change_last_pct": 1.2725148303679836,
+    "behaviour": "monotone",
+    "p": 1.1113015176299932,
+    "extrapolated": 1.3229868815174861,
+    "gci_pct": 2.8868648080251758,
+    "fine_error_pct": -2.257358339622051
+   }
+  },
+  {
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "freq": 1.25,
+   "budget_Nm": 0.75,
+   "summary": "outputs\\refine-top-f1.25-curve\\summary.json",
+   "half_span_mm": 320.0,
+   "ctrl": [
+    0.08249,
+    0.04193,
+    0.0255,
+    0.0255,
+    0.0255,
+    0.0205
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 2.54158384258914,
+     "torque": 0.749472627945409,
+     "tip_twist": 48.8454741345666
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "270690092def785ccdb0",
+     "thrust": 2.5490338419995466,
+     "torque": 0.7558377719282703,
+     "tip_twist": 48.013806796100255,
+     "elapsed_s": 1266.4
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "c4273c8378d79ef5122e",
+     "thrust": 2.5541158778804443,
+     "torque": 0.7600309094136221,
+     "tip_twist": 47.45731925160668,
+     "elapsed_s": 3109.4
+    }
+   ],
+   "thrust": {
+    "fine": 2.5541158778804443,
+    "change_last_pct": 0.19897436623411893,
+    "behaviour": "monotone",
+    "p": 0.8327191031216306,
+    "extrapolated": 2.5671667823766127,
+    "gci_pct": 0.6387192829225927,
+    "fine_error_pct": -0.5083777410085588
+   },
+   "torque": {
+    "fine": 0.7600309094136221,
+    "change_last_pct": 0.5517061784483023,
+    "behaviour": "monotone",
+    "p": 0.9188096431607596,
+    "extrapolated": 0.7696162402998785,
+    "gci_pct": 1.5764705697383683,
+    "fine_error_pct": -1.2454688953187354
+   }
+  },
+  {
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "freq": 1.25,
+   "budget_Nm": 1.0,
+   "summary": "outputs\\refine-top-f1.25-curve\\summary.json",
+   "half_span_mm": 320.0,
+   "ctrl": [
+    0.12748,
+    0.06193,
+    0.04345,
+    0.02863,
+    0.0255,
+    0.01
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 3.086531434897445,
+     "torque": 0.9995698599379405,
+     "tip_twist": 44.92670207814194
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "f74f2a611a4e0c55cdf5",
+     "thrust": 3.100815103777279,
+     "torque": 1.0099973665484605,
+     "tip_twist": 44.1808211834469,
+     "elapsed_s": 661.1
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "9c445b21f1da791db349",
+     "thrust": 3.1102909123810263,
+     "torque": 1.0177894799466634,
+     "tip_twist": 43.57081526461246,
+     "elapsed_s": 1795.7
+    }
+   ],
+   "thrust": {
+    "fine": 3.1102909123810263,
+    "change_last_pct": 0.30465988136438216,
+    "behaviour": "monotone",
+    "p": 0.9015051873466637,
+    "extrapolated": 3.132448085155191,
+    "gci_pct": 0.8904783104839494,
+    "fine_error_pct": -0.7073436549249967
+   },
+   "torque": {
+    "fine": 1.0177894799466634,
+    "change_last_pct": 0.765591858800819,
+    "behaviour": "monotone",
+    "p": 0.6076315765763549,
+    "extrapolated": 1.0465193460821107,
+    "gci_pct": 3.5284637321256915,
+    "fine_error_pct": -2.7452780727852066
+   }
+  },
+  {
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "freq": 1.25,
+   "budget_Nm": 1.25,
+   "summary": "outputs\\refine-top-f1.25-curve\\summary.json",
+   "half_span_mm": 400.0,
+   "ctrl": [
+    0.14199,
+    0.0649,
+    0.04736,
+    0.0297,
+    0.01523,
+    0.01
+   ],
+   "levels": [
+    {
+     "mesh": "21 x 12",
+     "span_panels": 21,
+     "chord_panels": 12,
+     "panels": 252,
+     "status": "verified",
+     "thrust": 4.243552792384566,
+     "torque": 1.2474818993109542,
+     "tip_twist": 60.02217377994708
+    },
+    {
+     "mesh": "32 x 18",
+     "span_panels": 32,
+     "chord_panels": 18,
+     "panels": 576,
+     "status": "verified",
+     "key": "e73e7a03d6ae702e9516",
+     "thrust": 4.346375393528636,
+     "torque": 1.2846160417805041,
+     "tip_twist": 58.865731705162155,
+     "elapsed_s": 1245.9
+    },
+    {
+     "mesh": "47 x 27",
+     "span_panels": 47,
+     "chord_panels": 27,
+     "panels": 1269,
+     "status": "verified",
+     "key": "183615092f3f77507921",
+     "thrust": 4.408242066968376,
+     "torque": 1.307355087453188,
+     "tip_twist": 58.129739879698356,
+     "elapsed_s": 3082.8
+    }
+   ],
+   "thrust": {
+    "fine": 4.408242066968376,
+    "change_last_pct": 1.403431855598767,
+    "behaviour": "monotone",
+    "p": 1.1423764675063453,
+    "extrapolated": 4.516752377497431,
+    "gci_pct": 3.076915607191211,
+    "fine_error_pct": -2.402396710292465
+   },
+   "torque": {
+    "fine": 1.307355087453188,
+    "change_last_pct": 1.7393167235828062,
+    "behaviour": "monotone",
+    "p": 1.0990486348754458,
+    "extrapolated": 1.34919278884477,
+    "gci_pct": 4.000223599646164,
+    "fine_error_pct": -3.1009431518978725
+   }
+  }
+ ]
+}

@@ -1,0 +1,52 @@
+{
+ "from": "outputs\\refine-top-2\\summary.json",
+ "chord_panels": 12,
+ "factor": 3,
+ "updated": "2026-11-27T05:13:45Z",
+ "seeds": [
+  {
+   "id": "B0.75-sheet-62a23e20",
+   "budget_Nm": 0.75,
+   "key": "fa358aa01b9e0c3d95e7",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact"
+   },
+   "status": "verified",
+   "thrust": 2.396452590947878,
+   "torque": 0.7818612349760544,
+   "tip_twist": 58.25160715902982,
+   "span": 0.4
+  },
+  {
+   "id": "B1-sheet-fc1c1d2a",
+   "budget_Nm": 1.0,
+   "key": "b6e3f0c5a1b10d092430",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact"
+   },
+   "status": "verified",
+   "thrust": 3.2253782420165087,
+   "torque": 1.1443629769808612,
+   "tip_twist": 57.1059620290329,
+   "span": 0.4
+  }
+ ]
+}

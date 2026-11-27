@@ -1,0 +1,77 @@
+{
+ "from": "outputs\\refine-top-f1.25\\summary.json",
+ "chord_panels": 12,
+ "factor": 3,
+ "updated": "2026-11-27T09:06:56Z",
+ "seeds": [
+  {
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "budget_Nm": 0.75,
+   "key": "4e8e7b05b4993a29e699",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact",
+    "freq": 1.25
+   },
+   "status": "verified",
+   "thrust": 2.795507794710387,
+   "torque": 0.8004099441852209,
+   "tip_twist": 54.67628476991716,
+   "span": 0.34
+  },
+  {
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "budget_Nm": 1.0,
+   "key": "580e40711d61c93f12e8",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact",
+    "freq": 1.25
+   },
+   "status": "verified",
+   "thrust": 4.068489583250121,
+   "torque": 1.1628200660111259,
+   "tip_twist": 63.41766482523212,
+   "span": 0.4
+  },
+  {
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "budget_Nm": 1.25,
+   "key": "c0fc55bb2dfe2bce316c",
+   "numerics": {
+    "stations": 22,
+    "span_panels": 21,
+    "chord_panels": 12,
+    "steps_per_cycle": 50,
+    "cycles": 4,
+    "dt_refinements": [
+     1,
+     2
+    ],
+    "param": "exact",
+    "freq": 1.25
+   },
+   "status": "verified",
+   "thrust": 4.166087401066861,
+   "torque": 1.2243935505107193,
+   "tip_twist": 58.308486108929934,
+   "span": 0.4
+  }
+ ]
+}
