@@ -490,40 +490,38 @@ function renderOverview(){
   const RS=Object.fromEntries(D.refined.filter(r=>r.set==='sweep').map(r=>[r.model,r]));
   const W=(st,f,m)=>D.winners.find(w=>w.study===st&&w.freq===f&&w.model===m);
   const counts=D.studies.map((s,i)=>C.s.filter(x=>x===i).length);
-  const best125=W('rod',1.25,'t0.50r');
   const tile=(k,v,s)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
   let h=`<h2>Carbon-fibre flapping wings in water: how the studies work and what they found</h2>
-  <p class="lede">One wing of the swimming robot: Ptera's unsteady vortex-lattice method coupled to a stabilized plate-torsion model. Every result is per wing at 0.5 m/s, a ±30° stroke (−26° to +34°) and peak root torque ≤ ${LIM} N·m; root chord 200 mm, leading edge straight and normal to the flow.</p>
+  <p class="lede">One wing of the swimming robot: Ptera's unsteady vortex-lattice method coupled to a stabilized plate-torsion model. Every result is per wing at 0.5 m/s, a ±30° stroke (−26° to +34°) and a peak root torque budget (${LIM} N·m in the original campaigns, 0.75–1.25 N·m for the FAAV wing); root chord 200 mm, leading edge straight and normal to the flow.</p>
   ${methodsCard()}
-  <h3 style="margin-top:18px">Headline results</h3>
+  <h3 style="margin-top:18px">Headline results: the FAAV wing (0.5 mm sheet on a stiff leading edge, one 400 mm sheet)</h3>
   <div class="tiles">
-   ${RS['t0.50r']?tile('Optimized from sweep winner · 0.5 mm + rod · 1 Hz',fmt(RS['t0.50r'].final.thrust)+' N',`at ${fmt(RS['t0.50r'].final.torque)} N·m · ${Math.round(RS['t0.50r'].final.half_span)} mm · fine mesh; outer chords at the 10 mm floor`):''}
-   ${(()=>{const r=R['t0.50r'];if(!r)return '';const b=r.baseline_at_budget;return b&&b.thrust>r.final.thrust?tile('Best for the hardware · 0.5 mm + rod · 1 Hz',fmt(b.thrust)+' N',`at ${fmt(b.torque)} N·m · ${Math.round(b.span)} mm half-span · campaign outline, fine mesh`):tile('Best for the hardware · 0.5 mm + rod · 1 Hz',fmt(r.final.thrust)+' N',`at ${fmt(r.final.torque)} N·m · ${Math.round(r.final.half_span)} mm · fine mesh, optimized`)})()}
-   ${(()=>{const r=R.rigid;if(!r)return '';const b=r.baseline_at_budget,u=b&&b.thrust>r.final.thrust;return tile('Rigid wing · 1 Hz',fmt(u?b.thrust:r.final.thrust)+' N',`at ${fmt(u?b.torque:r.final.torque)} N·m · fine mesh · ${u?'campaign outline, resized':'optimized'}`)})()}
-   ${best125?tile('0.5 mm + rod · 1.25 Hz',fmt(best125.thrust)+' N',`at ${fmt(best125.torque)} N·m · campaign mesh · +13% over 1 Hz`):''}
-   ${R['t0.50']?tile('Bare 0.5 mm plate · 1 Hz',fmt(R['t0.50'].final.thrust)+' N',`±${fmt(R['t0.50'].final.twist,0)}° tip twist: outside the model's comfort zone`):''}
+   ${(()=>{const L=(D.mesh_ladder&&D.mesh_ladder.wings)||[],lw=(f,B)=>L.find(w=>w.freq===f&&w.budget_Nm===B),tw=w=>{const l=w.levels[w.levels.length-1];return l&&l.tip_twist!=null?` · ±${fmt(l.tip_twist,0)}° tip twist`:''};
+     return [[1,1],[1,0.75],[1,1.25],[1.25,1.25]].map(([f,B])=>{const w=lw(f,B);return w?tile(`Recommended · ${f} Hz · ${B} N·m budget`,fmt(w.thrust.extrapolated)+' N',`at ${fmt(w.torque.extrapolated,3)} N·m · ${Math.round(w.half_span_mm)} mm half-span${tw(w)} · converged`):''}).join('')})()}
+   ${tile('Passive pitch against a rigid wing','+25%','2.87 N against 2.30 N, best one-sheet wing at ≤ 1 N·m, 1 Hz, search mesh')}
    ${tile('Designs simulated',N.toLocaleString(),`${(CAT_END-CAT0).toLocaleString()} rigid catalog runs + ${D.unique.toLocaleString()} unique elastic-study designs${N>CAT_END?` + ${(N-CAT_END).toLocaleString()} matched or planned-study results`:''}`)}
   </div>
   ${coverageCard()}
   <div class="grid2">
   <div class="card"><h3>Key findings</h3><ul class="f">
-   <li><b>The rod makes the wing nearly rigid in twist:</b> ±1–2° tip twist, and 0.5 and 0.25 mm sheets within 1% of each other.</li>
-   <li><b>Rod designs win on outline:</b> solved as rigid plates they perform the same, and the sweep found a rigid outline that closes most of the gap.</li>
-   <li><b>Every winner uses the full 200 mm root and tapers fast</b>, often to the 10 mm minimum over the outer third. Bare-plate winners reach the 400 mm limit; rod winners are 286–400 mm, shorter at higher frequency.</li>
-   ${(()=>{const c=D.winners.find(w=>w.study==='catalog'&&/200 mm root/.test(w.group)),e=W('rod',1,'t0.50r'),s=W('sweep',1,'rigid');return c&&e?`<li><b>Against the earlier rigid studies:</b> the best 200 mm-root catalog wing gives ${fmt(c.thrust)} N at ${fmt(c.torque)} N·m; the elastic campaigns reach ${fmt(e.thrust)} N with the rod${s?`, ${fmt(s.thrust)} N as a rigid plate from the sweep`:''}. Check conditions groups first: some catalog studies used another time step or stroke.</li>`:''})()}
-   <li><b>1.25 Hz gives about 13% more thrust than 1 Hz</b> at the same torque, on a shorter wing (286 vs 340 mm with the rod).</li>
-   <li><b>Without the rod, a 0.5 mm plate gains thrust</b> through ±50–70° of passive pitch. That is beyond small-deformation torsion and about 10% mesh-sensitive, so read it as a trend.</li>
-   <li><b>Which model fits the real wing is a bench test:</b> hang about 50 g at the trailing-edge tip of a clamped wing. About 4° of twist means the rod model holds; tens of degrees means the wing behaves like the bare plate.</li>
+   <li><b>Spend the torque on span.</b> Every top wing uses the full 200 mm root, tapers steeply over the inner sixth and keeps the outer half slender. At 1 N·m, outline alone moves thrust from 2.18 to 2.93 N (+34%) across 891 verified FAAV wings; the top 5% sit at 390–400 mm.</li>
+   <li><b>Most of the gain comes by 1.25 N·m.</b> Up to 1 N·m each extra 0.25 N·m buys 0.6–0.75 N of thrust; above it, 0.2 N or less, because the 400 mm sheet caps the span.</li>
+   <li><b>The 0.5 mm sheet's passive pitch adds 25% over a rigid wing</b> at equal torque, but only at that stiffness: a free 0.25 or 1.0 mm sheet does worse than rigid. Bonding the sheet to the rod removes the gain (±1–2° twist).</li>
+   <li><b>Frequency is the largest lever.</b> From 0.75 to 1 Hz thrust rises about 40% at every budget. From 1 to 1.25 Hz it rises about 12% at 0.75 and 1 N·m, where the wing must shrink to 320 mm, and 40% at 1.25 N·m, where it keeps 400 mm.</li>
+   <li><b>A joined sheet buys little.</b> With the span free, the best search-mesh wing gives 3.07 N at 510 mm, 7% more than the best one-sheet wing, at ±69° tip twist.</li>
+   <li><b>The recommended wings are mesh-converged</b> (last refinement step ≤ 1.4% thrust, ≤ 1.7% torque). Converged torque is 1.9–7.9% over each budget: size the motor with that margin or trim the span.</li>
+   <li><b>The main open risk is the model.</b> Every high-thrust FAAV wing twists ±46–70°, where separation and dynamic stall are likely and the inviscid model has neither. Thrust and torque measured on the built wing would settle it.</li>
   </ul></div>
   <div class="card"><h3>The studies</h3><table><tr><th>Study</th><th>What it is</th><th class="n">Designs</th></tr>
    ${D.studies.map((s,i)=>`<tr><td><span class="sw" style="background:${studyColor(i)}"></span><b>${s.label}</b></td><td class="small">${s.about}</td><td class="n">${counts[i].toLocaleString()}</td></tr>`).join('')}
    <tr><td><b>Manufactured candidates</b></td><td class="small">Top #7657, Middle #3894 and Rectangle #7835 at five sheet stiffnesses, 1 Hz (no rod).</td><td class="n">15</td></tr>
-   <tr><td><b>Optimized shapes</b></td><td class="small">1 Hz shapes refined on a 3× finer mesh: from the geometry-sweep winner (budget-matched) and from each model's campaign winner.</td><td class="n">${D.refined.length}</td></tr></table></div>
+   <tr><td><b>Recommended FAAV wings</b></td><td class="small">Standout one-sheet FAAV wings at three frequencies and three budgets, refined on a 21 × 12 mesh and converged on 32 × 18 and 47 × 27.</td><td class="n">${(D.mesh_ladder&&D.mesh_ladder.wings||[]).length}</td></tr>
+   <tr><td><b>Earlier optimized shapes</b></td><td class="small">1 Hz shapes refined on a 24 × 6 mesh: from the geometry-sweep winner (budget-matched) and from each model's campaign winner.</td><td class="n">${D.refined.length}</td></tr></table></div>
   </div>
   <div class="grid2">
   <div class="card"><h3>How to read the numbers</h3>
    <div class="kv"><div>Thrust</div><div>Mean thrust per wing over the last flapping cycle (N).</div>
-   <div>Torque</div><div>Peak absolute root roll moment per wing (N·m). The budget is ${LIM} N·m.</div>
+   <div>Torque</div><div>Peak absolute root roll moment per wing (N·m), held under a budget: ${LIM} N·m in the original campaigns, 0.75–1.25 N·m for the FAAV wing.</div>
    <div>Tip twist</div><div>Amplitude of passive pitch at the tip (±°). Rigid wings have none.</div>
    <div>${statusPill('verified')}</div><div>Elastic result solved at two stabilization settings that agree within 3%: numerically repeatable.</div>
    <div>${statusPill('ok')}</div><div>Rigid result whose last two cycles agree within 5%.</div>
