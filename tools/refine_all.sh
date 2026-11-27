@@ -24,4 +24,6 @@ for f in 1.25 0.75 1; do
   seed_cache "$o-baseline"
   "$PY" -m wingstudy.refine_top --from "$o/summary.json" --freq "$f" --chord-panels 12 --baseline --workers "$W" --out "$o-baseline"
 done
+echo "== animations $(date +%T)"
+"$PY" -m wingstudy.top_media atlas/refine-top/*/stage2.json outputs/refine-all-f*-curve/summary.json --workers 4
 echo "== done $(date +%T)"

@@ -110,6 +110,10 @@ def build(out: Path) -> None:
     ml = ROOT / "atlas" / "mesh-ladder.json"        # wingstudy.mesh_ladder output: the recommended wings on finer meshes
     if ml.exists():
         D["mesh_ladder"] = json.loads(ml.read_text(encoding="utf-8"))
+    tm = ROOT / "atlas" / "top-media.json"          # wingstudy.top_media output: animations of the Top-tab performers
+    if tm.exists():
+        D["media"] = {**(D.get("media") or {}), **{k: {n: v[n] for n in ("main", "front", "top", "poster")}
+                                                  for k, v in json.loads(tm.read_text(encoding="utf-8")).items()}}
     fs = ROOT / "atlas" / "frequency-sweep.json"    # wingstudy.frequency_sweep output: optimized wings at every frequency
     if fs.exists():
         D["frequency_sweep"] = json.loads(fs.read_text(encoding="utf-8"))
