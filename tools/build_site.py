@@ -107,6 +107,9 @@ def build(out: Path) -> None:
     n = study_atlas.merge_refinement(D, [D.get("refine_top"), D.get("refine_curve")])
     if n:
         print(f"optimized shapes: {n} map rows")
+    ml = ROOT / "atlas" / "mesh-ladder.json"        # wingstudy.mesh_ladder output: the recommended wings on finer meshes
+    if ml.exists():
+        D["mesh_ladder"] = json.loads(ml.read_text(encoding="utf-8"))
     gifs = ROOT / "atlas" / "media" / "refine-top"   # wingstudy.refine_top --gif output
     D["refine_gifs"] = sorted(g.stem for g in gifs.glob("*.gif")) if gifs.exists() else []
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")
