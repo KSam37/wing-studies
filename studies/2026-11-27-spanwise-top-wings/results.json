@@ -1,0 +1,5227 @@
+{
+ "schema": "wingstudy/study-results@1",
+ "study": "2026-11-27-spanwise-top-wings",
+ "kind": "design-set",
+ "spec_sha256": "80eb61684a06a880b09dcb93e9395289579a189dcaaa3fc4470c973c202436de",
+ "code": {
+  "structural": "c13001410d04fe1a9ce9f1e1e660100eafe86254de2edd7d3aa3661b634f6d1c",
+  "solve_path": "1feda8c970e4717f59a7662f33b4589dc30edcdf0eeefb8987725c2f9706eb34",
+  "ptera": "5.1.0",
+  "numpy": "2.5.4",
+  "numba": "0.68.0",
+  "scipy": "1.18.1",
+  "python": "3.14.2",
+  "digest": "80ca99756b95ec04"
+ },
+ "completed": "2026-11-28T04:19:33Z",
+ "counts": {
+  "verified": 53,
+  "unverified": 7,
+  "unresolved": 1,
+  "uncertain": 2
+ },
+ "cases": [
+  {
+   "case_id": "c0001",
+   "wing": "optimized 1 Hz 0.75 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    74.05,
+    44.22,
+    31.01,
+    25.5,
+    25.5,
+    25.13,
+    20.5
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "8538c39861bc983440fb136a",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.07405,
+      0.04422,
+      0.03101,
+      0.0255,
+      0.0255,
+      0.02513,
+      0.0205
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "8538c39861bc983440fb136a"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.257895985749699,
+   "torque_Nm": 0.22447581605569106,
+   "tip_twist_deg": 7.943004109352897,
+   "rms_lift_N": 1.1475263992848168,
+   "verification_spread_pct": 0.08074380796269048,
+   "cycle_error_pct": 1.1061637913083389,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 310.78
+  },
+  {
+   "case_id": "c0002",
+   "wing": "optimized 1 Hz 0.75 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    74.05,
+    44.22,
+    31.01,
+    25.5,
+    25.5,
+    25.13,
+    20.5
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "f10d9bb4decc09d4f799cd90",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.07405,
+      0.04422,
+      0.03101,
+      0.0255,
+      0.0255,
+      0.02513,
+      0.0205
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "f10d9bb4decc09d4f799cd90"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.379948349562558,
+   "torque_Nm": 0.25108430373883933,
+   "tip_twist_deg": 8.750696671131934,
+   "rms_lift_N": 1.4138958264574413,
+   "verification_spread_pct": 0.2289087133723812,
+   "cycle_error_pct": 1.367835414564545,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 240.87
+  },
+  {
+   "case_id": "c0003",
+   "wing": "optimized 1 Hz 0.75 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    74.05,
+    44.22,
+    31.01,
+    25.5,
+    25.5,
+    25.13,
+    20.5
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "5c936a4abc0da44a65082c7e",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.07405,
+      0.04422,
+      0.03101,
+      0.0255,
+      0.0255,
+      0.02513,
+      0.0205
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "5c936a4abc0da44a65082c7e"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5194727805490579,
+   "torque_Nm": 0.27853266193400966,
+   "tip_twist_deg": 10.181611819696673,
+   "rms_lift_N": 1.6926533475852634,
+   "verification_spread_pct": 0.3757348230039381,
+   "cycle_error_pct": 1.3365366403435108,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 298.82
+  },
+  {
+   "case_id": "c0004",
+   "wing": "optimized 1.25 Hz 0.75 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    74.05,
+    44.22,
+    31.01,
+    25.5,
+    25.5,
+    25.13,
+    20.5
+   ],
+   "half_span_mm": 367.5,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "320c0c38b1dd9b572a85d24f",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.07405,
+      0.04422,
+      0.03101,
+      0.0255,
+      0.0255,
+      0.02513,
+      0.0205
+     ],
+     "half_span": 0.3675,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "320c0c38b1dd9b572a85d24f"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.23865706023936234,
+   "torque_Nm": 0.21900136014047142,
+   "tip_twist_deg": 7.888072785557542,
+   "rms_lift_N": 1.0725622722258485,
+   "verification_spread_pct": 0.15826084097876053,
+   "cycle_error_pct": 0.8929205395743509,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 108.25
+  },
+  {
+   "case_id": "c0005",
+   "wing": "optimized 1.25 Hz 0.75 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    74.05,
+    44.22,
+    31.01,
+    25.5,
+    25.5,
+    25.13,
+    20.5
+   ],
+   "half_span_mm": 367.5,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "aa43a1f5ed7f69d7a11061ad",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.07405,
+      0.04422,
+      0.03101,
+      0.0255,
+      0.0255,
+      0.02513,
+      0.0205
+     ],
+     "half_span": 0.3675,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "aa43a1f5ed7f69d7a11061ad"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.34460389115972256,
+   "torque_Nm": 0.23639159155718842,
+   "tip_twist_deg": 8.716212142974616,
+   "rms_lift_N": 1.2919543053728355,
+   "verification_spread_pct": 0.15379311342933827,
+   "cycle_error_pct": 1.1312630823376097,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 297.17
+  },
+  {
+   "case_id": "c0006",
+   "wing": "optimized 1.25 Hz 0.75 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    74.05,
+    44.22,
+    31.01,
+    25.5,
+    25.5,
+    25.13,
+    20.5
+   ],
+   "half_span_mm": 367.5,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "76bf3a6f471f62e3ccf9d80d",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.07405,
+      0.04422,
+      0.03101,
+      0.0255,
+      0.0255,
+      0.02513,
+      0.0205
+     ],
+     "half_span": 0.3675,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "76bf3a6f471f62e3ccf9d80d"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4662803245847638,
+   "torque_Nm": 0.25735646638635734,
+   "tip_twist_deg": 9.679835380598048,
+   "rms_lift_N": 1.5379844348557554,
+   "verification_spread_pct": 0.2874321714589453,
+   "cycle_error_pct": 1.3256635496025861,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 282.79
+  },
+  {
+   "case_id": "c0007",
+   "wing": "optimized 1.25 Hz 1.25 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    149.61,
+    87.38,
+    53.99,
+    39.65,
+    24.99,
+    14.51,
+    10
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "b03d3c63562f5648b66882f1",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.14961,
+      0.08738,
+      0.05399,
+      0.03965,
+      0.02499,
+      0.01451,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "b03d3c63562f5648b66882f1"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.3730005563968863,
+   "torque_Nm": 0.3611293091927931,
+   "tip_twist_deg": 8.989646133087643,
+   "rms_lift_N": 1.7150244970143143,
+   "verification_spread_pct": 0.20846162645601252,
+   "cycle_error_pct": 0.6999540118970564,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 104.79
+  },
+  {
+   "case_id": "c0008",
+   "wing": "optimized 1.25 Hz 1.25 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    149.61,
+    87.38,
+    53.99,
+    39.65,
+    24.99,
+    14.51,
+    10
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "b567e5287e4d805e154a8181",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.14961,
+      0.08738,
+      0.05399,
+      0.03965,
+      0.02499,
+      0.01451,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "b567e5287e4d805e154a8181"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5146565069331839,
+   "torque_Nm": 0.39708398558497543,
+   "tip_twist_deg": 11.164593548632684,
+   "rms_lift_N": 2.1271163840733434,
+   "verification_spread_pct": 0.3561735004167916,
+   "cycle_error_pct": 1.0677204974743957,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 111.6
+  },
+  {
+   "case_id": "c0009",
+   "wing": "optimized 1.25 Hz 1.25 N\u00b7m",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    149.61,
+    87.38,
+    53.99,
+    39.65,
+    24.99,
+    14.51,
+    10
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "0a2095f0a004f3547c6cb049",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.14961,
+      0.08738,
+      0.05399,
+      0.03965,
+      0.02499,
+      0.01451,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0a2095f0a004f3547c6cb049"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6757891850742381,
+   "torque_Nm": 0.43740042448552763,
+   "tip_twist_deg": 14.768446536783976,
+   "rms_lift_N": 2.6100569681637555,
+   "verification_spread_pct": 0.462465762095261,
+   "cycle_error_pct": 1.3284618147551097,
+   "dt_s": 0.008,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 108.54
+  },
+  {
+   "case_id": "c0010",
+   "wing": "atlas 1c187a1d",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    200,
+    105.71,
+    71.43,
+    71.43,
+    44.29,
+    44.29,
+    10
+   ],
+   "half_span_mm": 390.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "122f975547cd03be7d5780f9",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.10571,
+      0.07143,
+      0.07143,
+      0.04429,
+      0.04429,
+      0.01
+     ],
+     "half_span": 0.39,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "122f975547cd03be7d5780f9"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.3869566441507203,
+   "torque_Nm": 0.41843310809549883,
+   "tip_twist_deg": 12.723826047999516,
+   "rms_lift_N": 1.8972321366163714,
+   "verification_spread_pct": 0.4353658413229745,
+   "cycle_error_pct": 0.8347404444920746,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 110.66
+  },
+  {
+   "case_id": "c0011",
+   "wing": "atlas 1c187a1d",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    200,
+    105.71,
+    71.43,
+    71.43,
+    44.29,
+    44.29,
+    10
+   ],
+   "half_span_mm": 390.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "583ae94c4aefd0bd27306cf5",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.10571,
+      0.07143,
+      0.07143,
+      0.04429,
+      0.04429,
+      0.01
+     ],
+     "half_span": 0.39,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "583ae94c4aefd0bd27306cf5"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5265932437601806,
+   "torque_Nm": 0.45276766219338443,
+   "tip_twist_deg": 16.685568885795902,
+   "rms_lift_N": 2.3775154538447554,
+   "verification_spread_pct": 0.6954273734813465,
+   "cycle_error_pct": 1.0314993888538102,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 108.82
+  },
+  {
+   "case_id": "c0012",
+   "wing": "atlas 1c187a1d",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    200,
+    105.71,
+    71.43,
+    71.43,
+    44.29,
+    44.29,
+    10
+   ],
+   "half_span_mm": 390.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "3927e482ce953f827ba959c5",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.10571,
+      0.07143,
+      0.07143,
+      0.04429,
+      0.04429,
+      0.01
+     ],
+     "half_span": 0.39,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "3927e482ce953f827ba959c5"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.7042428217393099,
+   "torque_Nm": 0.49327075026075756,
+   "tip_twist_deg": 23.744938562292603,
+   "rms_lift_N": 3.000913001434488,
+   "verification_spread_pct": 0.39215375509635864,
+   "cycle_error_pct": 0.19286419323492351,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 400.41
+  },
+  {
+   "case_id": "c0013",
+   "wing": "atlas 55be38eb",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    200,
+    200,
+    117.96,
+    117.96,
+    117.96,
+    117.96,
+    10
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "23111820a9554fef4ddad01f",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.11796,
+      0.11796,
+      0.11796,
+      0.11796,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "23111820a9554fef4ddad01f"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4321929355907537,
+   "torque_Nm": 0.4473766382263797,
+   "tip_twist_deg": 25.849050528133105,
+   "rms_lift_N": 1.835500593702862,
+   "verification_spread_pct": 0.6109073401941119,
+   "cycle_error_pct": 1.6228115861192138,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 495.04
+  },
+  {
+   "case_id": "c0014",
+   "wing": "atlas 55be38eb",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    200,
+    200,
+    117.96,
+    117.96,
+    117.96,
+    117.96,
+    10
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "134520d9c77ea7229f78c468",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.11796,
+      0.11796,
+      0.11796,
+      0.11796,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "134520d9c77ea7229f78c468"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6471377850042322,
+   "torque_Nm": 0.4771807718410936,
+   "tip_twist_deg": 32.040432604222275,
+   "rms_lift_N": 2.2474261846133587,
+   "verification_spread_pct": 0.7573043181139174,
+   "cycle_error_pct": 0.020439469799749383,
+   "dt_s": 0.005,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 1060.08
+  },
+  {
+   "case_id": "c0015",
+   "wing": "atlas 55be38eb",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    200,
+    200,
+    117.96,
+    117.96,
+    117.96,
+    117.96,
+    10
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "6b2ee343bed6b4f6644381ec",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.11796,
+      0.11796,
+      0.11796,
+      0.11796,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "6b2ee343bed6b4f6644381ec"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 0.9330841741020364,
+   "torque_Nm": 0.5201308475890172,
+   "tip_twist_deg": 37.340645205811825,
+   "rms_lift_N": 2.623032539816645,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 0.06747838765000336,
+   "dt_s": 0.004,
+   "cycles": 8,
+   "added_mass_factor": 0.7,
+   "error": null,
+   "elapsed_s": 508.36
+  },
+  {
+   "case_id": "c0016",
+   "wing": "atlas d633a32f",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    139.6,
+    56.9,
+    39.9,
+    29.9,
+    15.5,
+    10,
+    10
+   ],
+   "half_span_mm": 510.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "fa14928b5b95905bc2d0d88a",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.1396,
+      0.0569,
+      0.0399,
+      0.0299,
+      0.0155,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.51,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "fa14928b5b95905bc2d0d88a"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.40208602890301504,
+   "torque_Nm": 0.3579848039107111,
+   "tip_twist_deg": 10.42844647539075,
+   "rms_lift_N": 1.8290544603265046,
+   "verification_spread_pct": 0.12395239090695327,
+   "cycle_error_pct": 1.1282096696952322,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 236.77
+  },
+  {
+   "case_id": "c0017",
+   "wing": "atlas d633a32f",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    139.6,
+    56.9,
+    39.9,
+    29.9,
+    15.5,
+    10,
+    10
+   ],
+   "half_span_mm": 510.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "9646644a36ada8d61f12fa02",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.1396,
+      0.0569,
+      0.0399,
+      0.0299,
+      0.0155,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.51,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "9646644a36ada8d61f12fa02"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.567404328792823,
+   "torque_Nm": 0.4084460721873441,
+   "tip_twist_deg": 13.788338469918084,
+   "rms_lift_N": 2.2825933286999756,
+   "verification_spread_pct": 0.18853935079419004,
+   "cycle_error_pct": 0.9251644898012411,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 215.14
+  },
+  {
+   "case_id": "c0018",
+   "wing": "atlas d633a32f",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    139.6,
+    56.9,
+    39.9,
+    29.9,
+    15.5,
+    10,
+    10
+   ],
+   "half_span_mm": 510.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "049673d089b337b77736ee99",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.1396,
+      0.0569,
+      0.0399,
+      0.0299,
+      0.0155,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.51,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "049673d089b337b77736ee99"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.7299114617252264,
+   "torque_Nm": 0.4529171461512071,
+   "tip_twist_deg": 17.711820434974477,
+   "rms_lift_N": 2.755163238516697,
+   "verification_spread_pct": 0.23956721646731785,
+   "cycle_error_pct": 0.631304700824815,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 221.9
+  },
+  {
+   "case_id": "c0019",
+   "wing": "atlas b07f1d80",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    152.86,
+    125.71,
+    98.57,
+    71.43,
+    44.29,
+    17.14,
+    17.14
+   ],
+   "half_span_mm": 530.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "99940e47703c531d985b881a",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.15286,
+      0.12571,
+      0.09857,
+      0.07143,
+      0.04429,
+      0.01714,
+      0.01714
+     ],
+     "half_span": 0.53,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "99940e47703c531d985b881a"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.36266397473587053,
+   "torque_Nm": 0.40015407619953985,
+   "tip_twist_deg": 20.76374458992577,
+   "rms_lift_N": 1.806224437991607,
+   "verification_spread_pct": 0.3972152492613785,
+   "cycle_error_pct": 0.8669419247414311,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 361.62
+  },
+  {
+   "case_id": "c0020",
+   "wing": "atlas b07f1d80",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    152.86,
+    125.71,
+    98.57,
+    71.43,
+    44.29,
+    17.14,
+    17.14
+   ],
+   "half_span_mm": 530.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "7c58aca1e9e5d8cb0a1b6dab",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.15286,
+      0.12571,
+      0.09857,
+      0.07143,
+      0.04429,
+      0.01714,
+      0.01714
+     ],
+     "half_span": 0.53,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "7c58aca1e9e5d8cb0a1b6dab"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5003869746307098,
+   "torque_Nm": 0.42783490365835886,
+   "tip_twist_deg": 26.931107208091582,
+   "rms_lift_N": 2.082654646535875,
+   "verification_spread_pct": 0.5051543605731854,
+   "cycle_error_pct": 0.30036438886579314,
+   "dt_s": 0.005,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 816.64
+  },
+  {
+   "case_id": "c0021",
+   "wing": "atlas b07f1d80",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    152.86,
+    125.71,
+    98.57,
+    71.43,
+    44.29,
+    17.14,
+    17.14
+   ],
+   "half_span_mm": 530.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "499754f88c20df21d644294b",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.15286,
+      0.12571,
+      0.09857,
+      0.07143,
+      0.04429,
+      0.01714,
+      0.01714
+     ],
+     "half_span": 0.53,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "499754f88c20df21d644294b"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6509987272386447,
+   "torque_Nm": 0.4513844775589203,
+   "tip_twist_deg": 31.823357200108582,
+   "rms_lift_N": 2.325284860006138,
+   "verification_spread_pct": 0.5880306270817338,
+   "cycle_error_pct": 0.695132921515646,
+   "dt_s": 0.004,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 853.84
+  },
+  {
+   "case_id": "c0022",
+   "wing": "atlas 892c2944",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    192.86,
+    165.71,
+    138.57,
+    111.43,
+    84.29,
+    37.14,
+    20
+   ],
+   "half_span_mm": 470.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "28ae19fd00bb2db712366e09",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.19286,
+      0.16571,
+      0.13857,
+      0.11143,
+      0.08429,
+      0.03714,
+      0.02
+     ],
+     "half_span": 0.47,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "28ae19fd00bb2db712366e09"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.37544221627994795,
+   "torque_Nm": 0.43629583932448057,
+   "tip_twist_deg": 23.14206049270473,
+   "rms_lift_N": 1.7396019593963281,
+   "verification_spread_pct": 1.0441357998709235,
+   "cycle_error_pct": 1.855312297321124,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 153.66
+  },
+  {
+   "case_id": "c0023",
+   "wing": "atlas 892c2944",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    192.86,
+    165.71,
+    138.57,
+    111.43,
+    84.29,
+    37.14,
+    20
+   ],
+   "half_span_mm": 470.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "f7cfa50f318aba688eb3bed7",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.19286,
+      0.16571,
+      0.13857,
+      0.11143,
+      0.08429,
+      0.03714,
+      0.02
+     ],
+     "half_span": 0.47,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "f7cfa50f318aba688eb3bed7"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5367143064242508,
+   "torque_Nm": 0.4577214202356528,
+   "tip_twist_deg": 29.336690491341443,
+   "rms_lift_N": 1.9348377489671555,
+   "verification_spread_pct": 1.2225941767041026,
+   "cycle_error_pct": 0.1494380831310145,
+   "dt_s": 0.01,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 276.75
+  },
+  {
+   "case_id": "c0024",
+   "wing": "atlas 892c2944",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    192.86,
+    165.71,
+    138.57,
+    111.43,
+    84.29,
+    37.14,
+    20
+   ],
+   "half_span_mm": 470.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "a680f47d2796a398e5fb3cfc",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.19286,
+      0.16571,
+      0.13857,
+      0.11143,
+      0.08429,
+      0.03714,
+      0.02
+     ],
+     "half_span": 0.47,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "a680f47d2796a398e5fb3cfc"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 0.768673008392776,
+   "torque_Nm": 0.474456081088247,
+   "tip_twist_deg": 34.678177949091236,
+   "rms_lift_N": 2.2080155962130648,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 0.5549645586462637,
+   "dt_s": 0.004,
+   "cycles": 8,
+   "added_mass_factor": 0.7,
+   "error": null,
+   "elapsed_s": 430.06
+  },
+  {
+   "case_id": "c0025",
+   "wing": "atlas 47f2e43b",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200,
+    200,
+    200,
+    158.57,
+    141.43,
+    104.29,
+    37.14,
+    10
+   ],
+   "half_span_mm": 500.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "0c3706ba1ab080d9c862843b",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.15857,
+      0.14143,
+      0.10429,
+      0.03714,
+      0.01
+     ],
+     "half_span": 0.5,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0c3706ba1ab080d9c862843b"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4152528318497416,
+   "torque_Nm": 0.4427608892895339,
+   "tip_twist_deg": 25.56861486330493,
+   "rms_lift_N": 1.5682324144982804,
+   "verification_spread_pct": 1.359006499657882,
+   "cycle_error_pct": 0.08288384837256343,
+   "dt_s": 0.013333333333333334,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 334.55
+  },
+  {
+   "case_id": "c0026",
+   "wing": "atlas 47f2e43b",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200,
+    200,
+    200,
+    158.57,
+    141.43,
+    104.29,
+    37.14,
+    10
+   ],
+   "half_span_mm": 500.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "1530643fff91d399ef6eb3d6",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.15857,
+      0.14143,
+      0.10429,
+      0.03714,
+      0.01
+     ],
+     "half_span": 0.5,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "1530643fff91d399ef6eb3d6"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6319043205226972,
+   "torque_Nm": 0.46565752791058185,
+   "tip_twist_deg": 31.113997016209158,
+   "rms_lift_N": 1.7121551394222145,
+   "verification_spread_pct": 1.5468028650505323,
+   "cycle_error_pct": 0.48665109694106623,
+   "dt_s": 0.01,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 285.19
+  },
+  {
+   "case_id": "c0027",
+   "wing": "atlas 47f2e43b",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200,
+    200,
+    200,
+    158.57,
+    141.43,
+    104.29,
+    37.14,
+    10
+   ],
+   "half_span_mm": 500.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "key": "f7b302578cadfed15a1e87cf",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.15857,
+      0.14143,
+      0.10429,
+      0.03714,
+      0.01
+     ],
+     "half_span": 0.5,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "f7b302578cadfed15a1e87cf"
+    }
+   },
+   "status": "unresolved",
+   "thrust_N": null,
+   "torque_Nm": null,
+   "tip_twist_deg": null,
+   "rms_lift_N": null,
+   "verification_spread_pct": null,
+   "cycle_error_pct": null,
+   "dt_s": 0.016,
+   "cycles": 4,
+   "added_mass_factor": 0.7,
+   "error": "Sheet pitch exceeds configured limit.",
+   "elapsed_s": 75.24
+  },
+  {
+   "case_id": "c0028",
+   "wing": "atlas f65716c6",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    89.6,
+    46.9,
+    13.9,
+    13.9,
+    13.9,
+    13.9,
+    13.9
+   ],
+   "half_span_mm": 340.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "f65716c6e1d74ad6ab85f798",
+   "key": "4e374be7b92123c0a7094cec",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0469,
+      0.0139,
+      0.0139,
+      0.0139,
+      0.0139,
+      0.0139
+     ],
+     "half_span": 0.34,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "4e374be7b92123c0a7094cec"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.25367344913798134,
+   "torque_Nm": 0.1895433848954039,
+   "tip_twist_deg": 6.112985104445858,
+   "rms_lift_N": 1.004862272354846,
+   "verification_spread_pct": 0.005907630835390223,
+   "cycle_error_pct": 0.18336942078081653,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 208.06
+  },
+  {
+   "case_id": "c0029",
+   "wing": "atlas f65716c6",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    89.6,
+    46.9,
+    13.9,
+    13.9,
+    13.9,
+    13.9,
+    13.9
+   ],
+   "half_span_mm": 340.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "f65716c6e1d74ad6ab85f798",
+   "key": "e78ba64b325efab3a2b8f9b9",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0469,
+      0.0139,
+      0.0139,
+      0.0139,
+      0.0139,
+      0.0139
+     ],
+     "half_span": 0.34,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "e78ba64b325efab3a2b8f9b9"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.3540883357167142,
+   "torque_Nm": 0.21223952848696373,
+   "tip_twist_deg": 6.093816784871641,
+   "rms_lift_N": 1.2276290967128145,
+   "verification_spread_pct": 0.14278481761458733,
+   "cycle_error_pct": 0.490528800288375,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 95.34
+  },
+  {
+   "case_id": "c0030",
+   "wing": "atlas f65716c6",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    89.6,
+    46.9,
+    13.9,
+    13.9,
+    13.9,
+    13.9,
+    13.9
+   ],
+   "half_span_mm": 340.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "f65716c6e1d74ad6ab85f798",
+   "key": "b51f937a1eea456895c7cfa7",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0469,
+      0.0139,
+      0.0139,
+      0.0139,
+      0.0139,
+      0.0139
+     ],
+     "half_span": 0.34,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "b51f937a1eea456895c7cfa7"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.477994088464055,
+   "torque_Nm": 0.23448113352754335,
+   "tip_twist_deg": 6.3353436557667955,
+   "rms_lift_N": 1.4797120547122695,
+   "verification_spread_pct": 0.5534258143941041,
+   "cycle_error_pct": 0.0017758025298343551,
+   "dt_s": 0.008,
+   "cycles": 8,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 285.72
+  },
+  {
+   "case_id": "c0031",
+   "wing": "atlas 74fb8fc1",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    89.6,
+    66.9,
+    32.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "74fb8fc1e60ea0492fafa1ff",
+   "key": "745700d4ff34a290f63d2b3f",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0669,
+      0.032,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "745700d4ff34a290f63d2b3f"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.2985492201366685,
+   "torque_Nm": 0.2639520916521076,
+   "tip_twist_deg": 8.583538810989735,
+   "rms_lift_N": 1.3385017041406435,
+   "verification_spread_pct": 0.1036768097454999,
+   "cycle_error_pct": 0.8986062214999134,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 261.82
+  },
+  {
+   "case_id": "c0032",
+   "wing": "atlas 74fb8fc1",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    89.6,
+    66.9,
+    32.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "74fb8fc1e60ea0492fafa1ff",
+   "key": "c97b0c12eaaad56a9865b7a4",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0669,
+      0.032,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c97b0c12eaaad56a9865b7a4"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4373560975825601,
+   "torque_Nm": 0.29598672561928413,
+   "tip_twist_deg": 9.61056323718672,
+   "rms_lift_N": 1.666154680275586,
+   "verification_spread_pct": 0.25544026437526807,
+   "cycle_error_pct": 1.1961127251073107,
+   "dt_s": 0.005,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 221.85
+  },
+  {
+   "case_id": "c0033",
+   "wing": "atlas 74fb8fc1",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    89.6,
+    66.9,
+    32.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "74fb8fc1e60ea0492fafa1ff",
+   "key": "fcc855698ed8c944b3b35d84",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0669,
+      0.032,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "fcc855698ed8c944b3b35d84"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5967122931194535,
+   "torque_Nm": 0.33015464855302806,
+   "tip_twist_deg": 11.362689208078994,
+   "rms_lift_N": 2.0192130637929186,
+   "verification_spread_pct": 0.3845381106473437,
+   "cycle_error_pct": 1.189013688267178,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 257.78
+  },
+  {
+   "case_id": "c0034",
+   "wing": "atlas cbf15d97",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    148.9,
+    118.3,
+    60.5,
+    56.3,
+    54.9,
+    36.6,
+    15.8
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "cbf15d97385d44677233a414",
+   "key": "c52563cee0607d053ea351db",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.1489,
+      0.1183,
+      0.0605,
+      0.0563,
+      0.0549,
+      0.0366,
+      0.0158
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c52563cee0607d053ea351db"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.34663482625900527,
+   "torque_Nm": 0.37706432846114063,
+   "tip_twist_deg": 12.197370144609959,
+   "rms_lift_N": 1.7264396914568285,
+   "verification_spread_pct": 0.44779289742134093,
+   "cycle_error_pct": 1.0621990662785423,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 93.45
+  },
+  {
+   "case_id": "c0035",
+   "wing": "atlas cbf15d97",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    148.9,
+    118.3,
+    60.5,
+    56.3,
+    54.9,
+    36.6,
+    15.8
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "cbf15d97385d44677233a414",
+   "key": "0cf997e8dff61ca8ad4da433",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.1489,
+      0.1183,
+      0.0605,
+      0.0563,
+      0.0549,
+      0.0366,
+      0.0158
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0cf997e8dff61ca8ad4da433"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4800989954103698,
+   "torque_Nm": 0.4085923376816952,
+   "tip_twist_deg": 16.001427786564058,
+   "rms_lift_N": 2.152156059904925,
+   "verification_spread_pct": 0.7703185299399745,
+   "cycle_error_pct": 1.3222190001200778,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 107.24
+  },
+  {
+   "case_id": "c0036",
+   "wing": "atlas cbf15d97",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    148.9,
+    118.3,
+    60.5,
+    56.3,
+    54.9,
+    36.6,
+    15.8
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "cbf15d97385d44677233a414",
+   "key": "adfc2870ab7a95a427f4ff0d",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.1489,
+      0.1183,
+      0.0605,
+      0.0563,
+      0.0549,
+      0.0366,
+      0.0158
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "adfc2870ab7a95a427f4ff0d"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6505821838660726,
+   "torque_Nm": 0.4497138058584171,
+   "tip_twist_deg": 22.76224168573432,
+   "rms_lift_N": 2.68405912393091,
+   "verification_spread_pct": 1.3001495586568956,
+   "cycle_error_pct": 0.506620618968379,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 338.96
+  },
+  {
+   "case_id": "c0037",
+   "wing": "atlas 6ec1be78",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    200.0,
+    160.0,
+    120.0,
+    120.0,
+    120.0,
+    100.0,
+    40.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "6ec1be788e3ffd3e4d3f80fd",
+   "key": "63c9412ba494982b795f9c83",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.16,
+      0.12,
+      0.12,
+      0.12,
+      0.1,
+      0.04
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "63c9412ba494982b795f9c83"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.40452487617952254,
+   "torque_Nm": 0.4314476631007512,
+   "tip_twist_deg": 23.247829113086354,
+   "rms_lift_N": 1.756855510036738,
+   "verification_spread_pct": 1.167325162932794,
+   "cycle_error_pct": 0.6640987113847118,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 181.49
+  },
+  {
+   "case_id": "c0038",
+   "wing": "atlas 6ec1be78",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    200.0,
+    160.0,
+    120.0,
+    120.0,
+    120.0,
+    100.0,
+    40.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "6ec1be788e3ffd3e4d3f80fd",
+   "key": "2911e1cf342a25d1e003dd97",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.16,
+      0.12,
+      0.12,
+      0.12,
+      0.1,
+      0.04
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "2911e1cf342a25d1e003dd97"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6029546130213794,
+   "torque_Nm": 0.4600609091465539,
+   "tip_twist_deg": 29.270622555110887,
+   "rms_lift_N": 2.141577034662748,
+   "verification_spread_pct": 1.4340303436838424,
+   "cycle_error_pct": 3.06451976538609,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 210.09
+  },
+  {
+   "case_id": "c0039",
+   "wing": "atlas 6ec1be78",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    200.0,
+    160.0,
+    120.0,
+    120.0,
+    120.0,
+    100.0,
+    40.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "6ec1be788e3ffd3e4d3f80fd",
+   "key": "ce7d96425ae405cd5dc329e4",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.16,
+      0.12,
+      0.12,
+      0.12,
+      0.1,
+      0.04
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "ce7d96425ae405cd5dc329e4"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 0.8728396071096398,
+   "torque_Nm": 0.49723224103105285,
+   "tip_twist_deg": 34.47917045533324,
+   "rms_lift_N": 2.5369926691202243,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 0.08313980418526024,
+   "dt_s": 0.008,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 650.79
+  },
+  {
+   "case_id": "c0040",
+   "wing": "atlas 554c1cd8",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "554c1cd8753c0a141fe02547",
+   "key": "6ff727fb34e974afe8cbf132",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "6ff727fb34e974afe8cbf132"
+    }
+   },
+   "status": "uncertain",
+   "thrust_N": 0.760164124857692,
+   "torque_Nm": 0.6730920100709876,
+   "tip_twist_deg": 30.66564044389525,
+   "rms_lift_N": 1.4276034555253396,
+   "verification_spread_pct": 10.933709801761605,
+   "cycle_error_pct": 0.006734400171549539,
+   "dt_s": 0.02666666666666667,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 861.32
+  },
+  {
+   "case_id": "c0041",
+   "wing": "atlas 554c1cd8",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "554c1cd8753c0a141fe02547",
+   "key": "c07ff7060ad40228a45d26c1",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c07ff7060ad40228a45d26c1"
+    }
+   },
+   "status": "uncertain",
+   "thrust_N": 1.3730477679070021,
+   "torque_Nm": 1.058804704854012,
+   "tip_twist_deg": 35.18492518725157,
+   "rms_lift_N": 1.7629866328728094,
+   "verification_spread_pct": 18.926406564698432,
+   "cycle_error_pct": 0.042308124909479126,
+   "dt_s": 0.02,
+   "cycles": 8,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 406.16
+  },
+  {
+   "case_id": "c0042",
+   "wing": "atlas 554c1cd8",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    200.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "554c1cd8753c0a141fe02547",
+   "key": "567307610c6e05ca607561a1",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2,
+      0.2
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "567307610c6e05ca607561a1"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 2.1706675493603593,
+   "torque_Nm": 2.0182075864515787,
+   "tip_twist_deg": 36.14282490819188,
+   "rms_lift_N": 2.9095836405319653,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 0.07927491210252283,
+   "dt_s": 0.016,
+   "cycles": 8,
+   "added_mass_factor": 0.7,
+   "error": null,
+   "elapsed_s": 152.71
+  },
+  {
+   "case_id": "c0043",
+   "wing": "atlas 3f5432ac",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "half_span_mm": 340.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "3f5432ac145997610f59c986",
+   "key": "d2ee5c4882ed809bea54c8c5",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255
+     ],
+     "half_span": 0.34,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "d2ee5c4882ed809bea54c8c5"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.14053765118502826,
+   "torque_Nm": 0.1331052765343899,
+   "tip_twist_deg": 7.669814834664716,
+   "rms_lift_N": 0.6438014622365146,
+   "verification_spread_pct": 0.058440271909581246,
+   "cycle_error_pct": 0.9806998060870328,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 223.19
+  },
+  {
+   "case_id": "c0044",
+   "wing": "atlas 3f5432ac",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "half_span_mm": 340.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "3f5432ac145997610f59c986",
+   "key": "c3e1e51821794a788dca0bca",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255
+     ],
+     "half_span": 0.34,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c3e1e51821794a788dca0bca"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.196904555124907,
+   "torque_Nm": 0.14421608169825442,
+   "tip_twist_deg": 7.871503909976474,
+   "rms_lift_N": 0.7622182619553723,
+   "verification_spread_pct": 0.16552287803626006,
+   "cycle_error_pct": 2.0324979632576268,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.4,
+   "error": null,
+   "elapsed_s": 95.67
+  },
+  {
+   "case_id": "c0045",
+   "wing": "atlas 3f5432ac",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "half_span_mm": 340.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "3f5432ac145997610f59c986",
+   "key": "cbfc2aefbc17bcb22f5f2b1a",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255,
+      0.0255
+     ],
+     "half_span": 0.34,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "cbfc2aefbc17bcb22f5f2b1a"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.26786176715418375,
+   "torque_Nm": 0.15129727284574754,
+   "tip_twist_deg": 8.87075217331672,
+   "rms_lift_N": 0.8778866536253251,
+   "verification_spread_pct": 0.307815342136615,
+   "cycle_error_pct": 1.7392137308030045,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 254.89
+  },
+  {
+   "case_id": "c0046",
+   "wing": "atlas fc1c1d2a",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    166.1,
+    72.1,
+    61.3,
+    45.0,
+    36.6,
+    24.9,
+    21.6
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "fc1c1d2ab64d2c74d3a9e7d9",
+   "key": "180594fa8f848469107aba4f",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.1661,
+      0.0721,
+      0.0613,
+      0.045,
+      0.0366,
+      0.0249,
+      0.0216
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "180594fa8f848469107aba4f"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.35515856199919765,
+   "torque_Nm": 0.35554078492605246,
+   "tip_twist_deg": 10.032202487543783,
+   "rms_lift_N": 1.6877241086192833,
+   "verification_spread_pct": 0.2112511310926034,
+   "cycle_error_pct": 0.9725153213991949,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 82.28
+  },
+  {
+   "case_id": "c0047",
+   "wing": "atlas fc1c1d2a",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    166.1,
+    72.1,
+    61.3,
+    45.0,
+    36.6,
+    24.9,
+    21.6
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "fc1c1d2ab64d2c74d3a9e7d9",
+   "key": "433b5a9683277dd48f6945ee",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.1661,
+      0.0721,
+      0.0613,
+      0.045,
+      0.0366,
+      0.0249,
+      0.0216
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "433b5a9683277dd48f6945ee"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5001514463546888,
+   "torque_Nm": 0.3907406953980601,
+   "tip_twist_deg": 12.339546978959962,
+   "rms_lift_N": 2.1206936788252047,
+   "verification_spread_pct": 0.5171462812604318,
+   "cycle_error_pct": 1.4527208067380792,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 117.33
+  },
+  {
+   "case_id": "c0048",
+   "wing": "atlas fc1c1d2a",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    166.1,
+    72.1,
+    61.3,
+    45.0,
+    36.6,
+    24.9,
+    21.6
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "fc1c1d2ab64d2c74d3a9e7d9",
+   "key": "769e233480380b2f42bb224d",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.1661,
+      0.0721,
+      0.0613,
+      0.045,
+      0.0366,
+      0.0249,
+      0.0216
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "769e233480380b2f42bb224d"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 0.6697681474804658,
+   "torque_Nm": 0.4314404787459436,
+   "tip_twist_deg": 16.06866238976278,
+   "rms_lift_N": 2.634728090581856,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 1.5768444863752764,
+   "dt_s": 0.008,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 277.53
+  },
+  {
+   "case_id": "c0049",
+   "wing": "atlas fa8cba03",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    145.1,
+    145.1,
+    143.1,
+    40.4,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "fa8cba030d9a6c78d74d321d",
+   "key": "56c97de5bfc82743da6b92cf",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.1451,
+      0.1451,
+      0.1431,
+      0.0404,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "56c97de5bfc82743da6b92cf"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4020241856133953,
+   "torque_Nm": 0.46629562847096684,
+   "tip_twist_deg": 23.26148182591929,
+   "rms_lift_N": 1.689433451284872,
+   "verification_spread_pct": 2.4804073636493023,
+   "cycle_error_pct": 0.07729850500715389,
+   "dt_s": 0.02666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 39.53
+  },
+  {
+   "case_id": "c0050",
+   "wing": "atlas fa8cba03",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    145.1,
+    145.1,
+    143.1,
+    40.4,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "fa8cba030d9a6c78d74d321d",
+   "key": "52a9833c24b71e2b03de30ee",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.1451,
+      0.1451,
+      0.1431,
+      0.0404,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "52a9833c24b71e2b03de30ee"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.5554620329181706,
+   "torque_Nm": 0.48135358678113255,
+   "tip_twist_deg": 29.991506740599306,
+   "rms_lift_N": 1.7290300086887676,
+   "verification_spread_pct": 2.656771637193842,
+   "cycle_error_pct": 2.749436516834722,
+   "dt_s": 0.02,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 40.18
+  },
+  {
+   "case_id": "c0051",
+   "wing": "atlas fa8cba03",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    145.1,
+    145.1,
+    143.1,
+    40.4,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "fa8cba030d9a6c78d74d321d",
+   "key": "16de9806a7af7457fe115bc4",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.1451,
+      0.1451,
+      0.1431,
+      0.0404,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "16de9806a7af7457fe115bc4"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.7741961562798982,
+   "torque_Nm": 0.5001267649350726,
+   "tip_twist_deg": 35.388193811832394,
+   "rms_lift_N": 1.7595834996063626,
+   "verification_spread_pct": 2.7400794889019924,
+   "cycle_error_pct": 0.04655830139386334,
+   "dt_s": 0.016,
+   "cycles": 8,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 170.97
+  },
+  {
+   "case_id": "c0052",
+   "wing": "atlas ec5a6068",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    89.6,
+    46.9,
+    13.9,
+    13.9,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "half_span_mm": 280.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "ec5a6068f1850e595b3c81db",
+   "key": "0fd67a0707d8b7bec2893bff",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0469,
+      0.0139,
+      0.0139,
+      0.01,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.28,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0fd67a0707d8b7bec2893bff"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.2675639957564298,
+   "torque_Nm": 0.16727873792151599,
+   "tip_twist_deg": 4.989936026363106,
+   "rms_lift_N": 0.9069944885038385,
+   "verification_spread_pct": 0.004069653224880925,
+   "cycle_error_pct": 0.006024740728498712,
+   "dt_s": 0.006666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 266.77
+  },
+  {
+   "case_id": "c0053",
+   "wing": "atlas ec5a6068",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    89.6,
+    46.9,
+    13.9,
+    13.9,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "half_span_mm": 280.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "ec5a6068f1850e595b3c81db",
+   "key": "57dff2e014aef245059074e1",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0469,
+      0.0139,
+      0.0139,
+      0.01,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.28,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "57dff2e014aef245059074e1"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.35578019723401866,
+   "torque_Nm": 0.18786875108629483,
+   "tip_twist_deg": 5.404650402391262,
+   "rms_lift_N": 1.0729692479992774,
+   "verification_spread_pct": 0.03985911615657732,
+   "cycle_error_pct": 0.02980539654098812,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 130.29
+  },
+  {
+   "case_id": "c0054",
+   "wing": "atlas ec5a6068",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    89.6,
+    46.9,
+    13.9,
+    13.9,
+    10.0,
+    10.0,
+    10.0
+   ],
+   "half_span_mm": 280.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "ec5a6068f1850e595b3c81db",
+   "key": "661b4b07f36215dc25352bf3",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.0896,
+      0.0469,
+      0.0139,
+      0.0139,
+      0.01,
+      0.01,
+      0.01
+     ],
+     "half_span": 0.28,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "661b4b07f36215dc25352bf3"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.45404410722905925,
+   "torque_Nm": 0.2065210298515561,
+   "tip_twist_deg": 5.7444682694595945,
+   "rms_lift_N": 1.2446270398910941,
+   "verification_spread_pct": 0.04494731466362413,
+   "cycle_error_pct": 0.07991322050637094,
+   "dt_s": 0.008,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 113.07
+  },
+  {
+   "case_id": "c0055",
+   "wing": "atlas af1fc98a",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    139.6,
+    66.9,
+    52.0,
+    34.9,
+    25.5,
+    25.5,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "af1fc98ab84ff8de2e86cfed",
+   "key": "c72cd5d1ef0ef5c82b0b8125",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.1396,
+      0.0669,
+      0.052,
+      0.0349,
+      0.0255,
+      0.0255,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c72cd5d1ef0ef5c82b0b8125"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.34032869144512834,
+   "torque_Nm": 0.32603050462683175,
+   "tip_twist_deg": 8.626891177024952,
+   "rms_lift_N": 1.573341769133358,
+   "verification_spread_pct": 0.1770027401741896,
+   "cycle_error_pct": 0.9016596807427559,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 91.47
+  },
+  {
+   "case_id": "c0056",
+   "wing": "atlas af1fc98a",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    139.6,
+    66.9,
+    52.0,
+    34.9,
+    25.5,
+    25.5,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "af1fc98ab84ff8de2e86cfed",
+   "key": "70e388240039831d07be5771",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.1396,
+      0.0669,
+      0.052,
+      0.0349,
+      0.0255,
+      0.0255,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "70e388240039831d07be5771"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.48172038095128356,
+   "torque_Nm": 0.3600688360178471,
+   "tip_twist_deg": 10.108516656830558,
+   "rms_lift_N": 1.9570825011447903,
+   "verification_spread_pct": 0.39751255279267245,
+   "cycle_error_pct": 1.4146785556310462,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 62.74
+  },
+  {
+   "case_id": "c0057",
+   "wing": "atlas af1fc98a",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    139.6,
+    66.9,
+    52.0,
+    34.9,
+    25.5,
+    25.5,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "af1fc98ab84ff8de2e86cfed",
+   "key": "dd1b47ea87f94c34d699199d",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.1396,
+      0.0669,
+      0.052,
+      0.0349,
+      0.0255,
+      0.0255,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "dd1b47ea87f94c34d699199d"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.6631406104562112,
+   "torque_Nm": 0.3994761436072846,
+   "tip_twist_deg": 14.370022214772492,
+   "rms_lift_N": 2.455741550745776,
+   "verification_spread_pct": 0.2686200778008252,
+   "cycle_error_pct": 1.0008912613229421,
+   "dt_s": 0.004,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 211.11
+  },
+  {
+   "case_id": "c0058",
+   "wing": "atlas 8c1aff31",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    180.0,
+    110.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    60.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "8c1aff31adf1aac55db75a17",
+   "key": "d8e13cff945fb8945d0ab578",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.18,
+      0.11,
+      0.1,
+      0.1,
+      0.1,
+      0.1,
+      0.06
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "d8e13cff945fb8945d0ab578"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.3774187840047675,
+   "torque_Nm": 0.3844586534128143,
+   "tip_twist_deg": 20.216752566626177,
+   "rms_lift_N": 1.6807453320703443,
+   "verification_spread_pct": 1.279993221751569,
+   "cycle_error_pct": 0.05431794845710233,
+   "dt_s": 0.013333333333333334,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 83.54
+  },
+  {
+   "case_id": "c0059",
+   "wing": "atlas 8c1aff31",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    180.0,
+    110.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    60.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "8c1aff31adf1aac55db75a17",
+   "key": "0de798cd3d64531086e91f18",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.18,
+      0.11,
+      0.1,
+      0.1,
+      0.1,
+      0.1,
+      0.06
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "0de798cd3d64531086e91f18"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 0.5657653428392788,
+   "torque_Nm": 0.41204781195298124,
+   "tip_twist_deg": 24.866065364601887,
+   "rms_lift_N": 2.13221649238839,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 2.047880431213233,
+   "dt_s": 0.01,
+   "cycles": 4,
+   "added_mass_factor": 0.6,
+   "error": null,
+   "elapsed_s": 153.16
+  },
+  {
+   "case_id": "c0060",
+   "wing": "atlas 8c1aff31",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    180.0,
+    110.0,
+    100.0,
+    100.0,
+    100.0,
+    100.0,
+    60.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "8c1aff31adf1aac55db75a17",
+   "key": "6fdd45284d10c21480731592",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.18,
+      0.11,
+      0.1,
+      0.1,
+      0.1,
+      0.1,
+      0.06
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "6fdd45284d10c21480731592"
+    }
+   },
+   "status": "unverified",
+   "thrust_N": 0.8586176700515176,
+   "torque_Nm": 0.4640419505637406,
+   "tip_twist_deg": 30.43062037015248,
+   "rms_lift_N": 2.811311613879118,
+   "verification_spread_pct": null,
+   "cycle_error_pct": 0.08943167968797042,
+   "dt_s": 0.004,
+   "cycles": 8,
+   "added_mass_factor": 0.7,
+   "error": null,
+   "elapsed_s": 701.17
+  },
+  {
+   "case_id": "c0061",
+   "wing": "atlas 86a05230",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 0.75,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    185.1,
+    158.0,
+    143.1,
+    40.4,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "86a05230a790f28146af42c6",
+   "key": "71f0c78af5cfa91ebfe86c2c",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 0.75,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.1851,
+      0.158,
+      0.1431,
+      0.0404,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "71f0c78af5cfa91ebfe86c2c"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.4204448868459227,
+   "torque_Nm": 0.4715390215037692,
+   "tip_twist_deg": 24.473494797940294,
+   "rms_lift_N": 1.6108179119091353,
+   "verification_spread_pct": 2.414722383949186,
+   "cycle_error_pct": 0.7561067830785858,
+   "dt_s": 0.02666666666666667,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 42.01
+  },
+  {
+   "case_id": "c0062",
+   "wing": "atlas 86a05230",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.0,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    185.1,
+    158.0,
+    143.1,
+    40.4,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "86a05230a790f28146af42c6",
+   "key": "c83977aa2a975b0df8d76a17",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.0,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.1851,
+      0.158,
+      0.1431,
+      0.0404,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "c83977aa2a975b0df8d76a17"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.585271982261159,
+   "torque_Nm": 0.4850922896631752,
+   "tip_twist_deg": 30.627416243162376,
+   "rms_lift_N": 1.5286667157717138,
+   "verification_spread_pct": 2.8119210107396393,
+   "cycle_error_pct": 4.108830712568508,
+   "dt_s": 0.02,
+   "cycles": 4,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 35.41
+  },
+  {
+   "case_id": "c0063",
+   "wing": "atlas 86a05230",
+   "model": "t0.50",
+   "structure": "spanwise",
+   "freq": 1.25,
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    185.1,
+    158.0,
+    143.1,
+    40.4,
+    10.0
+   ],
+   "half_span_mm": 400.0,
+   "numerics": {
+    "span_panels": 8,
+    "chord_panels": 4,
+    "steps_per_cycle": 50,
+    "cycles": 4
+   },
+   "atlas_key": "86a05230a790f28146af42c6",
+   "key": "4073e1479f2b0cda01aacafb",
+   "replay": {
+    "engine": "design",
+    "input": {
+     "level": "t0.50",
+     "freq": 1.25,
+     "chords": [
+      0.2,
+      0.2,
+      0.2,
+      0.1851,
+      0.158,
+      0.1431,
+      0.0404,
+      0.01
+     ],
+     "half_span": 0.4,
+     "elastic_options": {
+      "spanwise_bending": true,
+      "large_deflection": true,
+      "max_bend_deg": 75.0,
+      "max_tip_deflection_fraction": 0.95
+     },
+     "thickness_mm": 0.5,
+     "rod": null,
+     "material": {
+      "name": "plain_weave_cf",
+      "shear_modulus_pa": 4500000000.0,
+      "density_kg_m3": 1550.0,
+      "youngs_modulus_pa": 50000000000.0
+     },
+     "template": 7657,
+     "steps_per_cycle": 50,
+     "cycles": 4,
+     "span_panels": 8,
+     "chord_panels": 4,
+     "dt_refinements": [
+      1,
+      2,
+      4
+     ],
+     "numerics": "study",
+     "dt_divisor": null,
+     "key": "4073e1479f2b0cda01aacafb"
+    }
+   },
+   "status": "verified",
+   "thrust_N": 0.8157827907979451,
+   "torque_Nm": 0.4981201770396612,
+   "tip_twist_deg": 35.63049775619194,
+   "rms_lift_N": 1.4202803479324957,
+   "verification_spread_pct": 2.826417297601988,
+   "cycle_error_pct": 0.07071433151468992,
+   "dt_s": 0.016,
+   "cycles": 8,
+   "added_mass_factor": 0.5,
+   "error": null,
+   "elapsed_s": 208.26
+  }
+ ]
+}

@@ -1,0 +1,173 @@
+{
+  "schema": "wingstudy/study-spec@1",
+  "id": "2026-11-27-spanwise-top-wings",
+  "title": "Spanwise bending on the best FAAV wing at each torque budget",
+  "author": "sam",
+  "question": "The best FAAV wing at each torque budget (0.5 to 2 N·m) and frequency, one sheet and any span, has no verified spanwise solve: matched reruns of these wings twist past the torsion model's limit. Does the spanwise model alone verify on them at 0.75, 1 and 1.25 Hz, and where it does, how do thrust and torque compare with the atlas's chordwise result?",
+  "kind": "design-set",
+  "structure": "spanwise",
+  "models": [
+    "t0.50"
+  ],
+  "frequencies_hz": [
+    0.75,
+    1.0,
+    1.25
+  ],
+  "numerics": [
+    {
+      "span_panels": 8,
+      "chord_panels": 4,
+      "steps_per_cycle": 50,
+      "cycles": 4
+    }
+  ],
+  "wings": {
+    "designs": [
+      {
+        "name": "optimized 1 Hz 0.75 N·m",
+        "chords_mm": [
+          200,
+          74.05,
+          44.22,
+          31.01,
+          25.5,
+          25.5,
+          25.13,
+          20.5
+        ],
+        "half_span_mm": 400
+      },
+      {
+        "name": "optimized 1.25 Hz 0.75 N·m",
+        "chords_mm": [
+          200,
+          74.05,
+          44.22,
+          31.01,
+          25.5,
+          25.5,
+          25.13,
+          20.5
+        ],
+        "half_span_mm": 367.5
+      },
+      {
+        "name": "optimized 1.25 Hz 1.25 N·m",
+        "chords_mm": [
+          200,
+          149.61,
+          87.38,
+          53.99,
+          39.65,
+          24.99,
+          14.51,
+          10
+        ],
+        "half_span_mm": 400
+      },
+      {
+        "name": "atlas 1c187a1d",
+        "chords_mm": [
+          200,
+          200,
+          105.71,
+          71.43,
+          71.43,
+          44.29,
+          44.29,
+          10
+        ],
+        "half_span_mm": 390
+      },
+      {
+        "name": "atlas 55be38eb",
+        "chords_mm": [
+          200,
+          200,
+          200,
+          117.96,
+          117.96,
+          117.96,
+          117.96,
+          10
+        ],
+        "half_span_mm": 400
+      },
+      {
+        "name": "atlas d633a32f",
+        "chords_mm": [
+          200,
+          139.6,
+          56.9,
+          39.9,
+          29.9,
+          15.5,
+          10,
+          10
+        ],
+        "half_span_mm": 510
+      },
+      {
+        "name": "atlas b07f1d80",
+        "chords_mm": [
+          200,
+          152.86,
+          125.71,
+          98.57,
+          71.43,
+          44.29,
+          17.14,
+          17.14
+        ],
+        "half_span_mm": 530
+      },
+      {
+        "name": "atlas 892c2944",
+        "chords_mm": [
+          200,
+          192.86,
+          165.71,
+          138.57,
+          111.43,
+          84.29,
+          37.14,
+          20
+        ],
+        "half_span_mm": 470
+      },
+      {
+        "name": "atlas 47f2e43b",
+        "chords_mm": [
+          200,
+          200,
+          200,
+          158.57,
+          141.43,
+          104.29,
+          37.14,
+          10
+        ],
+        "half_span_mm": 500
+      }
+    ],
+    "from_atlas": [
+      "f65716c6e1d74ad6ab85f798",
+      "74fb8fc1e60ea0492fafa1ff",
+      "cbf15d97385d44677233a414",
+      "6ec1be788e3ffd3e4d3f80fd",
+      "554c1cd8753c0a141fe02547",
+      "3f5432ac145997610f59c986",
+      "fc1c1d2ab64d2c74d3a9e7d9",
+      "fa8cba030d9a6c78d74d321d",
+      "ec5a6068f1850e595b3c81db",
+      "af1fc98ab84ff8de2e86cfed",
+      "8c1aff31adf1aac55db75a17",
+      "86a05230a790f28146af42c6"
+    ]
+  },
+  "budget": {
+    "max_cases": 200
+  },
+  "notes": "Wings picked from the Top tab: the highest-thrust verified FAAV wing at or below 0.5, 0.75, 1, 1.25, 1.5 and 2 N·m at each frequency, within one 400 mm sheet and with any span. The three optimized wings and the six planned-study wings (not in the atlas row files) are given by their 8-station outline. Each wing is solved at all three frequencies, with span bending (the chordwise result is already in the atlas), on the 8 x 4 search mesh."
+}
