@@ -291,7 +291,7 @@ const MODEL=Object.fromEntries(D.models.map((m,i)=>[m.id,{...m,i}]));
 const STUDY=Object.fromEntries(D.studies.map((s,i)=>[s.id,{...s,i}]));
 // Fixed colour per entity (never by rank). Rod models take the first slots: they are the hardware.
 const MODEL_VAR={'t0.50r':'--s1','t0.25r':'--s2','t0.50':'--s3','t0.25':'--s4','t0.20':'--s5','t1.00':'--s7','rigid':'--neutral','span-flex':'--s2','chord-rerun':'--s1'};
-const STUDY_VAR_ID={rod:'--s1',weekend:'--s2',sweep:'--s3',spanfree:'--s7',catalog:'--neutral'}, FREQ_VAR=['--f1','--f2','--f3'];
+const STUDY_VAR_ID={rod:'--s1',weekend:'--s2',sweep:'--s3',spanfree:'--s7',catalog:'--neutral'}, FREQ_VAR=['--s1','--s3','--s2'];   // 0.75 Hz blue, 1 Hz green, 1.25 Hz orange
 // Study groups: studies of the same kind share a chip and a colour on the Wing map.
 const SGROUPS=[[0,'Original campaigns (rod and plate)','--s1'],[1,'Geometric sweeps','--s3'],[2,'Span and shape searches','--s7'],[3,'Design sets and reruns','--s4'],[4,'Rigid catalog','--neutral']];
 const SGROUP_OF=D.studies.map(s=>s.id==='rod'||s.id==='weekend'?0:s.id==='sweep'||s.kind==='geometry-sweep'?1:s.id==='catalog'?4:s.kind==='evolutionary'||s.kind==='refine'||s.id==='spanfree'?2:3);
@@ -803,13 +803,13 @@ function filtered(){
   return out;
 }
 const GREYED=i=>M.faav&&!FAAV(i);
-// Gradients (half-span, thrust per unit torque): one hue, light to dark on a light surface and dark to light on a
-// dark one, stretched over the 2nd to 98th percentile of the points shown (GRAD, set before each draw).
+// Gradients (half-span, thrust per unit torque): a cool-to-warm spectrum, stretched over the 2nd to 98th percentile of the points shown (GRAD, set before each draw).
 const GRADV={span:i=>SPAN[i],tq:i=>C.Q[i]>0?C.T[i]/C.Q[i]:null},GRADL={span:['half-span',v=>Math.round(v)+' mm'],tq:['thrust / torque',v=>fmt(v,2)+' N per N·m']};
 let GRAD=null;
-function gradLUT(){const dark=(()=>{const c=css('--surface').replace('#','');if(c.length<6)return false;const n=parseInt(c.slice(0,6),16);return ((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000<128})();
-  const a=dark?[0x1c,0x3a,0x66]:[0xcf,0xe2,0xf8],b=dark?[0xc4,0xe0,0xff]:[0x0b,0x3a,0x80];
-  return Array.from({length:24},(_,k)=>'#'+a.map((x,j)=>Math.round(x+(b[j]-x)*k/23).toString(16).padStart(2,'0')).join(''))}
+function gradLUT(){   // cool to warm: blue, cyan, green, yellow, orange, red (same in both themes)
+  const st=[[0x3b,0x5b,0xdb],[0x1f,0xaf,0xd6],[0x3c,0xc4,0x6e],[0xe3,0xcf,0x2f],[0xf3,0x84,0x28],[0xd2,0x2b,0x1f]];
+  return Array.from({length:24},(_,k)=>{const t=k/23*(st.length-1),a=Math.min(st.length-2,Math.floor(t)),u=t-a;
+    return '#'+st[a].map((x,j)=>Math.round(x+(st[a+1][j]-x)*u).toString(16).padStart(2,'0')).join('')})}
 function setGrad(rows){const f=GRADV[M.color];if(!f){GRAD=null;return}const v=rows.filter(i=>!GREYED(i)).map(f).filter(x=>x!=null&&isFinite(x)).sort((a,b)=>a-b);
   if(!v.length){GRAD=null;return}const q=p=>v[Math.min(v.length-1,Math.max(0,Math.round(p*(v.length-1))))];GRAD={lo:q(.02),hi:q(.98),lut:gradLUT()};if(GRAD.hi<=GRAD.lo)GRAD.hi=GRAD.lo+1}
 function gradColor(v){if(!GRAD||v==null||!isFinite(v))return css('--neutral');const t=Math.min(1,Math.max(0,(v-GRAD.lo)/(GRAD.hi-GRAD.lo)));return GRAD.lut[Math.round(t*23)]}
@@ -889,7 +889,7 @@ function updateCounts(){
   const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),BC_SHORT[k],k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?SGROUPS.map(g=>[css(g[2]),g[1],g[0]]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
   const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?SGROUP_OF[C.s[i]]:C.f[i];
   const cnt={};let nGrey=0;for(const i of VIS){if(GREYED(i)){nGrey++;continue}const k=key(i);cnt[k]=(cnt[k]||0)+1}
-  setGrad(VIS);$('#map-legend').innerHTML=(GRADV[M.color]&&GRAD?`<span>${GRADL[M.color][0]} <span class="muted">${GRADL[M.color][1](GRAD.lo)}</span> <span style="display:inline-block;width:140px;height:10px;border-radius:2px;vertical-align:middle;background:linear-gradient(90deg,${GRAD.lut[0]},${GRAD.lut[23]})"></span> <span class="muted">${GRADL[M.color][1](GRAD.hi)}</span></span>`:'')+lab.filter(l=>!GRADV[M.color]&&cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span><span style="color:${FAVC}">★</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
+  setGrad(VIS);$('#map-legend').innerHTML=(GRADV[M.color]&&GRAD?`<span>${GRADL[M.color][0]} <span class="muted">${GRADL[M.color][1](GRAD.lo)}</span> <span style="display:inline-block;width:140px;height:10px;border-radius:2px;vertical-align:middle;background:linear-gradient(90deg,${GRAD.lut.join(',')})"></span> <span class="muted">${GRADL[M.color][1](GRAD.hi)}</span></span>`:'')+lab.filter(l=>!GRADV[M.color]&&cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span><span style="color:${FAVC}">★</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
 
   const nF=VIS.filter(i=>isFav(C.k[i])).length;
   const nFine=VIS.filter(i=>FINE(i)&&!isFav(C.k[i])).length,mixed=nFine&&nFine<VIS.length;
