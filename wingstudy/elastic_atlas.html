@@ -283,7 +283,7 @@ const EXTRA={}; const ORIGINAL_N=D.cols.s.length;
     let si=D.studies.findIndex(st=>st.id===w.study);if(si<0)si=0;
     let status=D.statuses.indexOf(r.status);if(status<0){status=D.statuses.length;D.statuses.push(r.status)}
     const i=D.cols.s.length;pair.mapRows[kind]=i;EXTRA[i]={pair,kind,result:r};
-    const vals={s:si,m:mi,f:fi,T:r.mean_thrust_N,Q:r.peak_abs_root_torque_Nm,H:w.half_span,W:r.tip_twist_amplitude_deg??null,S:status,src:0,k:w.key+':'+kind,obj:512};
+    const vals={s:si,m:mi,f:fi,T:r.mean_thrust_N,Q:r.peak_abs_root_torque_Nm,H:w.half_span,W:r.tip_twist_amplitude_deg??null,S:status,src:0,k:w.key+':'+kind,obj:512,g:w.shape??null};
     for(const k of Object.keys(D.cols))if(k==='C')D.cols.C.push(...Array.from({length:8},(_,j)=>w.chords[j]??0));else D.cols[k].push(vals[k]??null);
   }
 });
@@ -376,20 +376,23 @@ const FINE=i=>!isCat(i)&&MESH_OF(i)!==SEARCH_MESH;   // any finer mesh: never ra
    A point is one simulation. Its shape group is every simulation of the same outline (root-to-tip chords and
    half-span), whatever the construction, model, frequency or mesh. The outline is sampled at 25 equal span
    fractions and rounded to 1 mm, so an 8-station outline and the same outline on tripled stations match. */
-const GSAMPLES=25;
-function groupKey(i){if(isCat(i))return 'cat'+i;const o=designOutline(i);if(!o.length)return 'row'+i;const L=o[o.length-1][0],out=[Math.round(L)];
-  for(let k=0;k<GSAMPLES;k++){const x=L*k/(GSAMPLES-1);let j=0;while(j<o.length-2&&o[j+1][0]<x)j++;const a=o[j],b=o[j+1]||a,t=b[0]>a[0]?(x-a[0])/(b[0]-a[0]):0;out.push(Math.round(a[1]+(b[1]-a[1])*Math.min(1,Math.max(0,t))))}
-  return out.join(',')}
+// Shape numbers come from the build (wingstudy/shapes.py, atlas/shape-ids.json) and never change.
+const shapeName=n=>n==null?'W?':'W'+String(n).padStart(5,'0');
 let GROUPS=null;
-function groupOf(i){if(!GROUPS){GROUPS=new Map();for(let j=0;j<N;j++){if(isCat(j))continue;const k=groupKey(j);const g=GROUPS.get(k);if(g)g.push(j);else GROUPS.set(k,[j])}}
-  return GROUPS.get(groupKey(i))||[i]}
+function groups(){if(!GROUPS){GROUPS=new Map();for(let j=0;j<N;j++){const k=C.g[j];if(k==null)continue;const g=GROUPS.get(k);if(g)g.push(j);else GROUPS.set(k,[j])}}return GROUPS}
+function groupOf(i){return C.g[i]==null?[i]:groups().get(C.g[i])||[i]}
+// Standard name of one simulation: shape number, then construction, structural model, frequency and mesh.
+const MODEL_CODE=['rigid','stiff LE','rod','spanwise','rod + spanwise'];
+function configParts(i){const b=BASE_OF[C.m[i]],rigid=b==='rigid';
+  return [rigid?'rigid':`${MODEL[b].thickness} mm${ROD_OF[C.m[i]]?' + rod':''}`,...(rigid?[]:[MODEL_CODE[BC_OF[C.m[i]]]]),`${D.freqs[C.f[i]]} Hz`,MESH_OF(i)==='catalog'?'catalog settings':MESH_OF(i)]}
+const configName=i=>[shapeName(C.g[i]),...configParts(i)].join(' · ');
 function groupCard(i){if(isCat(i))return '';
   const all=groupOf(i),shown=all.filter(j=>j===i||paramPass(j)),hidden=all.length-shown.length;
-  if(all.length<2)return `<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">Shape group</h3><p class="small muted" style="margin:0">This outline has been simulated once.</p></div>`;
+  if(all.length<2)return `<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}</h3><p class="small muted" style="margin:0">This shape has been simulated once.</p></div>`;
   const GBC=['Rigid','Stiff LE (FAAV)','Rod, twists','Free sheet, bends','Rod, bends'];
   const label=j=>BASE_OF[C.m[j]]==='rigid'?'–':`${MODEL[BASE_OF[C.m[j]]].thickness} mm${ROD_OF[C.m[j]]?' + rod':''}`,model=j=>`<span title="${esc(BCS[BC_OF[C.m[j]]][1])}">${GBC[BC_OF[C.m[j]]]}</span>`;
   const rows=shown.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
-  let h=`<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">Shape group: ${all.length} simulations of this outline</h3>
+  let h=`<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}: ${all.length} simulations of this shape</h3>
     <p class="tiny muted" style="margin:0 0 6px">Same outline, varied construction, model, frequency and mesh. The map filters choose which are listed${hidden?`; ${hidden} hidden by them`:''}. Click a row to select it.</p>`;
   // thrust against frequency, one line per construction, model and mesh
   const ser=new Map();for(const j of rows){const k=C.m[j]+'|'+MESH_OF(j);if(!ser.has(k))ser.set(k,[]);ser.get(k).push(j)}
@@ -520,6 +523,38 @@ function methodsCard(){
    ${blk('7 · Convergence',`Top designs and a random sample are re-solved on three uniformly refined settings (8 × 4 / 50, 12 × 6 / 75, 18 × 9 / 112; r = 1.5) and with each parameter doubled alone. Observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, Richardson value f₁ + (f₁ − f₂)/(r<sup>p</sup> − 1), GCI = 1.25 |(f₁ − f₂)/f₁| / (r<sup>p</sup> − 1).${S?` <b>Latest:</b> thrust ranking kept with ρ = ${fmt(S.rank_correlation_base_fine,3)}; base-setting thrust within ${fmt(S.median_abs_base_error_thrust_pct,1)}% (median) of the extrapolated value.`:' See the Convergence tab for results.'}`)}
    ${blk('8 · Derived quantities',`<b>Strouhal number</b> St = f·A/U with A the tip's peak-to-peak excursion, A = R(sin 34° + sin 26°) ≈ R for half-span R (elastic deflection not included). <b>Effective half-span</b> runs to the last non-zero chord. A <b>single sheet</b> is at most ${SHEET} mm, so longer half-spans need a joined sheet.`)}
   </div><p class="note small" style="margin-top:10px">Limits: the model is inviscid, so viscous drag (rod, narrow chords) and separation at large twist are missing. Read strip-like optima and very large twists as trends.</p></div>`}
+// Every wing shape, one row each; click a shape for every configuration it was simulated in.
+const SHP={q:'',sort:'best',multi:false,faav:false,page:0,open:null,per:40};
+function shapeStats(){if(shapeStats.v)return shapeStats.v;const out=[];
+  for(const [g,rows] of groups()){let best=null;for(const j of rows)if(MESH_OF(j)===SEARCH_MESH&&GOOD.has(STATUS[C.S[j]])&&C.Q[j]<=LIM&&(best==null||C.T[j]>C.T[best]))best=j;
+    out.push({g,rows,best,faav:rows.some(FAAV),cat:isCat(rows[0]),
+      models:new Set(rows.map(j=>BC_OF[C.m[j]])),freqs:new Set(rows.map(j=>C.f[j])),meshes:new Set(rows.map(MESH_OF))})}
+  return shapeStats.v=out}
+function setShp(k,v){SHP[k]=v;if(k!=='page'&&k!=='open')SHP.page=0;renderShapes()}
+function renderShapes(){const el=$('#shapes-card');if(!el)return;
+  let L=shapeStats();const q=SHP.q.trim().toUpperCase().replace(/^W0*/,'');
+  if(q)L=L.filter(s=>String(s.g).startsWith(q));if(SHP.multi)L=L.filter(s=>s.rows.length>1);if(SHP.faav)L=L.filter(s=>s.faav);
+  L=L.slice().sort(SHP.sort==='num'?(a,b)=>a.g-b.g:SHP.sort==='sims'?(a,b)=>b.rows.length-a.rows.length||a.g-b.g:(a,b)=>(b.best==null?-1:C.T[b.best])-(a.best==null?-1:C.T[a.best])||a.g-b.g);
+  const pages=Math.max(1,Math.ceil(L.length/SHP.per)),pg=Math.max(0,Math.min(SHP.page,pages-1)),view=L.slice(pg*SHP.per,(pg+1)*SHP.per);
+  const chip=(on,lab,js)=>`<button class="chip ${on?'':'off'}" aria-pressed="${on}" onclick="${js}">${lab}</button>`;
+  const spanMax=Math.max(420,...view.filter(s=>!s.cat).map(s=>SPAN[s.rows[0]]))*1.02;
+  let h=`<div class="card"><h3>Wing shapes</h3><p class="small muted" style="max-width:920px">Every outline simulated, numbered once and for good. A simulation is named by its shape, then construction, structural model, frequency and mesh (for example <b>${shapeStats().find(s=>s.best!=null&&FAAV(s.best))?configName(shapeStats().find(s=>s.best!=null&&FAAV(s.best)).best):'W00001 · 0.5 mm · stiff LE · 1 Hz · 8 × 4'}</b>). Click a shape for all its configurations.</p>
+    <div class="chips" style="gap:8px;margin:6px 0 8px"><input type="search" id="shp-q" placeholder="Shape number, e.g. W00412" value="${esc(SHP.q)}" oninput="setShp('q',this.value);const e=$('#shp-q');e.focus();e.setSelectionRange(e.value.length,e.value.length)" style="width:200px" aria-label="Find a shape number">
+     <span class="small muted">Sort</span>${chip(SHP.sort==='best',`Best thrust ≤ ${LIM} N·m`,"setShp('sort','best')")}${chip(SHP.sort==='sims','Most simulations',"setShp('sort','sims')")}${chip(SHP.sort==='num','Shape number',"setShp('sort','num')")}
+     ${chip(SHP.faav,'Simulated as the FAAV build',"setShp('faav',!SHP.faav)")}${chip(SHP.multi,'Several configurations',"setShp('multi',!SHP.multi)")}</div>
+    <p class="small" style="margin:0 0 6px">${L.length.toLocaleString()} shapes${L.length!==shapeStats().length?` of ${shapeStats().length.toLocaleString()}`:''} · ${N.toLocaleString()} simulations in all</p>
+    <div style="overflow-x:auto"><table class="small"><tr><th>Shape</th><th>Outline</th><th class="n">Half-span</th><th class="n">Runs</th><th>Models</th><th>Frequencies</th><th>Meshes</th><th>Best ≤ ${LIM} N·m (8 × 4)</th></tr>`;
+  for(const s of view){const i0=s.rows[0],open=SHP.open===s.g;
+    h+=`<tr onclick="setShp('open',${open?'null':s.g})" style="cursor:pointer${open?';background:color-mix(in srgb,var(--accent) 12%,transparent)':''}"><td><b>${shapeName(s.g)}</b> <span class="tiny muted">${open?'▾':'▸'}</span></td>
+      <td style="width:130px">${s.cat?polySVG(polyOf(i0),{w:120,h:40,color:css('--neutral')}):outlineSVG(designOutline(i0),{w:120,h:40,spanMax,color:s.faav?css('--s3'):css('--neutral')})}</td>
+      <td class="n">${s.cat?'–':Math.round(SPAN[i0])+' mm'}</td><td class="n">${s.rows.length}</td>
+      <td>${[...s.models].sort().map(k=>MODEL_CODE[k]).join(', ')}</td><td>${[...s.freqs].sort((a,b)=>D.freqs[a]-D.freqs[b]).map(f=>D.freqs[f]).join(', ')} Hz</td><td>${[...s.meshes].map(m=>m==='catalog'?'catalog':m).join(', ')}</td>
+      <td>${s.best==null?'<span class="muted">–</span>':`<b>${fmt(C.T[s.best],2)} N</b> at ${fmt(C.Q[s.best],2)} N·m <span class="tiny muted">${configParts(s.best).slice(0,-1).join(' · ')}</span>`}</td></tr>`;
+    if(open){const rows=s.rows.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
+      h+=`<tr><td colspan="8" style="padding:4px 0 10px 18px"><table class="small" style="white-space:nowrap"><tr><th>Simulation</th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Tip twist</th><th>Quality</th><th>Study</th><th></th></tr>`
+        +rows.map(j=>`<tr><td>${configName(j)}</td><td class="n">${fmt(C.T[j],3)} N</td><td class="n">${fmt(C.Q[j],3)} N·m</td><td class="n">${C.W[j]==null?'–':'±'+fmt(C.W[j],0)+'°'}</td><td>${statusPill(STATUS[C.S[j]])}</td><td class="tiny muted">${esc(D.studies[C.s[j]].short)}</td><td><button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎ on map</button>${mediaForRow(j)?' <span class="tiny muted">▶ animation</span>':''}</td></tr>`).join('')+`</table></td></tr>`}}
+  h+=`</table></div><div class="chips" style="margin-top:8px;gap:8px">${chip(pg>0,'‹ Previous',`setShp('page',${pg-1})`)}<span class="small muted">Page ${pg+1} of ${pages}</span>${chip(pg<pages-1,'Next ›',`setShp('page',${pg+1})`)}</div></div>`;
+  el.innerHTML=h}
 function renderOverview(){
   const R=Object.fromEntries(D.refined.filter(r=>(r.set||'campaign')==='campaign').map(r=>[r.model,r]));
   const RS=Object.fromEntries(D.refined.filter(r=>r.set==='sweep').map(r=>[r.model,r]));
@@ -540,6 +575,7 @@ function renderOverview(){
    ${tile('Designs simulated',N.toLocaleString(),`${(CAT_END-CAT0).toLocaleString()} rigid catalog runs + ${D.unique.toLocaleString()} unique elastic-study designs${N>CAT_END?` + ${(N-CAT_END).toLocaleString()} matched or planned-study results`:''}`)}
   </div>
   ${coverageCard()}
+  <div id="shapes-card"></div>
   <div class="grid2">
   <div class="card"><h3>Key findings</h3><ul class="f">
    <li><b>The rod makes the wing nearly rigid in twist:</b> ±1–2° tip twist, and 0.5 and 0.25 mm sheets within 1% of each other.</li>
@@ -571,7 +607,7 @@ function renderOverview(){
    ${D.reports.map(r=>`<li><a href="${r.file}" target="_blank">${STUDY[r.study].label}: ${r.name.replace('chunk_','chunk ').replace('_',' · ').replace('Hz',' Hz')}</a></li>`).join('')}
   </ul><p class="tiny muted">Built ${D.built}. The page is a static snapshot of the results.</p></div>
   </div>`;
-  $('#t-overview').innerHTML=h;
+  $('#t-overview').innerHTML=h;renderShapes();
 }
 
 /* ======================================================================================
@@ -940,7 +976,7 @@ function selectDesign(i){
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
   if(EXTRA[i]){const e=EXTRA[i],em=e.result.media;$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}<div style="margin:10px 0">${em&&em.poster?posterButton(em,`${e.kind==='spanwise'?'Spanwise + chordwise':'Chordwise only'} · ${esc(e.pair.source.material_label||'')} · ${D.freqs[C.f[i]]} Hz`,info)+` <button class="iconbtn" data-span-pair="${esc(e.pair.source.key)}">▶ Compare both models side by side</button>`:'<p class="tiny muted">No animation rendered for this matched pair.</p>'}</div>${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button> ${basketButton(i)}`;return}
-  $('#detail').innerHTML=`<h3>${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
+  $('#detail').innerHTML=`<h3>${configName(i)}</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:8px 0 0">${favButton(i)} ${basketButton(i)}</div>
     ${groupCard(i)}

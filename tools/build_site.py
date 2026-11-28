@@ -110,6 +110,9 @@ def build(out: Path) -> None:
     ff = ROOT / "atlas" / "frontier-fine.json"      # wingstudy.frontier_fine output: the frontier on 21 x 12
     if ff.exists():
         print(f"frontier re-solves: {study_atlas.merge_frontier(D, json.loads(ff.read_text(encoding='utf-8')))} map rows")
+    from wingstudy import shapes
+    new = shapes.assign(D, ROOT / "atlas" / "shape-ids.json")   # permanent shape numbers; append-only registry
+    print(f"wing shapes: {len(set(x for x in D['cols']['g'] if x)):,} ({new:,} newly numbered)")
     ml = ROOT / "atlas" / "mesh-ladder.json"        # wingstudy.mesh_ladder output: the recommended wings on finer meshes
     if ml.exists():
         D["mesh_ladder"] = json.loads(ml.read_text(encoding="utf-8"))
