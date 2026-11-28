@@ -214,10 +214,11 @@ class Search:
         self.seed, self.budget = seed, seed["budget"]
         f = seed.get("freq", 1.0)
         c = seed["case"]
-        self.recheck = None
+        self.recheck, self.recheck_ctrl = None, None
         if seed.get("ctrl"):                                    # second stage: start from a refined outline
             n, self.root = len(seed["ctrl"]), seed.get("root", ER.ROOT_CHORD)
             self.recheck_numerics = numerics_for(n, chord_panels, "exact", f, self.root)
+            self.recheck_ctrl, self.recheck_span = list(seed["ctrl"]), seed["span"]
             if curve:
                 self.ctrl, self.span = fit_curve(outline_mm(seed["ctrl"], _with_root({"param": "exact"}, self.root)), curve), seed["span"]
                 self.numerics = numerics_for(n, chord_panels, "pchip", f, self.root)
@@ -235,6 +236,10 @@ class Search:
             self.root = [x for x in c["chords_mm"] if x > 0][0] / 1000
             self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
             self.numerics = numerics_for(len(self.ctrl), chord_panels, freq=f, root=self.root)
+            if curve:                                           # the pick itself on this mesh, then a smooth curve
+                self.recheck_numerics, self.recheck_ctrl, self.recheck_span = self.numerics, self.ctrl, self.span
+                self.ctrl = fit_curve(outline_mm(self.ctrl, _with_root({"param": "exact"}, self.root)), curve)
+                self.numerics = numerics_for(len(self.recheck_ctrl), chord_panels, "pchip", f, self.root)
         self.span_max = SHEET_M if seed["single_sheet"] else SPAN_LIMITS[1]
         self.step_i, self.rounds, self.max_rounds = 0, 0, max_rounds
         self.current, self.history, self.done, self.note = None, [], False, ""
@@ -411,7 +416,7 @@ def main(argv=None) -> int:
     if not seeds:
         print("no verified FAAV wings to start from")
         return 1
-    searches = [Search(s, a.factor, a.max_rounds, a.chord_panels, a.curve if (a.from_summary or a.search_mesh) else 0,
+    searches = [Search(s, a.factor, a.max_rounds, a.chord_panels, a.curve,
                        search_mesh=a.search_mesh and not a.from_summary) for s in seeds]
     for s in searches:
         c = s.seed["case"]
@@ -467,15 +472,15 @@ def main(argv=None) -> int:
         return 0
 
     with ProcessPoolExecutor(max_workers=a.workers) as pool:
-        if a.from_summary:                                      # the refined outline itself on the new mesh
-            checks = solve_all(pool, [s.task(s.seed["ctrl"], s.seed["span"], "recheck (refined outline, finer mesh)",
-                                             s.recheck_numerics) for s in searches])
-            for s, r in zip(searches, checks):
+        if any(s.recheck_ctrl for s in searches):               # the outline as given, on this mesh, before the curve fit
+            tag = "recheck (refined outline, finer mesh)" if a.from_summary else "recheck (study pick, tripled stations, this mesh)"
+            rs = [s for s in searches if s.recheck_ctrl]
+            for s, r in zip(rs, solve_all(pool, [s.task(s.recheck_ctrl, s.recheck_span, tag, s.recheck_numerics) for s in rs])):
                 s.recheck = r
         if a.from_summary:
             start_tag = "start (smooth-curve fit of the refined outline)" if a.curve else "start (refined outline)"
         else:
-            start_tag = "start (same outline, tripled stations)"
+            start_tag = "start (smooth-curve fit of the study pick)" if a.curve and not a.search_mesh else "start (same outline, tripled stations)"
         starts = solve_all(pool, [s.task(s.ctrl, s.span, start_tag) for s in searches])
         for s, r in zip(searches, starts):
             s.current = r
