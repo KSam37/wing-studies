@@ -202,7 +202,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
       <span class="fh">View</span>
       <label>X <select id="ax-x"></select></label>
       <label>Y <select id="ax-y"></select></label>
-      <label>Colour by <select id="colorby"><option value="freq">frequency</option><option value="span">half-span (gradient)</option><option value="tq">thrust / torque (gradient)</option><option value="bc">model (leading edge)</option><option value="thk">sheet thickness</option></select></label>
+      <label>Colour by <select id="colorby"><option value="freq">frequency</option><option value="span">half-span (gradient)</option><option value="tq">thrust / torque (gradient)</option><option value="bc">model (leading edge)</option><option value="thk">sheet thickness</option><option value="method">search method</option></select></label>
       <button class="chip" id="f-faav" aria-pressed="true" title="Colour only the wing that was built (0.5 mm carbon sheet, chordwise elasticity, pivoting freely on a stiff leading edge that neither bends nor twists); every other wing is drawn in grey behind it. Nothing is hidden.">Highlight FAAV build</button>
       <button class="chip off" id="f-fav" aria-pressed="false" title="Only designs starred as favourites (shared and your own)">★ Favourites</button>
       <button class="chip off" id="f-steps" aria-pressed="false" title="Searches solve many wings on the way to their result. By default the map shows each search's final variants only (search winners, the end of every lineage, the campaign winners and the optimized standouts), plus favourites. Turn this on to show every wing every search solved, trial and intermediate steps included.">Show every search step</button>
@@ -567,6 +567,11 @@ function methodStats(fi){if(MC.cache[fi])return MC.cache[fi];const S=Object.from
     const ok=GOOD.has(STATUS[C.S[i]])&&C.T[i]>0&&C.Q[i]>0&&SPAN[i]<=SHEET+0.5;
     for(const m of ms){const s=S[m];s.n++;if(ok)MC_B.forEach((B,k)=>{if(C.Q[i]<=B+1e-9&&(s.best[k]==null||C.T[i]>C.T[s.best[k]]))s.best[k]=i})}}
   return MC.cache[fi]=S}
+// Map colouring by search method: one key per wing. Finer-mesh rows are the refinement stage; a campaign wing
+// accepted by both a weighted and a budget search gets its own key.
+const METHOD_KEYS=[...MC_METHODS.map(m=>[m[0],m[1],m[2]]),['both','Weighted and budget search','var(--s5)'],['refine','Refinement (finer mesh)','var(--s4)'],['other','Other (reruns, catalog)','var(--neutral)']];
+const METHOD_COL=Object.fromEntries(METHOD_KEYS.map(m=>[m[0],m[2]]));
+function methodKey(i){if(FINE(i))return 'refine';const ms=methodsOf(i);return ms.length>1?'both':ms[0]||'other'}
 function setMC(f){MC.f=f;$('#mc-card').innerHTML=methodCompareCard()}
 function methodCompareCard(){
   const f1=D.freqs.indexOf(1);if(MC.f==null)MC.f=f1>=0?f1:-1;
@@ -885,7 +890,7 @@ function setGrad(rows){const f=GRADV[M.color];if(!f){GRAD=null;return}const v=ro
   if(!v.length){GRAD=null;return}const q=p=>v[Math.min(v.length-1,Math.max(0,Math.round(p*(v.length-1))))];GRAD={lo:q(.02),hi:q(.98),lut:gradLUT()};if(GRAD.hi<=GRAD.lo)GRAD.hi=GRAD.lo+1}
 function gradColor(v){if(!GRAD||v==null||!isFinite(v))return css('--neutral');const t=Math.min(1,Math.max(0,(v-GRAD.lo)/(GRAD.hi-GRAD.lo)));return GRAD.lut[Math.round(t*23)]}
 function colorOf(i){const m=C.m[i];if(GREYED(i))return css('--muted');if(GRADV[M.color])return gradColor(GRADV[M.color](i));if(M.color==='constr'||M.color==='thk'){const k=M.color==='constr'?ROD_OF[m]:THK_OF[m];return k==null?css('--neutral'):M.color==='constr'?constrColor(k):thkColor(k)}
-  return M.color==='model'?modelColor(BASE_OF[m]):M.color==='struct'?structColor(STRUCT_OF[m]):M.color==='bc'?bcColor(BC_OF[m]):M.color==='study'?studyColor(C.s[i]):freqColor(C.f[i])}
+  return M.color==='model'?modelColor(BASE_OF[m]):M.color==='struct'?structColor(STRUCT_OF[m]):M.color==='bc'?bcColor(BC_OF[m]):M.color==='study'?studyColor(C.s[i]):M.color==='method'?css(METHOD_COL[methodKey(i)].slice(4,-1)):freqColor(C.f[i])}
 const PAD={l:62,r:16,t:14,b:46};
 function fitView(){
   const gx=AXES[M.x].get,gy=AXES[M.y].get;let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
@@ -957,8 +962,8 @@ function paint(){
 function star(x,y,R,fill,ring){ctx.beginPath();for(let j=0;j<10;j++){const a=-Math.PI/2+j*Math.PI/5,rr=j%2?R*.45:R;ctx.lineTo(x+rr*Math.cos(a),y+rr*Math.sin(a))}ctx.closePath();
   ctx.fillStyle=fill;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=ring;ctx.stroke();ctx.lineWidth=1;ctx.strokeStyle=css('--text');ctx.stroke()}
 function updateCounts(){
-  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),BC_SHORT[k],k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?SGROUPS.map(g=>[css(g[2]),g[1],g[0]]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
-  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?SGROUP_OF[C.s[i]]:C.f[i];
+  const lab=M.color==='model'?MATS.map(i=>[modelColor(D.models[i].id),D.models[i].label,i]):M.color==='struct'?STRUCTS.map(([k,l])=>[structColor(k),l,k]):M.color==='bc'?BCS.map(([k,l])=>[bcColor(k),BC_SHORT[k],k]):M.color==='constr'?[...CONSTRS.map(([k,l])=>[constrColor(k),l,k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='thk'?[...THKS.map((t,k)=>[thkColor(k),t+' mm sheet',k]),[css('--neutral'),'Rigid (no material)','r']]:M.color==='study'?SGROUPS.map(g=>[css(g[2]),g[1],g[0]]):M.color==='method'?METHOD_KEYS.map(([k,l,c])=>[c,l,k]):D.freqs.map((f,i)=>[freqColor(i),f+' Hz',i]);
+  const key=i=>M.color==='constr'?(ROD_OF[C.m[i]]??'r'):M.color==='thk'?(THK_OF[C.m[i]]??'r'):M.color==='model'?MAT_OF[C.m[i]]:M.color==='struct'?STRUCT_OF[C.m[i]]:M.color==='bc'?BC_OF[C.m[i]]:M.color==='study'?SGROUP_OF[C.s[i]]:M.color==='method'?methodKey(i):C.f[i];
   const cnt={};let nGrey=0;for(const i of VIS){if(GREYED(i)){nGrey++;continue}const k=key(i);cnt[k]=(cnt[k]||0)+1}
   setGrad(VIS);$('#map-legend').innerHTML=(GRADV[M.color]&&GRAD?`<span>${GRADL[M.color][0]} <span class="muted">${GRADL[M.color][1](GRAD.lo)}</span> <span style="display:inline-block;width:140px;height:10px;border-radius:2px;vertical-align:middle;background:linear-gradient(90deg,${GRAD.lut.join(',')})"></span> <span class="muted">${GRADL[M.color][1](GRAD.hi)}</span></span>`:'')+lab.filter(l=>!GRADV[M.color]&&cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span><span style="color:${FAVC}">★</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
 
