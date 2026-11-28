@@ -96,15 +96,19 @@ def effective_span_mm(c: dict) -> float:
     return c["half_span_mm"] * (n - 1) / (len(ch) - 1)
 
 
-def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False, freq: float = 1.0) -> list[dict]:
+def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False, freq: float = 1.0, free_span: bool = False) -> list[dict]:
+    """Standouts per budget. With ``free_span``, a budget whose best wing already fits one sheet also gets an
+    'any' seed from that wing, searched without the 400 mm cap, so every budget has a free-span search."""
     seeds = []
     for B in levels:
         ok = [c for c in cases if c["torque_Nm"] <= B]
         best = max(ok, key=lambda c: c["thrust_N"], default=None)
         sheet = max((c for c in ok if effective_span_mm(c) <= SHEET_M * 1000 + 0.5), key=lambda c: c["thrust_N"], default=None)
         pairs = ((sheet, True),) if sheet_only else ((best, best is not None and effective_span_mm(best) <= SHEET_M * 1000 + 0.5), (sheet, True))
+        if free_span and not sheet_only and best is not None and pairs[0][1]:
+            pairs = pairs + ((best, False),)
         for c, single in pairs:
-            if c is None or any(s["case"]["key"] == c["key"] and s["budget"] == B for s in seeds):
+            if c is None or any(s["case"]["key"] == c["key"] and s["budget"] == B and s["single_sheet"] == single for s in seeds):
                 continue
             seeds.append({"id": f"{'' if abs(freq - 1.0) < 1e-9 else f'F{freq:g}-'}B{B:g}-{'sheet' if single else 'any'}-{c['key'][:8]}",
                           "budget": B, "single_sheet": single, "case": c, "freq": freq})
@@ -318,6 +322,7 @@ def main(argv=None) -> int:
     ap.add_argument("--max-rounds", type=int, default=20)
     ap.add_argument("--levels", type=float, nargs="+", default=list(LEVELS), help="torque budgets to pick standouts at (N*m)")
     ap.add_argument("--sheet-only", action="store_true", help="only single-sheet (<= 400 mm) standouts, kept within one sheet")
+    ap.add_argument("--free-span", action="store_true", help="also search each budget's best wing without the 400 mm cap when it fits one sheet")
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--dry", action="store_true", help="list the seeds and the first round's size, solve nothing")
     a = ap.parse_args(argv)
@@ -333,7 +338,7 @@ def main(argv=None) -> int:
         if a.atlas:
             have = {c["key"] for c in cases}
             cases += [c for c in atlas_cases(a.freq) if c["key"] not in have]
-        seeds = pick_seeds(cases, a.levels, a.sheet_only, a.freq)
+        seeds = pick_seeds(cases, a.levels, a.sheet_only, a.freq, a.free_span)
     if not seeds:
         print("no verified FAAV wings to start from")
         return 1

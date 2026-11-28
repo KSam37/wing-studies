@@ -158,6 +158,7 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
                 else:
                     cols[k].append(vals.get(k))
             n = c["numerics"]
+            D.setdefault("row_mesh", {})[str(row)] = mesh_label(n)
             notes[str(row)] = (f"{spec['id']} case {c['case_id']} ({c['wing']}): {n['span_panels']} × {n['chord_panels']} "
                                f"panels, {n['steps_per_cycle']} steps per cycle, {n['cycles']} cycles")
             added += 1
@@ -184,6 +185,13 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
 
 
 SRC_REFINE = 8
+SRC_FRONTIER = 32
+SEARCH_MESH = "8 × 4"
+
+
+def mesh_label(numerics: dict) -> str:
+    """Panel mesh of a solve, as shown on the map ("span × chord")."""
+    return f"{numerics.get('span_panels')} × {numerics.get('chord_panels')}"
 
 
 def _resample(chords: list, n: int) -> list:
@@ -239,12 +247,12 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                 if not (h.get("key") and _finite(h.get("thrust")) and _finite(h.get("torque")) and h.get("ctrl")):
                     continue
                 ch = h.get("chords_mm") or [200.0] + [round(1000 * c, 2) for c in h["ctrl"]]
-                path.append((h, ch, f"step {n + 1 if n == 0 else 3}{'' if h['round'] else ' start'}"
+                path.append((h, ch, mesh_label(num), f"step {n + 1 if n == 0 else 3}{'' if h['round'] else ' start'}"
                                     f"{', round ' + str(h['round']) if h['round'] else ''} ({mesh}"
                                     f"{', smooth curve' if num.get('param') == 'pchip' else ''})"))
         fi = _index(D["freqs"], freq)
         rows = []
-        for h, ch, what in path:
+        for h, ch, mesh_s, what in path:
             if h["key"] in keyrow:
                 rows.append(keyrow[h["key"]])
                 continue
@@ -258,6 +266,7 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                 else:
                     cols[k].append(vals.get(k))
             keyrow[h["key"]] = row
+            D.setdefault("row_mesh", {})[str(row)] = mesh_s
             outlines[str(row)] = ch
             notes[str(row)] = f"Optimized shapes, ≤ {budget:g} N·m standout at {freq:g} Hz ({sid_}): {what}"
             rsearch[str(row)] = {"objectives": [f"≤ {budget:g} N·m (fine-mesh refinement)"], "lambda": [],
@@ -277,4 +286,51 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                 "note": "The study pick (8 × 4 mesh), then every accepted step: tripled chord stations on 21 × 4 panels, "
                         "then a smooth curve through 6 control chords on 21 × 12 panels. Thrust and torque rise with the "
                         "finer meshes, so compare steps within a mesh."}})
+    return added
+
+
+def merge_frontier(D: dict, data: dict | None) -> int:
+    """21 x 12 re-solves of the FAAV thrust/torque frontier (wingstudy.frontier_fine) as map rows.
+
+    Each row keeps its 8 x 4 source's outline (8 chords, same half-span), so on the map it falls in the same
+    shape group as its source and differs only in mesh. ``row_mesh`` records the mesh; the source row is noted.
+    """
+    if not data or not data.get("wings"):
+        return 0
+    cols = D["cols"]
+    if D.get("catalog") and "end" not in D["catalog"]:
+        D["catalog"]["end"] = len(cols["s"])
+    keyrow = {k: r for r, k in enumerate(cols["k"])}
+    sid = len(D["studies"])
+    D["studies"].append({"id": "frontier-fine", "label": "Frontier on the 21 × 12 mesh: FAAV wings re-solved",
+                         "short": "Frontier, 21 × 12 mesh", "kind": "rerun", "planned": True,
+                         "about": "Every FAAV wing on the thrust/torque frontier and the best few under each budget, at "
+                                  "every frequency, re-solved on 21 × 12 panels with the outline unchanged "
+                                  "(wingstudy.frontier_fine), so wings can be ranked on one finer mesh.",
+                         **({"run_date": data["updated"]} if data.get("updated") else {})})
+    mi = _model(D, "t0.50", "chordwise")
+    notes, meshes = D.setdefault("row_notes", {}), D.setdefault("row_mesh", {})
+    added = 0
+    for w in data["wings"]:
+        f = w.get("fine") or {}
+        if f.get("status") not in ("verified", "ok") or not (_finite(f.get("thrust")) and _finite(f.get("torque"))):
+            continue
+        if f["key"] in keyrow:
+            continue
+        row = len(cols["s"])
+        vals = {"s": sid, "m": mi, "f": _index(D["freqs"], w["freq"]), "T": f["thrust"], "Q": f["torque"],
+                "H": w["half_span_mm"], "W": f.get("tip_twist"), "S": _index(D["statuses"], f["status"]),
+                "src": SRC_STUDY | SRC_FRONTIER, "k": f["key"], "obj": 0}
+        for k in cols:
+            if k == "C":
+                cols["C"].extend(list(w["chords_mm"]) + [0.0] * (S.NODES - len(w["chords_mm"])))
+            else:
+                cols[k].append(vals.get(k))
+        keyrow[f["key"]] = row
+        meshes[str(row)] = "21 × 12"
+        n = f.get("numerics") or {}
+        notes[str(row)] = (f"21 × 12 re-solve of {w['key'][:12]} ({w['study']}, 8 × 4: {w['coarse']['thrust']:.3f} N at "
+                           f"{w['coarse']['torque']:.3f} N·m): {n.get('stations')} stations, straight segments, "
+                           f"{n.get('steps_per_cycle')} steps per cycle")
+        added += 1
     return added

@@ -107,9 +107,22 @@ def build(out: Path) -> None:
     n = study_atlas.merge_refinement(D, [D.get("refine_top"), D.get("refine_curve")])
     if n:
         print(f"optimized shapes: {n} map rows")
+    ff = ROOT / "atlas" / "frontier-fine.json"      # wingstudy.frontier_fine output: the frontier on 21 x 12
+    if ff.exists():
+        print(f"frontier re-solves: {study_atlas.merge_frontier(D, json.loads(ff.read_text(encoding='utf-8')))} map rows")
+    from wingstudy import shapes
+    new = shapes.assign(D, ROOT / "atlas" / "shape-ids.json")   # permanent shape numbers; append-only registry
+    print(f"wing shapes: {len(set(x for x in D['cols']['g'] if x)):,} ({new:,} newly numbered)")
     ml = ROOT / "atlas" / "mesh-ladder.json"        # wingstudy.mesh_ladder output: the recommended wings on finer meshes
     if ml.exists():
         D["mesh_ladder"] = json.loads(ml.read_text(encoding="utf-8"))
+    tm = ROOT / "atlas" / "top-media.json"          # wingstudy.top_media output: animations of the Top-tab performers
+    if tm.exists():
+        D["media"] = {**(D.get("media") or {}), **{k: {n: v[n] for n in ("main", "front", "top", "poster")}
+                                                  for k, v in json.loads(tm.read_text(encoding="utf-8")).items()}}
+    fs = ROOT / "atlas" / "frequency-sweep.json"    # wingstudy.frequency_sweep output: optimized wings at every frequency
+    if fs.exists():
+        D["frequency_sweep"] = json.loads(fs.read_text(encoding="utf-8"))
     gifs = ROOT / "atlas" / "media" / "refine-top"   # wingstudy.refine_top --gif output
     D["refine_gifs"] = sorted(g.stem for g in gifs.glob("*.gif")) if gifs.exists() else []
     D["built"] = now.strftime("%Y-%m-%d %H:%M UTC")

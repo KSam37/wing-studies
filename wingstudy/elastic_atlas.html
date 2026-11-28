@@ -177,6 +177,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
     <button data-t="winners">Top performing wings</button>
     <button data-t="conv">Convergence</button>
     <button data-t="elastic">Elasticity effects</button>
+    <button data-t="freq">Frequency effects</button>
   </nav>
   <a class="iconbtn" id="newstudy" href="../new/" title="Set up a study with the wings you picked">New study</a>
   <button class="iconbtn" id="theme" title="Switch light / dark">Light / dark</button>
@@ -223,6 +224,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
         <div class="frow"><span class="fl">Frequency</span><div class="chips" id="f-freq"></div></div>
         <div class="frow"><span class="fl">Root torque</span><div class="chips" id="f-lim"></div></div>
         <div class="frow"><span class="fl">Result quality</span><div class="chips" id="f-quality"></div></div>
+        <div class="frow"><span class="fl">Mesh</span><div class="chips" id="f-mesh"></div></div>
         <p class="tiny muted" style="margin:2px 0 0"><b>Half-span</b>: root to last non-zero chord. <b>St</b> = f·A/U, with A ≈ half-span (the rigid tip's peak-to-peak excursion over the 60° flap) and U = 0.5 m/s. <b>Verified</b>: two stabilization settings agree. <b>Settled</b>: rigid solve converged over cycles. Both are numerical checks.</p>
       </fieldset>
     </div>
@@ -254,6 +256,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
 </section>
 <section class="tab" id="t-opt"></section>
 <section class="tab" id="t-conv"></section>
+<section class="tab" id="t-freq"></section>
 </main>
 <div class="tip" id="tip"></div>
 <dialog id="viewer"><div class="dlg-h"><h3 id="v-title" style="margin:0"></h3><button class="iconbtn" onclick="viewer.close()">Close</button></div><div class="dlg-b" id="v-body"></div></dialog>
@@ -280,7 +283,7 @@ const EXTRA={}; const ORIGINAL_N=D.cols.s.length;
     let si=D.studies.findIndex(st=>st.id===w.study);if(si<0)si=0;
     let status=D.statuses.indexOf(r.status);if(status<0){status=D.statuses.length;D.statuses.push(r.status)}
     const i=D.cols.s.length;pair.mapRows[kind]=i;EXTRA[i]={pair,kind,result:r};
-    const vals={s:si,m:mi,f:fi,T:r.mean_thrust_N,Q:r.peak_abs_root_torque_Nm,H:w.half_span,W:r.tip_twist_amplitude_deg??null,S:status,src:0,k:w.key+':'+kind,obj:512};
+    const vals={s:si,m:mi,f:fi,T:r.mean_thrust_N,Q:r.peak_abs_root_torque_Nm,H:w.half_span,W:r.tip_twist_amplitude_deg??null,S:status,src:0,k:w.key+':'+kind,obj:512,g:w.shape??null};
     for(const k of Object.keys(D.cols))if(k==='C')D.cols.C.push(...Array.from({length:8},(_,j)=>w.chords[j]??0));else D.cols[k].push(vals[k]??null);
   }
 });
@@ -363,7 +366,61 @@ function outlineSVG(pts,{w=260,h=96,color='var(--accent)',spanMax=420,chordMax=2
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block" role="img" aria-label="Wing outline, to scale"><title>Outline to scale: leading edge (thick line) at the top, root at the left</title>${g}</svg>`;
 }
 const designOutline=i=>activeOutline(D.row_outline&&D.row_outline[i]||chordsOf(i),C.H[i]);   // row_outline: refined rows, every mesh station
-const FINE=i=>!!(C.src[i]&8);   // fine-mesh refinement rows (Optimized shapes): not compared with 8 x 4 results
+// Panel mesh of each row ("span × chord"): studies, refinement and frontier re-solves record theirs (row_mesh);
+// campaign rows and matched reruns were solved on the 8 × 4 search mesh; the rigid catalog has its own settings.
+const SEARCH_MESH='8 × 4';
+const MESH_OF=i=>isCat(i)?'catalog':(D.row_mesh&&D.row_mesh[i])||(EXTRA[i]&&EXTRA[i].pair.source.numerics&&EXTRA[i].pair.source.numerics.span_panels?`${EXTRA[i].pair.source.numerics.span_panels} × ${EXTRA[i].pair.source.numerics.chord_panels}`:SEARCH_MESH);
+const FINE=i=>!isCat(i)&&MESH_OF(i)!==SEARCH_MESH;   // any finer mesh: never ranked against 8 × 4 results
+
+/* ---------- shape groups: every simulation of one outline ----------
+   A point is one simulation. Its shape group is every simulation of the same outline (root-to-tip chords and
+   half-span), whatever the construction, model, frequency or mesh. The outline is sampled at 25 equal span
+   fractions and rounded to 1 mm, so an 8-station outline and the same outline on tripled stations match. */
+// Shape numbers come from the build (wingstudy/shapes.py, atlas/shape-ids.json) and never change.
+const shapeName=n=>n==null?'W?':'W'+String(n).padStart(5,'0');
+let GROUPS=null;
+function groups(){if(!GROUPS){GROUPS=new Map();for(let j=0;j<N;j++){const k=C.g[j];if(k==null)continue;const g=GROUPS.get(k);if(g)g.push(j);else GROUPS.set(k,[j])}}return GROUPS}
+function groupOf(i){return C.g[i]==null?[i]:groups().get(C.g[i])||[i]}
+// Standard name of one simulation: shape number, then construction, structural model, frequency and mesh.
+const MODEL_CODE=['rigid','stiff LE','rod','spanwise','rod + spanwise'];
+function configParts(i){const b=BASE_OF[C.m[i]],rigid=b==='rigid';
+  return [rigid?'rigid':`${MODEL[b].thickness} mm${ROD_OF[C.m[i]]?' + rod':''}`,...(rigid?[]:[MODEL_CODE[BC_OF[C.m[i]]]]),`${D.freqs[C.f[i]]} Hz`,MESH_OF(i)==='catalog'?'catalog settings':MESH_OF(i)]}
+const configName=i=>[shapeName(C.g[i]),...configParts(i)].join(' · ');
+// The optimizer changes the outline, so an optimized wing is a new shape. LINKS ties it to the shape it started
+// from both ways: from each optimization's final row (row_search evolution: study pick, then every accepted step).
+let LINKS=null;
+function shapeLinks(){if(LINKS)return LINKS;LINKS={from:new Map(),into:new Map()};
+  const add=(m,k,v)=>{if(!m.has(k))m.set(k,[]);if(!m.get(k).some(x=>x.final===v.final&&x.row===v.row))m.get(k).push(v)};
+  for(const [r,v] of Object.entries(D.row_search||{})){if(!(v.refine&&v.winner&&v.evolution))continue;
+    const fin=+r,st=v.evolution.steps||[],seed=st.length&&!(RS(st[0])||{}).refine?st[0]:null;if(seed==null)continue;
+    const lab=`≤ ${v.evolution.torque_budget_Nm} N·m at ${D.freqs[C.f[fin]]} Hz`;
+    add(LINKS.into,C.g[seed],{g:C.g[fin],row:fin,final:fin,lab});
+    for(const j of st.slice(1))if(C.g[j]!==C.g[seed])add(LINKS.from,C.g[j],{g:C.g[seed],row:seed,final:fin,step:j!==fin,lab})}
+  return LINKS}
+// mode 'map': links select a simulation; 'list': links open that shape in the Overview list
+function linkLines(g,mode){const L=shapeLinks(),go=(x,row)=>mode==='map'?`selectDesign(${row})`:`event.stopPropagation();openShape(${x})`;
+  const a=(x,row)=>`<a href="#" onclick="${go(x,row)};return false"><b>${shapeName(x)}</b></a>`,out=[];
+  for(const x of L.from.get(g)||[])out.push(x.step?`An intermediate step of the optimization of ${a(x.g,x.row)} (${x.lab}), which ended at ${a(C.g[x.final],x.final)}.`
+    :`Optimized from ${a(x.g,x.row)}, the study pick for ${x.lab} (8 × 4), on finer meshes and a smooth outline.`);
+  for(const x of L.into.get(g)||[])out.push(`Optimized into ${a(x.g,x.row)} for ${x.lab}: ${fmt(C.T[x.row],3)} N at ${fmt(C.Q[x.row],3)} N·m on ${MESH_OF(x.row)}.`);
+  return out.length?`<p class="small" style="margin:0 0 6px">${out.join('<br>')}</p>`:''}
+function openShape(g){SHP.q=String(g);SHP.open=g;SHP.page=0;renderShapes();$('#shapes-card').scrollIntoView({block:'start'})}
+function groupCard(i){if(isCat(i))return '';
+  const all=groupOf(i),shown=all.filter(j=>j===i||paramPass(j)),hidden=all.length-shown.length;
+  if(all.length<2)return `<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}</h3>${linkLines(C.g[i],'map')}<p class="small muted" style="margin:0">This shape has been simulated once.</p></div>`;
+  const GBC=['Rigid','Stiff LE (FAAV)','Rod, twists','Free sheet, bends','Rod, bends'];
+  const label=j=>BASE_OF[C.m[j]]==='rigid'?'–':`${MODEL[BASE_OF[C.m[j]]].thickness} mm${ROD_OF[C.m[j]]?' + rod':''}`,model=j=>`<span title="${esc(BCS[BC_OF[C.m[j]]][1])}">${GBC[BC_OF[C.m[j]]]}</span>`;
+  const rows=shown.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
+  let h=`<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}: ${all.length} simulations of this shape</h3>
+    <p class="tiny muted" style="margin:0 0 6px">Same outline, varied construction, model, frequency and mesh. The map filters choose which are listed${hidden?`; ${hidden} hidden by them`:''}. Click a row to select it.</p>${linkLines(C.g[i],'map')}`;
+  // thrust against frequency, one line per construction, model and mesh
+  const ser=new Map();for(const j of rows){const k=C.m[j]+'|'+MESH_OF(j);if(!ser.has(k))ser.set(k,[]);ser.get(k).push(j)}
+  if(new Set(rows.map(j=>C.f[j])).size>1){const series=[...ser.values()].map(js=>{const j0=js[0],byF=new Map();for(const j of js)if(!byF.has(C.f[j])||C.T[j]>C.T[byF.get(C.f[j])])byF.set(C.f[j],j);
+      return {name:`${label(j0)} · ${GBC[BC_OF[C.m[j0]]]} · ${MESH_OF(j0)}`,color:modelColor(D.models[C.m[j0]].id),points:[...byF].sort((a,b)=>a[0]-b[0]).map(([f,j])=>({x:D.freqs[f],y:C.T[j],hollow:FINE(j),row:j,tip:`<b>${label(j)} · ${GBC[BC_OF[C.m[j]]]}</b><br>${D.freqs[C.f[j]]} Hz · ${MESH_OF(j)} mesh<br>${fmt(C.T[j],3)} N at ${fmt(C.Q[j],3)} N·m${C.W[j]!=null?` · ±${fmt(C.W[j],0)}°`:''}`}))}});
+    h+=lineChart({series,xlabel:'frequency (Hz)',ylabel:'thrust (N)',w:340,h:190,xfmt:v=>v+' Hz'})+`<p class="tiny muted" style="margin:0 0 6px">One line per construction, model and mesh; hollow = finer than 8 × 4. Hover for torque.</p>`}
+  h+=`<div style="max-height:260px;overflow:auto"><table class="small" style="white-space:nowrap"><tr><th>Sheet</th><th>Model</th><th class="n">Hz</th><th>Mesh</th><th class="n">N</th><th class="n">N·m</th><th class="n">Twist</th></tr>`;
+  for(const j of rows)h+=`<tr onclick="selectDesign(${j})" style="cursor:pointer${j===i?';background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:600':''}"><td>${label(j)}</td><td>${model(j)}</td><td class="n">${D.freqs[C.f[j]]}</td><td>${MESH_OF(j)}</td><td class="n">${fmt(C.T[j],3)}</td><td class="n">${fmt(C.Q[j],3)}</td><td class="n">${C.W[j]==null?'–':'±'+fmt(C.W[j],0)+'°'}</td></tr>`;
+  return h+'</table></div></div>'}
 
 /* ---------- media viewer ---------- */
 const viewer=$('#viewer');
@@ -485,6 +542,38 @@ function methodsCard(){
    ${blk('7 · Convergence',`Top designs and a random sample are re-solved on three uniformly refined settings (8 × 4 / 50, 12 × 6 / 75, 18 × 9 / 112; r = 1.5) and with each parameter doubled alone. Observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, Richardson value f₁ + (f₁ − f₂)/(r<sup>p</sup> − 1), GCI = 1.25 |(f₁ − f₂)/f₁| / (r<sup>p</sup> − 1).${S?` <b>Latest:</b> thrust ranking kept with ρ = ${fmt(S.rank_correlation_base_fine,3)}; base-setting thrust within ${fmt(S.median_abs_base_error_thrust_pct,1)}% (median) of the extrapolated value.`:' See the Convergence tab for results.'}`)}
    ${blk('8 · Derived quantities',`<b>Strouhal number</b> St = f·A/U with A the tip's peak-to-peak excursion, A = R(sin 34° + sin 26°) ≈ R for half-span R (elastic deflection not included). <b>Effective half-span</b> runs to the last non-zero chord. A <b>single sheet</b> is at most ${SHEET} mm, so longer half-spans need a joined sheet.`)}
   </div><p class="note small" style="margin-top:10px">Limits: the model is inviscid, so viscous drag (rod, narrow chords) and separation at large twist are missing. Read strip-like optima and very large twists as trends.</p></div>`}
+// Every wing shape, one row each; click a shape for every configuration it was simulated in.
+const SHP={q:'',sort:'best',multi:false,faav:false,page:0,open:null,per:40};
+function shapeStats(){if(shapeStats.v)return shapeStats.v;const out=[];
+  for(const [g,rows] of groups()){let best=null;for(const j of rows)if(MESH_OF(j)===SEARCH_MESH&&GOOD.has(STATUS[C.S[j]])&&C.Q[j]<=LIM&&(best==null||C.T[j]>C.T[best]))best=j;
+    out.push({g,rows,best,faav:rows.some(FAAV),cat:isCat(rows[0]),
+      models:new Set(rows.map(j=>BC_OF[C.m[j]])),freqs:new Set(rows.map(j=>C.f[j])),meshes:new Set(rows.map(MESH_OF))})}
+  return shapeStats.v=out}
+function setShp(k,v){SHP[k]=v;if(k!=='page'&&k!=='open')SHP.page=0;renderShapes()}
+function renderShapes(){const el=$('#shapes-card');if(!el)return;
+  let L=shapeStats();const q=SHP.q.trim().toUpperCase().replace(/^W0*/,'');
+  if(q)L=L.filter(s=>String(s.g).startsWith(q));if(SHP.multi)L=L.filter(s=>s.rows.length>1);if(SHP.faav)L=L.filter(s=>s.faav);
+  L=L.slice().sort(SHP.sort==='num'?(a,b)=>a.g-b.g:SHP.sort==='sims'?(a,b)=>b.rows.length-a.rows.length||a.g-b.g:(a,b)=>(b.best==null?-1:C.T[b.best])-(a.best==null?-1:C.T[a.best])||a.g-b.g);
+  const pages=Math.max(1,Math.ceil(L.length/SHP.per)),pg=Math.max(0,Math.min(SHP.page,pages-1)),view=L.slice(pg*SHP.per,(pg+1)*SHP.per);
+  const chip=(on,lab,js)=>`<button class="chip ${on?'':'off'}" aria-pressed="${on}" onclick="${js}">${lab}</button>`;
+  const spanMax=Math.max(420,...view.filter(s=>!s.cat).map(s=>SPAN[s.rows[0]]))*1.02;
+  let h=`<div class="card"><h3>Wing shapes</h3><p class="small muted" style="max-width:920px">Every outline simulated, numbered once and for good. A simulation is named by its shape, then construction, structural model, frequency and mesh (for example <b>${shapeStats().find(s=>s.best!=null&&FAAV(s.best))?configName(shapeStats().find(s=>s.best!=null&&FAAV(s.best)).best):'W00001 · 0.5 mm · stiff LE · 1 Hz · 8 × 4'}</b>). Click a shape for all its configurations.</p>
+    <div class="chips" style="gap:8px;margin:6px 0 8px"><input type="search" id="shp-q" placeholder="Shape number, e.g. W00412" value="${esc(SHP.q)}" oninput="setShp('q',this.value);const e=$('#shp-q');e.focus();e.setSelectionRange(e.value.length,e.value.length)" style="width:200px" aria-label="Find a shape number">
+     <span class="small muted">Sort</span>${chip(SHP.sort==='best',`Best thrust ≤ ${LIM} N·m`,"setShp('sort','best')")}${chip(SHP.sort==='sims','Most simulations',"setShp('sort','sims')")}${chip(SHP.sort==='num','Shape number',"setShp('sort','num')")}
+     ${chip(SHP.faav,'Simulated as the FAAV build',"setShp('faav',!SHP.faav)")}${chip(SHP.multi,'Several configurations',"setShp('multi',!SHP.multi)")}</div>
+    <p class="small" style="margin:0 0 6px">${L.length.toLocaleString()} shapes${L.length!==shapeStats().length?` of ${shapeStats().length.toLocaleString()}`:''} · ${N.toLocaleString()} simulations in all</p>
+    <div style="overflow-x:auto"><table class="small"><tr><th>Shape</th><th>Outline</th><th class="n">Half-span</th><th class="n">Runs</th><th>Models</th><th>Frequencies</th><th>Meshes</th><th>Best ≤ ${LIM} N·m (8 × 4)</th></tr>`;
+  for(const s of view){const i0=s.rows[0],open=SHP.open===s.g;
+    h+=`<tr onclick="setShp('open',${open?'null':s.g})" style="cursor:pointer${open?';background:color-mix(in srgb,var(--accent) 12%,transparent)':''}"><td><b>${shapeName(s.g)}</b> <span class="tiny muted">${open?'▾':'▸'}</span>${shapeLinks().from.has(s.g)?' <span class="tiny muted" title="An optimized shape">optimized</span>':shapeLinks().into.has(s.g)?' <span class="tiny muted" title="Was optimized into another shape">optimized ↗</span>':''}</td>
+      <td style="width:130px">${s.cat?polySVG(polyOf(i0),{w:120,h:40,color:css('--neutral')}):outlineSVG(designOutline(i0),{w:120,h:40,spanMax,color:s.faav?css('--s3'):css('--neutral')})}</td>
+      <td class="n">${s.cat?'–':Math.round(SPAN[i0])+' mm'}</td><td class="n">${s.rows.length}</td>
+      <td>${[...s.models].sort().map(k=>MODEL_CODE[k]).join(', ')}</td><td>${[...s.freqs].sort((a,b)=>D.freqs[a]-D.freqs[b]).map(f=>D.freqs[f]).join(', ')} Hz</td><td>${[...s.meshes].map(m=>m==='catalog'?'catalog':m).join(', ')}</td>
+      <td>${s.best==null?'<span class="muted">–</span>':`<b>${fmt(C.T[s.best],2)} N</b> at ${fmt(C.Q[s.best],2)} N·m <span class="tiny muted">${configParts(s.best).slice(0,-1).join(' · ')}</span>`}</td></tr>`;
+    if(open){const rows=s.rows.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
+      h+=`<tr><td colspan="8" style="padding:4px 0 10px 18px">${linkLines(s.g,'list')}<table class="small" style="white-space:nowrap"><tr><th>Simulation</th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Tip twist</th><th>Quality</th><th>Study</th><th></th></tr>`
+        +rows.map(j=>`<tr><td>${configName(j)}</td><td class="n">${fmt(C.T[j],3)} N</td><td class="n">${fmt(C.Q[j],3)} N·m</td><td class="n">${C.W[j]==null?'–':'±'+fmt(C.W[j],0)+'°'}</td><td>${statusPill(STATUS[C.S[j]])}</td><td class="tiny muted">${esc(D.studies[C.s[j]].short)}</td><td><button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎ on map</button>${mediaForRow(j)?' <span class="tiny muted">▶ animation</span>':''}</td></tr>`).join('')+`</table></td></tr>`}}
+  h+=`</table></div><div class="chips" style="margin-top:8px;gap:8px">${chip(pg>0,'‹ Previous',`setShp('page',${pg-1})`)}<span class="small muted">Page ${pg+1} of ${pages}</span>${chip(pg<pages-1,'Next ›',`setShp('page',${pg+1})`)}</div></div>`;
+  el.innerHTML=h}
 function renderOverview(){
   const R=Object.fromEntries(D.refined.filter(r=>(r.set||'campaign')==='campaign').map(r=>[r.model,r]));
   const RS=Object.fromEntries(D.refined.filter(r=>r.set==='sweep').map(r=>[r.model,r]));
@@ -502,6 +591,7 @@ function renderOverview(){
    ${tile('Designs simulated',N.toLocaleString(),`${(CAT_END-CAT0).toLocaleString()} rigid catalog runs + ${D.unique.toLocaleString()} unique elastic-study designs${N>CAT_END?` + ${(N-CAT_END).toLocaleString()} matched or planned-study results`:''}`)}
   </div>
   ${coverageCard()}
+  <div id="shapes-card"></div>
   <div class="grid2">
   <div class="card"><h3>Key findings</h3><ul class="f">
    <li><b>Spend the torque on span.</b> Every top wing uses the full 200 mm root, tapers steeply over the inner sixth and keeps the outer half slender. At 1 N·m, outline alone moves thrust from 2.18 to 2.93 N (+34%) across 891 verified FAAV wings; the top 5% sit at 390–400 mm.</li>
@@ -534,7 +624,7 @@ function renderOverview(){
    ${D.reports.map(r=>`<li><a href="${r.file}" target="_blank">${STUDY[r.study].label}: ${r.name.replace('chunk_','chunk ').replace('_',' · ').replace('Hz',' Hz')}</a></li>`).join('')}
   </ul><p class="tiny muted">Built ${D.built}. The page is a static snapshot of the results.</p></div>
   </div>`;
-  $('#t-overview').innerHTML=h;
+  $('#t-overview').innerHTML=h;renderShapes();
 }
 
 /* ======================================================================================
@@ -600,7 +690,11 @@ const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / 
 const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low torque'],[0,'No λ (other searches, maps, sweeps, reruns)']];
 const LAMBDA_BITS=2|4|8;
 const lambdaPass=i=>{const o=C.obj[i]&LAMBDA_BITS;if(!o)return M.lambda.has(0);for(const b of [2,4,8])if(o&b&&M.lambda.has(b))return true;return false};
-const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),
+const MESH_LIST=(()=>{const n=new Map();for(let i=0;i<N;i++){const m=MESH_OF(i);n.set(m,(n.get(m)||0)+1)}
+  const area=m=>m==='catalog'?-1:m.split(' × ').reduce((a,b)=>a*(+b||1),1);return [...n.keys()].sort((a,b)=>area(a)-area(b))})();
+const MESH_IDX=new Map(MESH_LIST.map((m,k)=>[m,k]));
+const MESHES=MESH_LIST.map((m,k)=>[k,m==='catalog'?'Rigid catalog settings':m===SEARCH_MESH?'8 × 4 (search mesh)':m,m==='catalog'?'The rigid catalog runs, each with its own recorded settings':m===SEARCH_MESH?'The mesh every study searched on':'A finer mesh: thrust and torque both run higher than on 8 × 4, so compare like with like']);
+const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),mesh:new Set(MESH_LIST.map((_,k)=>k)),
   studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false,steps:false});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
@@ -682,14 +776,17 @@ function renderChips(){
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
   chipRow($('#f-lim'),[[0,`≤ ${LIM} N·m`],[1,`> ${LIM} N·m`]],M.lim,null);
   chipRow($('#f-quality'),QUALS,M.quality,null);
+  chipRow($('#f-mesh'),MESHES,M.mesh,null);
 }
+// The parameters a shape group varies over (construction, model, frequency, mesh) plus result quality.
+function paramPass(i){const m=C.m[i];
+  if(!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))return false;
+  if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))return false;
+  return M.quality.has(QUAL_OF(STATUS[C.S[i]]))&&M.mesh.has(MESH_IDX.get(MESH_OF(i)))}
 function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   for(let i=0;i<N;i++){
-    const m=C.m[i];
-    if(!M.studies.has(SGROUP_OF[C.s[i]])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))continue;
-    if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
-    if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
+    if(!M.studies.has(SGROUP_OF[C.s[i]])||!paramPass(i))continue;
     if(M.favOnly&&!isFav(C.k[i]))continue;
     if(!M.steps&&STEP_ROW(i)&&i!==M.sel&&!isFav(C.k[i]))continue;
     if(!lambdaPass(i))continue;
@@ -759,6 +856,7 @@ function paint(){
     const c=colorOf(i);if(c!==last){ctx.fillStyle=c;ctx.strokeStyle=c;last=c}
     const g=GREYED(i);
     if(STATUS[C.S[i]]==='uncertain'){ctx.globalAlpha=g?.35:.9;ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(x,y,r+1.2,0,7);ctx.stroke()}
+    else if(FINE(i)){ctx.globalAlpha=g?.35:.95;const q=r+1.3;ctx.fillRect(x-q,y-q,2*q,2*q)}
     else{ctx.globalAlpha=g?.22:.72;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}}
   ctx.globalAlpha=1;
   // favourites: a star (the only marker drawn over the points)
@@ -778,7 +876,8 @@ function updateCounts(){
   $('#map-legend').innerHTML=lab.filter(l=>cnt[l[2]]).map(([c,l,i])=>`<span><span class="sw" style="background:${c}"></span>${l} <span class="muted">${cnt[i].toLocaleString()}</span></span>`).join('')+(nGrey?`<span><span class="sw" style="background:var(--muted);opacity:.5"></span>Not the FAAV build (other materials and models) <span class="muted">${nGrey.toLocaleString()}</span></span>`:'')+`<span><span style="color:${FAVC}">★</span> favourite</span>${M.x==='span'||M.y==='span'?`<span><span class="sw" style="background:var(--warn);opacity:.35"></span>above the ${SHEET} mm single-sheet limit</span>`:''}`;
 
   const nF=VIS.filter(i=>isFav(C.k[i])).length;
-  $('#map-note').textContent=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Shift-click a chip to show only that one. Hollow = uncertain.`;
+  const nFine=VIS.filter(FINE).length,mixed=nFine&&nFine<VIS.length;
+  $('#map-note').innerHTML=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Shift-click a chip to show only that one. Hollow = uncertain. Squares = a mesh finer than 8 × 4 (${nFine.toLocaleString()}).`+(mixed?`<br><b>More than one mesh is shown.</b> Finer-mesh squares run about 15% higher in thrust and torque than the 8 × 4 dots, so an 8 × 4 dot just under the budget is usually over it on the finer mesh. Use the Mesh filter to compare one mesh at a time.`:'');
 }
 function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
 const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75'],[512,'matched elasticity comparison']];
@@ -885,6 +984,7 @@ function selectDesign(i){
     <div>Strouhal number</div><div>${fmt(ST[i],3)} <span class="muted small">(f·A/U, tip excursion A = ${Math.round(TIPA[i])} mm, U = ${U_FWD} m/s)</span></div>
     <div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
     <div>Chords</div><div class="small">${chordsOf(i).map(Math.round).join(' · ')} mm (root → tip, ${chordsOf(i).length} equally spaced stations)</div>
+    <div>Mesh</div><div>${MESH_OF(i)} panels${FINE(i)?' <span class="tiny muted">(finer than the 8 × 4 search mesh)</span>':''}</div>
     <div>Quality</div><div>${statusPill(st)}</div>
     <div>Found by</div><div class="small">${[C.src[i]&8?'fine-mesh refinement (Optimized shapes)':C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):'',C.src[i]&4?'a planned study':''].filter(Boolean).join(' and ')||'–'}</div>
     ${D.row_notes&&D.row_notes[i]?`<div>Numerics</div><div class="small">${esc(D.row_notes[i])}</div>`:''}
@@ -893,10 +993,11 @@ function selectDesign(i){
     <div>Key</div><div><code>${C.k[i]}</code></div></div>`;
   const media=mediaForRow(i);
   if(EXTRA[i]){const e=EXTRA[i],em=e.result.media;$('#detail').innerHTML=`<h3>${esc(m.label)} · ${D.freqs[C.f[i]]} Hz</h3>${rowSVG(i,{labels:true})}<div style="margin:10px 0">${em&&em.poster?posterButton(em,`${e.kind==='spanwise'?'Spanwise + chordwise':'Chordwise only'} · ${esc(e.pair.source.material_label||'')} · ${D.freqs[C.f[i]]} Hz`,info)+` <button class="iconbtn" data-span-pair="${esc(e.pair.source.key)}">▶ Compare both models side by side</button>`:'<p class="tiny muted">No animation rendered for this matched pair.</p>'}</div>${info}<p class="small muted">Matched result; peak torque is fluid root moment. Tip span travel: ${fmt(e.result.tip_bend_amplitude_m==null?null:1000*e.result.tip_bend_amplitude_m,1)} mm. Numerical verification does not establish physical accuracy.</p><button class="iconbtn" onclick="go('span')">Compare models</button> ${basketButton(i)}`;return}
-  $('#detail').innerHTML=`<h3>${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
+  $('#detail').innerHTML=`<h3>${configName(i)}</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:8px 0 0">${favButton(i)} ${basketButton(i)}</div>
-    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(FINE(i)?'<p class="tiny muted">No animation rendered for this design. It was solved by the fine-mesh refinement; rerunning it reuses the cached solves:<br><code>python -m wingstudy.refine_top --from atlas/refine-top.json --chord-panels 12 --curve 6 --out outputs/refine-top-curve</code></p>':C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
+    ${groupCard(i)}
+    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(C.src[i]&8?'<p class="tiny muted">No animation rendered for this design. It was solved by the fine-mesh refinement; rerunning it reuses the cached solves:<br><code>python -m wingstudy.refine_top --from atlas/refine-top.json --chord-panels 12 --curve 6 --out outputs/refine-top-curve</code></p>':C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
 }
 function downloadCSV(){
   const head=['study','plate','leading_edge_bc','freq_hz','status','thrust_N','peak_torque_Nm','tip_twist_deg','half_span_mm','strouhal','area_cm2','c1_mm','c2_mm','c3_mm','c4_mm','c5_mm','c6_mm','c7_mm','c8_mm','source','key'];
@@ -966,12 +1067,13 @@ function plannedCard(si){const st=D.studies[si];
   return h+'</div></div>'}
 
 /* ---------- Top performing wings: the FAAV build first ---------- */
-const TOPS={f:D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0,sheet:true,c:1.0,tol:0.05,n:6};   // the tab shows single-sheet wings only
+const TOPS={f:-1,sheet:true,c:1.0,tol:0.05,n:6};   // f = -1: every frequency pooled; sheet: half-span <= 400 mm
+const topFreqs=()=>TOPS.f<0?D.freqs.slice():[D.freqs[TOPS.f]], topFreqLabel=()=>TOPS.f<0?'any frequency':D.freqs[TOPS.f]+' Hz';
 const LEVELS=[0.5,0.75,1,1.25,1.5,2];
 function setTop(k,v){TOPS[k]=v;renderWinners()}
-// Verified FAAV wings at the chosen frequency, one row per design key.
+// Verified FAAV wings at the chosen frequency (or all), one row per design key.
 function faavRows(sheet=TOPS.sheet){const out=[],seen=new Set();
-  for(let i=0;i<N;i++){if(isCat(i)||EXTRA[i]||FINE(i)||!FAAV(i)||C.f[i]!==TOPS.f||!GOOD.has(STATUS[C.S[i]])||!(C.T[i]>0)||!(C.Q[i]>0))continue;
+  for(let i=0;i<N;i++){if(isCat(i)||EXTRA[i]||FINE(i)||!FAAV(i)||(TOPS.f>=0&&C.f[i]!==TOPS.f)||!GOOD.has(STATUS[C.S[i]])||!(C.T[i]>0)||!(C.Q[i]>0))continue;
     if(sheet&&SPAN[i]>SHEET+0.5)continue;if(seen.has(C.k[i]))continue;seen.add(C.k[i]);out.push(i)}
   return out}
 const bestUnder=(rows,B)=>{let b=null;for(const i of rows)if(C.Q[i]<=B+1e-9&&(b==null||C.T[i]>C.T[b]))b=i;return b};
@@ -992,31 +1094,31 @@ function topCell(i,{title='',best=false,spanMax=700,note=''}={}){const m=D.model
 // beats, on that same mesh, the 8 x 4 pick shown beside it (that pick's baseline solve): the pick breaks the budget
 // there or gives less thrust. Without a fine-mesh solve of that pick it is shown, but no comparison is claimed.
 const RF=x=>x.freq??(x.numerics&&x.numerics.freq)??1;
-function refineBest(B,f){const R2=D.refine_curve;if(!R2)return null;let y=null;
-  for(const q of R2.seeds){const z=q.final;if(Math.abs(q.budget_Nm-B)>1e-9||Math.abs(RF(q)-f)>1e-9||!z||z.thrust==null||!(z.torque<=B+1e-9)||!q.final_chords_mm)continue;if(!y||z.thrust>y.final.thrust)y=q}
+function refineBest(B,fs,sheet=TOPS.sheet){const R2=D.refine_curve;if(!R2)return null;let y=null;fs=[].concat(fs);
+  for(const q of R2.seeds){const z=q.final;if(Math.abs(q.budget_Nm-B)>1e-9||!fs.some(f=>Math.abs(RF(q)-f)<1e-9)||(sheet&&(q.single_sheet===false||z&&z.span>SHEET/1000+1e-6))||!z||z.thrust==null||!(z.torque<=B+1e-9)||!q.final_chords_mm)continue;if(!y||z.thrust>y.final.thrust)y=q}
   return y}
 function baselineOfKey(k){const R=D.refine_top,BL=D.refine_baseline;if(!R||!BL)return null;
   const s=R.seeds.find(q=>q.source&&q.source.key===k);return s?BL.seeds.find(q=>q.id===s.id)||null:null}
-function optFor(B,i){const y=refineBest(B,D.freqs[TOPS.f]);if(!y)return null;
+function optFor(B,i){const y=refineBest(B,topFreqs());if(!y)return null;
   const r=Object.entries(D.row_search||{}).find(([,v])=>v.refine&&v.winner&&v.winner_of.includes(y.id));if(!r)return null;
   const b=i!=null?baselineOfKey(C.k[i]):null;
   if(b&&b.thrust!=null&&!(b.torque>B+1e-9||y.final.thrust>b.thrust))return null;
   return {y,b:b&&b.thrust!=null?b:null,row:+r[0]}}
 function optCell({y,b,row},B,spanMax){const n=(y.numerics&&y.numerics.chord_panels)||12,m=(y.numerics&&y.numerics.span_panels)||21,over=b&&b.torque>B+1e-9;
   const cmp=b?`<span class="small">Study pick beside it, on the same mesh: ${fmt(b.thrust,2)} N at <span${over?' style="color:var(--warn)"':''}>${fmt(b.torque,2)} N·m${over?', over budget':''}</span></span>`:'<span class="small muted">The study pick beside it has not been solved on this mesh, so the two are not compared.</span>';
-  return topCell(row,{title:`≤ ${B} N·m · optimized <span class="pill">${m} × ${n} mesh</span>`,best:true,spanMax,
+  return topCell(row,{title:`≤ ${B} N·m · ${RF(y)} Hz · optimized <span class="pill">${m} × ${n} mesh</span>`,best:true,spanMax,
     note:`${cmp}<br><button class="playbtn" onclick="event.stopPropagation();go('opt');setTimeout(()=>{const e=document.getElementById('rt-${esc(y.id)}');e&&e.scrollIntoView({behavior:'smooth',block:'start'})},60)">▶ before / after</button>`})}
 function levelsCard(rows,rowsSheet){
-  const spanMax=SHEET*1.02;
-  let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust one-sheet FAAV wing at or below each torque budget; outlines share one scale. An optimized wing comes first when it beats the study pick on the same finer mesh (the pick breaks the budget there, or gives less thrust).</p><div class="grid3">`;
+  const spanMax=TOPS.sheet?SHEET*1.02:Math.max(SHEET,...LEVELS.map(B=>{const i=bestUnder(rows,B);return i==null?0:SPAN[i]}),...LEVELS.map(B=>{const y=refineBest(B,topFreqs());return y?1000*y.final.span:0}))*1.02;
+  let h=`<div class="card"><h3>Standout designs at each torque budget</h3><p class="small muted" style="max-width:900px">The highest-thrust FAAV wing at or below each torque budget, ${TOPS.f<0?'at whichever frequency gives the most thrust':'at '+topFreqLabel()}${TOPS.sheet?`, within one ${SHEET} mm sheet`:', any span'}; outlines share one scale. An optimized wing comes first when it beats the study pick on the same finer mesh (the pick breaks the budget there, or gives less thrust).</p><div class="grid3">`;
   let prev=null;for(const B of LEVELS){const i=bestUnder(rows,B),o=optFor(B,i);if(o)h+=optCell(o,B,spanMax);if(i==null)continue;if(i===prev){h+=`<div class="wcell" style="cursor:default"><div class="small" style="font-weight:600">≤ ${B} N·m</div><div class="t">Same wing as the previous budget: nothing verified uses the extra torque yet.</div></div>`;continue}prev=i;const j=SPAN[i]>SHEET+0.5?bestUnder(rowsSheet,B):null;
-    h+=topCell(i,{title:`≤ ${B} N·m${o?' · study pick (8 × 4 mesh)':''}`,best:B===LIM&&!o,spanMax,note:j!=null?`<span class="small">Single sheet: <b>${fmt(C.T[j],2)} N</b> at ${Math.round(SPAN[j])} mm (${fmt(100*(C.T[j]-C.T[i])/C.T[i],1)}%) <button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎</button></span>`:''})}
+    h+=topCell(i,{title:`≤ ${B} N·m · ${D.freqs[C.f[i]]} Hz${o?' · study pick (8 × 4 mesh)':''}`,best:B===LIM&&!o,spanMax,note:j!=null?`<span class="small">Single sheet: <b>${fmt(C.T[j],2)} N</b> at ${Math.round(SPAN[j])} mm (${fmt(100*(C.T[j]-C.T[i])/C.T[i],1)}%) <button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎</button></span>`:''})}
   h+='</div>';
   // frontier: best thrust against budget, all spans and single sheet
   const grid=[];for(let B=0.3;B<=2.5+1e-9;B+=0.05)grid.push(+B.toFixed(2));
   const ser=(rs,name,color)=>({name,color,points:grid.map(B=>{const i=bestUnder(rs,B);return i==null?null:{x:B,y:C.T[i],row:i,tip:`<b>≤ ${B} N·m: ${fmt(C.T[i],3)} N</b><br>${wingSVG(i,{w:220,h:64,spanMax,color})}${Math.round(SPAN[i])} mm · ${fmt(C.Q[i],3)} N·m · St ${fmt(ST[i],2)}<br><span class="muted">Click to open on the Wing map</span>`}}).filter(Boolean)});
-  const series=[ser(rowsSheet,`Single sheet (≤ ${SHEET} mm)`,css('--s1'))].filter(x=>x.points.length);
-  if(series.length)h+=`<h3 style="margin-top:14px">Best thrust against torque budget</h3>${lineChart({series,xlabel:'Peak-torque budget (N·m)',ylabel:'Best thrust (N)',w:900,h:280,xfmt:v=>fmt(v,2)})}<p class="tiny muted">Best verified one-sheet FAAV wing at or below each budget, so the curve only rises. Click a point to open it on the map.</p>`;
+  const series=topFreqs().map(f=>{const k=D.freqs.indexOf(f);return ser(rows.filter(i=>C.f[i]===k),`${f} Hz`,freqColor(k))}).filter(x=>x.points.length);
+  if(series.length)h+=`<h3 style="margin-top:14px">Best thrust against torque budget, by frequency</h3>${series.length>1?legend(series.map(x=>[x.color,x.name])):''}${lineChart({series,xlabel:'Peak-torque budget (N·m)',ylabel:'Best thrust (N)',w:900,h:280,xfmt:v=>fmt(v,2)})}<p class="tiny muted">Best verified FAAV wing at or below each budget${TOPS.sheet?` within one ${SHEET} mm sheet`:', any span'}, search mesh (8 × 4), so each curve only rises. Click a point to open it on the map.</p>`;
   return h+'</div>'}
 // Spaced-out designs in a torque slice: farthest-point picks in (thrust, outline, span), best and worst first.
 function sliceSelect(rows,n){
@@ -1033,7 +1135,7 @@ function sliceCard(all){
   const num=(k,step,w,lab)=>`<label class="small">${lab} <input type="number" step="${step}" value="${TOPS[k]}" style="width:${w}px" onchange="setTop('${k}',+this.value||TOPS['${k}'])"></label>`;
   let h=`<div class="card" id="slice-card"><h3>Torque slice: what shape does to thrust at equal torque</h3><p class="small muted" style="max-width:900px">Every verified FAAV wing in the torque band; ${TOPS.n} shown, chosen to differ most in thrust, outline and span (best and worst always included). At equal torque, the thrust spread is the effect of shape alone.</p>
     <div class="chips" style="gap:12px;margin-bottom:8px">${num('c',0.05,64,'Torque')} ${num('tol',0.01,58,'± (N·m)')} ${num('n',1,48,'Designs')}</div>`;
-  if(band.length<2)return h+`<p class="small">Only ${band.length} FAAV wing${band.length===1?'':'s'} in ${fmt(TOPS.c,2)} ± ${fmt(TOPS.tol,2)} N·m at ${D.freqs[TOPS.f]} Hz${TOPS.sheet?` within ${SHEET} mm`:''}. Widen the band.</p></div>`;
+  if(band.length<2)return h+`<p class="small">Only ${band.length} FAAV wing${band.length===1?'':'s'} in ${fmt(TOPS.c,2)} ± ${fmt(TOPS.tol,2)} N·m at ${topFreqLabel()}${TOPS.sheet?` within ${SHEET} mm`:''}. Widen the band.</p></div>`;
   const T=band.map(i=>C.T[i]),lo=Math.min(...T),hi=Math.max(...T),spanMax=SHEET*1.02;
   h+=`<p class="small"><b>${band.length.toLocaleString()} wings</b> within ${fmt(TOPS.c,2)} ± ${fmt(TOPS.tol,2)} N·m: thrust ${fmt(lo,2)}–${fmt(hi,2)} N, so the best outline gives <b>${fmt(100*(hi-lo)/lo,0)}% more thrust</b> than the worst at the same torque.</p>`;
   const step=Math.max(1,Math.ceil(band.length/600)),bg=band.filter((_,k)=>k%step===0&&!pick.includes(band[k]));
@@ -1175,13 +1277,15 @@ function convergenceCard(){const sts=D.convergence||[];
     h+='</table></div>'}
   return h+'</div>'}
 function faavTopHTML(){
-  const rows=faavRows(),rowsSheet=faavRows(true),allRows=TOPS.sheet?rowsSheet:rows;
-  const fs=D.freqs.map((f,k)=>k).filter(k=>{for(let i=0;i<N;i++)if(C.f[i]===k&&FAAV(i))return true;return false});
-  let h=`<h2>Top performing wings</h2><p class="lede">Designs worth building for <b>the FAAV wing</b>: a 0.5 mm carbon sheet pivoting on a stiff leading edge (chordwise model, no rod), cut from one sheet (half-span ≤ ${SHEET} mm), 200 mm root, verified results only. Longer wings are on the Wing map; other materials and earlier studies at the bottom.</p>
-   <div class="chips" style="margin:0 0 10px">${fs.map(f=>`<button class="chip ${f===TOPS.f?'':'off'}" aria-pressed="${f===TOPS.f}" onclick="setTop('f',${f})">${D.freqs[f]} Hz</button>`).join('')}</div>`;
-  if(!rows.length)return h+`<div class="card"><p>No verified FAAV wings at ${D.freqs[TOPS.f]} Hz.</p></div>`;
+  const rows=faavRows(false),rowsSheet=faavRows(true),allRows=TOPS.sheet?rowsSheet:rows;
+  const fs=[-1,...D.freqs.map((f,k)=>k).filter(k=>{for(let i=0;i<N;i++)if(C.f[i]===k&&FAAV(i))return true;return false})];
+  const chip=(on,lab,js)=>`<button class="chip ${on?'':'off'}" aria-pressed="${on}" onclick="${js}">${lab}</button>`;
+  let h=`<h2>Top performing wings</h2><p class="lede">Designs worth building for <b>the FAAV wing</b>: a 0.5 mm carbon sheet pivoting on a stiff leading edge (chordwise model, no rod), 200 mm root, verified results only. Frequency is easy to change on the robot, so every frequency is pooled by default and each wing is shown at the one it was solved at; pick one to narrow the view. Other materials and earlier studies are at the bottom.</p>
+   <div class="chips" style="margin:0 0 6px">${fs.map(f=>chip(f===TOPS.f,f<0?'All frequencies':D.freqs[f]+' Hz',`setTop('f',${f})`)).join('')}</div>
+   <div class="chips" style="margin:0 0 10px">${chip(TOPS.sheet,`One sheet (≤ ${SHEET} mm)`,"setTop('sheet',true)")}${chip(!TOPS.sheet,'Any span (joined sheet)',"setTop('sheet',false)")}</div>`;
+  if(!rows.length)return h+`<div class="card"><p>No verified FAAV wings at ${topFreqLabel()}.</p></div>`;
   h+=levelsCard(TOPS.sheet?rowsSheet:rows,rowsSheet)+sliceCard(allRows)
-    +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&!FINE(i)&&SPAN[i]<=SHEET+0.5,`for the FAAV build within one ${SHEET} mm sheet, at every frequency simulated`)
+    +strouhalCard(i=>FAAV(i)&&!EXTRA[i]&&!FINE(i)&&(!TOPS.sheet||SPAN[i]<=SHEET+0.5),`for the FAAV build${TOPS.sheet?` within one ${SHEET} mm sheet`:', any span'}, at every frequency simulated`)
     +favouritesCard()+`<div class="card"><h3>Convergence</h3><p class="small">Mesh convergence of these numbers: see the <a href="#" onclick="go('conv');return false">Convergence</a> tab.</p></div>`;
   return h}
 function renderWinners(){
@@ -1302,7 +1406,7 @@ function renderEffect(){
 function beforeAfterHTML(){
   const pairs=(D.lineage_pairs||[]).filter(p=>p.family==='wing'&&p.before!=null&&p.after!=null&&FAAV(p.before)&&FAAV(p.after));
   let h=`<div class="card"><h3>Optimize the top performers</h3><p class="small muted" style="max-width:900px">Downloads a follow-up study seeded from the FAAV standouts (best one-sheet wing at ${LEVELS.join(', ')} N·m): 10 mm chord steps (half-step 5) instead of 20 and the half-span free in 20 mm steps, under every budget. Seed = <b>before</b>; its lineage's best = <b>after</b>, shown below once run and published.</p>
-    <div class="chips"><button class="iconbtn" style="width:auto;padding:0 12px" onclick="optimizeTop()">⤓ Optimize top performers (download study spec)</button> <span class="small muted">at ${D.freqs[TOPS.f]} Hz (set on the Top tab), one ${SHEET} mm sheet</span></div><div id="opt-out"></div></div>`;
+    <div class="chips"><button class="iconbtn" style="width:auto;padding:0 12px" onclick="optimizeTop()">⤓ Optimize top performers (download study spec)</button> <span class="small muted">at ${topFreqLabel()}${TOPS.sheet?`, one ${SHEET} mm sheet`:', any span'} (set on the Top tab)</span></div><div id="opt-out"></div></div>`;
   if(!pairs.length)return h+`<div class="card"><h3>Before and after</h3><p class="small">No re-optimized seeds in this snapshot yet.</p></div>`;
   const by=new Map();for(const p of pairs){const k=p.study;if(!by.has(k))by.set(k,[]);by.get(k).push(p)}
   for(const [sid,ps] of by){const st=D.studies[STUDY[sid]?.i]||{label:sid};
@@ -1327,8 +1431,8 @@ function optimizeTop(){
   if(!designs.length){$('#opt-out').innerHTML='<p class="small">No FAAV standouts to seed from.</p>';return}
   const d=new Date(),day=d.toISOString().slice(0,10),id=`${day}-polish-faav-top`,solves=150,maxSpan=SHEET;
   const spec={schema:'wingstudy/study-spec@1',id,title:'Polish the FAAV top performers: finer chord steps, free span',author:'sam',
-    question:`Starting from the ${designs.length} FAAV standouts (best wing at each torque budget${TOPS.sheet?' within one sheet':''}, ${D.freqs[TOPS.f]} Hz), how much more thrust does a search with a 10 mm chord step and the half-span free find under each budget, and how do the outlines change?`,
-    kind:'evolutionary',structure:'chordwise',models:['t0.50'],frequencies_hz:[D.freqs[TOPS.f]],
+    question:`Starting from the ${designs.length} FAAV standouts (best wing at each torque budget${TOPS.sheet?' within one sheet':''}, ${topFreqLabel()}), how much more thrust does a search with a 10 mm chord step and the half-span free find under each budget, and how do the outlines change?`,
+    kind:'evolutionary',structure:'chordwise',models:['t0.50'],frequencies_hz:topFreqs(),
     numerics:[{span_panels:8,chord_panels:4,steps_per_cycle:50,cycles:4}],wings:{designs},
     search:{objectives:LEVELS.map(b=>({torque_budget_Nm:b})),solves_per_lineage:solves,step_mm:10,min_chord_mm:10,decreasing:true,span_step_mm:20,half_span_limits_mm:[150,maxSpan]},
     budget:{max_cases:designs.length*LEVELS.length*(1+solves)},
@@ -1481,11 +1585,49 @@ function renderSpan(){
   <div class="card" style="overflow:auto"><h3>Matched performance changes</h3><table><thead><tr><th>Wing</th><th>Chordwise: thrust / torque</th><th>Span + chord: thrust / torque</th><th>Thrust change</th><th>Torque change</th><th>Span deflection</th><th>Animation</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${outlineSVG(activeOutline(p.source.chords,p.source.half_span),{w:150,h:65})}${esc(p.source.material_label)} · ${p.source.freq} Hz</td><td>${fmt(p.baseline.mean_thrust_N,3)} N / ${fmt(p.baseline.peak_abs_root_torque_Nm,3)} N·m</td><td>${fmt(p.spanwise.mean_thrust_N,3)} N / ${fmt(p.spanwise.peak_abs_root_torque_Nm,3)} N·m</td><td>${delta(p.baseline.mean_thrust_N,p.spanwise.mean_thrust_N)}</td><td>${delta(p.baseline.peak_abs_root_torque_Nm,p.spanwise.peak_abs_root_torque_Nm)}</td><td>±${fmt(1000*p.spanwise.tip_bend_amplitude_m,1)} mm</td><td><button class="iconbtn" data-span-pair="${esc(p.source.key)}">${p.baseline.media&&p.spanwise.media?'▶ Compare animations':'Open comparison'}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
+/* ======================================================================================
+   Frequency effects: the optimized FAAV wings solved at every frequency (wingstudy.frequency_sweep)
+   ====================================================================================== */
+// fixed   = the outline exactly as optimized (torque drifts with frequency)
+// matched = the same shape, half-span rescaled until peak torque sits on the wing's own budget (cap 400 mm)
+function renderFreq(){
+  const F=D.frequency_sweep,el=$('#t-freq');
+  let h=`<h2>How one wing's thrust changes with flapping frequency</h2>`;
+  if(!F||!F.wings||!F.wings.length){el.innerHTML=h+'<p class="small">No sweep in this snapshot. Run <code>python -m wingstudy.frequency_sweep atlas/refine-top/*/stage2.json --min-thrust 1.6</code> and copy <code>outputs/frequency-sweep/sweep.json</code> to <code>atlas/frequency-sweep.json</code>.</p>';return}
+  const FR=F.freqs,REC=new Set(((D.mesh_ladder||{}).wings||[]).map(w=>w.id)),fc=f=>freqColor(FR.findIndex(x=>Math.abs(x-f)<1e-9));
+  const BUD=[...new Set(F.wings.map(w=>w.budget_Nm))].sort((a,b)=>a-b);
+  const pt=(w,f)=>w.points.find(p=>Math.abs(p.freq-f)<1e-9)||{};
+  const val=(w,f,mode,q)=>{const r=pt(w,f)[mode];return r&&r[q]!=null?r[q]:null};
+  const name=w=>`${w.freq} Hz · ≤ ${w.budget_Nm} N·m${REC.has(w.id)?'':' (second start)'}`;
+  const tipOf=(w,f,mode)=>{const r=pt(w,f)[mode]||{};return `<b>Optimized at ${name(w)}</b><br>solved at ${f} Hz${pt(w,f).own?' (its own frequency)':''}<br>${fmt(r.thrust)} N at ${fmt(r.torque,3)} N·m · ${Math.round(r.half_span_mm)} mm · ±${fmt(r.tip_twist,0)}°`};
+  // Equal-torque thrust of each wing relative to the wing optimized at that frequency and budget.
+  const best=(B,f)=>Math.max(...F.wings.filter(w=>w.budget_Nm===B).map(w=>val(w,f,'matched','thrust')??-1));
+  h+=`<p class="lede">Each optimized FAAV wing was solved at 0.75, 1 and 1.25 Hz on its search mesh (${esc(F.mesh)}). <b>Equal torque</b>: the shape kept, its half-span rescaled until peak torque sits on the wing's own budget again (at most 400 mm). This is the fair test of whether a shape suits a frequency. <b>Fixed outline</b>: the wing exactly as optimized, so its torque changes with frequency too.</p>`;
+  h+=legend(FR.map(f=>[fc(f),`optimized at ${f} Hz`]))+`<p class="tiny muted" style="margin:2px 0 10px">Hollow points: the second 1 Hz, 1 N·m wing (free-span start). Hover a point for its torque, span and twist.</p>`;
+  for(const B of BUD){const ws=F.wings.filter(w=>w.budget_Nm===B);
+    const ser=mode=>ws.map(w=>({name:name(w),color:fc(w.freq),points:FR.map(f=>({x:f,y:val(w,f,mode,'thrust'),hollow:!REC.has(w.id),tip:tipOf(w,f,mode)}))}));
+    const serQ=ws.map(w=>({name:name(w),color:fc(w.freq),points:FR.map(f=>({x:f,y:val(w,f,'fixed','torque'),hollow:!REC.has(w.id),tip:tipOf(w,f,'fixed')}))}));
+    h+=`<div class="card"><h3>≤ ${B} N·m budget</h3><div class="grid3">
+      <div><div class="small"><b>Thrust at equal torque</b> (N)</div>${lineChart({series:ser('matched'),xlabel:'frequency (Hz)',ylabel:'thrust (N)',w:340,h:230,xfmt:v=>v+' Hz'})}</div>
+      <div><div class="small"><b>Thrust, fixed outline</b> (N)</div>${lineChart({series:ser('fixed'),xlabel:'frequency (Hz)',ylabel:'thrust (N)',w:340,h:230,xfmt:v=>v+' Hz'})}</div>
+      <div><div class="small"><b>Peak torque, fixed outline</b> (N·m; dashed = budget)</div>${lineChart({series:serQ,xlabel:'frequency (Hz)',ylabel:'torque (N·m)',w:340,h:230,hline:B,xfmt:v=>v+' Hz'})}</div>
+    </div></div>`}
+  // Table: every wing, every frequency
+  h+=`<div class="card"><h3>Every wing at every frequency</h3><p class="small muted" style="max-width:920px">Equal torque: thrust and the rescaled half-span, then the gap to the best wing at that frequency and budget. Fixed outline: thrust and peak torque; torque over budget is marked. Bold: the frequency the wing was optimized at.</p><div style="overflow-x:auto"><table><tr><th>Optimized at</th><th>Outline</th>${FR.map(f=>`<th class="n">${f} Hz<br><span class="tiny muted">equal torque</span></th><th class="n">${f} Hz<br><span class="tiny muted">fixed outline</span></th>`).join('')}</tr>`;
+  for(const w of F.wings){h+=`<tr><td class="small"><span class="sw" style="background:${fc(w.freq)}"></span><b>${name(w)}</b><br>${Math.round(w.half_span_mm)} mm</td><td style="width:140px">${w.chords_mm?outlineSVG(activeOutline(w.chords_mm,w.half_span_mm),{w:130,h:40,spanMax:420,color:fc(w.freq)}):''}</td>`;
+    for(const f of FR){const m=pt(w,f).matched,x=pt(w,f).fixed,own=pt(w,f).own,b=best(w.budget_Nm,f),gap=m&&m.thrust!=null&&b>0?100*(m.thrust/b-1):null;
+      const cap=m&&m.torque!=null&&m.torque<w.budget_Nm-0.01;
+      h+=`<td class="n small" style="${own?'font-weight:600':''}">${m&&m.thrust!=null?`${fmt(m.thrust)} N · ${Math.round(m.half_span_mm)} mm<br><span class="tiny ${gap!=null&&gap>-0.05?'':'muted'}">${gap==null?'':gap>-0.05?'best':fmt(gap,1)+' %'}${cap?` · ${fmt(m.torque,2)} N·m at the 400 mm cap`:''}</span>`:'–'}</td>`
+        +`<td class="n small" style="${own?'font-weight:600':''}">${x&&x.thrust!=null?`${fmt(x.thrust)} N<br><span class="tiny ${x.torque>w.budget_Nm+1e-3?'':'muted'}">${fmt(x.torque,3)} N·m${x.torque>w.budget_Nm+1e-3?' (over)':''}</span>`:'–'}</td>`}
+    h+=`</tr>`}
+  h+=`</table></div><p class="tiny muted">Search mesh (21 × 12), so absolute values run 0.5–2.4 % low on thrust and 1.2–3.1 % low on torque against the converged ones (Convergence tab); the comparisons between wings are on one mesh. Half-spans are rescaled between 150 and 400 mm; a wing that reaches 400 mm below its budget stops there, and its torque is given.</p></div>`;
+  el.innerHTML=h;
+}
 function renderElastic(){renderStiff();renderSpan()}
 const RENDERED={};
 function go(t){$$('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t===t);if(b.dataset.t===t&&b.scrollIntoView&&matchMedia('(max-width:760px)').matches)b.scrollIntoView({block:'nearest',inline:'nearest'})});$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   try{history.replaceState(null,'','#'+t)}catch(e){}
-  if(!RENDERED[t]){RENDERED[t]=1;({elastic:renderElastic,overview:renderOverview,winners:renderWinners,opt:renderOpt,conv:renderConv,map:()=>{initMapControls();drawMap()}})[t]()}
+  if(!RENDERED[t]){RENDERED[t]=1;({elastic:renderElastic,overview:renderOverview,winners:renderWinners,opt:renderOpt,conv:renderConv,freq:renderFreq,map:()=>{initMapControls();drawMap()}})[t]()}
   else if(t==='map')requestDraw()}
 $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
 {const ft=$('#f-toggle');if(ft)ft.onclick=()=>{const c=ft.closest('.filters'),o=c.classList.toggle('open');ft.setAttribute('aria-expanded',o);ft.textContent=o?'Hide filters':'Filters'}}
@@ -1495,7 +1637,7 @@ $('#theme').onclick=()=>{const cur=document.documentElement.dataset.theme||(matc
   document.documentElement.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('atlas-theme',document.documentElement.dataset.theme)}catch(e){}rerenderAll()};
 try{const t=localStorage.getItem('atlas-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',rerenderAll);
-{const t=location.hash.slice(1).replace(/[^a-z]/g,''),old={stiff:'elastic',span:'elastic'};go(old[t]||(t in{elastic:1,overview:1,map:1,winners:1,opt:1}?t:'overview'));if(t==='span'){const j=()=>{const e=document.getElementById('el-span');e&&e.scrollIntoView&&e.scrollIntoView()};setTimeout(j,0);window.addEventListener('load',j)}}
+{const t=location.hash.slice(1).replace(/[^a-z]/g,''),old={stiff:'elastic',span:'elastic'};go(old[t]||(t in{elastic:1,overview:1,map:1,winners:1,opt:1,conv:1,freq:1}?t:'overview'));if(t==='span'){const j=()=>{const e=document.getElementById('el-span');e&&e.scrollIntoView&&e.scrollIntoView()};setTimeout(j,0);window.addEventListener('load',j)}}
 </script>
 </body>
 </html>

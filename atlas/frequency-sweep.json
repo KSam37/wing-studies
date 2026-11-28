@@ -1,0 +1,981 @@
+{
+ "freqs": [
+  0.75,
+  1.0,
+  1.25
+ ],
+ "mesh": "21 x 12, 50 steps per cycle, 4 cycles",
+ "updated": "2026-11-27T23:53:48Z",
+ "wings": [
+  {
+   "id": "F0.75-B0.75-sheet-74fb8fc1",
+   "freq": 0.75,
+   "budget_Nm": 0.75,
+   "half_span_mm": 380.0,
+   "ctrl": [
+    0.08582,
+    0.05527,
+    0.0255,
+    0.0255,
+    0.0255,
+    0.0255
+   ],
+   "chords_mm": [
+    200.0,
+    157.44,
+    121.13,
+    94.48,
+    79.6,
+    70.22,
+    62.91,
+    55.27,
+    44.97,
+    34.05,
+    26.62,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5
+   ],
+   "summary": "atlas\\refine-top\\4-f0.75\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.6318715993048936,
+      "torque": 0.7436650594706535,
+      "tip_twist": 42.47362887279297,
+      "half_span_mm": 380.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.6318715993048936,
+      "torque": 0.7436650594706535,
+      "tip_twist": 42.47362887279297,
+      "half_span_mm": 380.0
+     }
+    },
+    {
+     "freq": 1.0,
+     "key": "f929fc7b10f8ded38060",
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.4752492893953875,
+      "torque": 0.840610795869223,
+      "tip_twist": 54.016342476256746,
+      "half_span_mm": 380.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.0748285810786626,
+      "torque": 0.7496148626098922,
+      "tip_twist": 44.58198953934445,
+      "half_span_mm": 338.1
+     },
+     "solves": 4
+    },
+    {
+     "freq": 1.25,
+     "key": "d01e1e737a518d192b02",
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.2980714831010816,
+      "torque": 0.9149836982737644,
+      "tip_twist": 62.608306833450726,
+      "half_span_mm": 380.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.442470077577775,
+      "torque": 0.7483512873400985,
+      "tip_twist": 45.509409886547914,
+      "half_span_mm": 306.5
+     },
+     "solves": 5
+    }
+   ]
+  },
+  {
+   "id": "F0.75-B1-sheet-cbf15d97",
+   "freq": 0.75,
+   "budget_Nm": 1.0,
+   "half_span_mm": 340.0,
+   "ctrl": [
+    0.1838,
+    0.09903,
+    0.0784,
+    0.0563,
+    0.0563,
+    0.01
+   ],
+   "chords_mm": [
+    200.0,
+    198.37,
+    193.98,
+    187.55,
+    176.83,
+    150.11,
+    119.09,
+    99.03,
+    91.35,
+    86.02,
+    81.2,
+    74.94,
+    66.72,
+    59.44,
+    56.3,
+    56.3,
+    56.3,
+    56.3,
+    54.95,
+    45.37,
+    29.3,
+    10.0
+   ],
+   "summary": "atlas\\refine-top\\4-f0.75\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.893635394554529,
+      "torque": 0.999530802767016,
+      "tip_twist": 36.11312676000392,
+      "half_span_mm": 340.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.893635394554529,
+      "torque": 0.999530802767016,
+      "tip_twist": 36.11312676000392,
+      "half_span_mm": 340.0
+     }
+    },
+    {
+     "freq": 1.0,
+     "key": "ad57416d6a51d41f6110",
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.946874778352086,
+      "torque": 1.2207885906331368,
+      "tip_twist": 47.14349966419761,
+      "half_span_mm": 340.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.2682025329805975,
+      "torque": 0.9978442649801073,
+      "tip_twist": 34.812866971743055,
+      "half_span_mm": 293.6
+     },
+     "solves": 4
+    },
+    {
+     "freq": 1.25,
+     "key": "bf2ca6359841621aaf78",
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.9757820477503616,
+      "torque": 1.4669826543673974,
+      "tip_twist": 56.13573016071267,
+      "half_span_mm": 340.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.588253248345261,
+      "torque": 0.9973233368788816,
+      "tip_twist": 34.193229278993215,
+      "half_span_mm": 262.2
+     },
+     "solves": 4
+    }
+   ]
+  },
+  {
+   "id": "F0.75-B1.25-sheet-6ec1be78",
+   "freq": 0.75,
+   "budget_Nm": 1.25,
+   "half_span_mm": 360.0,
+   "ctrl": [
+    0.2,
+    0.16167,
+    0.10333,
+    0.09333,
+    0.09333,
+    0.01
+   ],
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    200.0,
+    198.69,
+    189.77,
+    176.01,
+    161.67,
+    144.36,
+    123.83,
+    107.54,
+    100.98,
+    97.0,
+    94.32,
+    93.33,
+    93.33,
+    93.33,
+    93.33,
+    90.9,
+    73.65,
+    44.74,
+    10.0
+   ],
+   "summary": "atlas\\refine-top\\4-f0.75\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.2209354818814186,
+      "torque": 1.224169889005568,
+      "tip_twist": 43.28204102985702,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.2209354818814186,
+      "torque": 1.224169889005568,
+      "tip_twist": 43.28204102985702,
+      "half_span_mm": 360.0
+     }
+    },
+    {
+     "freq": 1.0,
+     "key": "79eedba96801c78474ad",
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.2616191097357774,
+      "torque": 1.4987549210190232,
+      "tip_twist": 52.998424600728185,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.7391261467163406,
+      "torque": 1.248286730307288,
+      "tip_twist": 46.069743825877,
+      "half_span_mm": 318.1
+     },
+     "solves": 4
+    },
+    {
+     "freq": 1.25,
+     "key": "41d488cb50f7ed015e3c",
+     "fixed": {
+      "status": "verified",
+      "thrust": 4.318754944290995,
+      "torque": 1.7868736621459131,
+      "tip_twist": 58.49252289240732,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.1090568470865354,
+      "torque": 1.2481699819871583,
+      "tip_twist": 47.58103956510918,
+      "half_span_mm": 283.3
+     },
+     "solves": 5
+    }
+   ]
+  },
+  {
+   "id": "B0.75-sheet-62a23e20",
+   "freq": 1.0,
+   "budget_Nm": 0.75,
+   "half_span_mm": 380.0,
+   "ctrl": [
+    0.06082,
+    0.03977,
+    0.0255,
+    0.0255,
+    0.0255,
+    0.0205
+   ],
+   "chords_mm": [
+    200.0,
+    145.64,
+    99.91,
+    68.9,
+    56.11,
+    49.2,
+    44.29,
+    39.77,
+    34.46,
+    29.33,
+    25.99,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.35,
+    24.32,
+    22.59,
+    20.5
+   ],
+   "summary": "atlas\\refine-top\\2-campaign-seeds\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "76446e465e6efef80ab0",
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.502970062520069,
+      "torque": 0.66695692412792,
+      "tip_twist": 42.67712060012075,
+      "half_span_mm": 380.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.6223943180157678,
+      "torque": 0.7023527627559678,
+      "tip_twist": 46.52518247637142,
+      "half_span_mm": 400.0
+     },
+     "solves": 3
+    },
+    {
+     "freq": 1.0,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.2635539806245144,
+      "torque": 0.7483389138011158,
+      "tip_twist": 54.077499479342464,
+      "half_span_mm": 380.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.2635539806245144,
+      "torque": 0.7483389138011158,
+      "tip_twist": 54.077499479342464,
+      "half_span_mm": 380.0
+     }
+    },
+    {
+     "freq": 1.25,
+     "key": "312d08c085b41276a50d",
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.998998389058197,
+      "torque": 0.8209397941809584,
+      "tip_twist": 62.560384197322364,
+      "half_span_mm": 380.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.6713557287716214,
+      "torque": 0.7478366871709902,
+      "tip_twist": 55.24358090404087,
+      "half_span_mm": 343.1
+     },
+     "solves": 3
+    }
+   ]
+  },
+  {
+   "id": "B1-sheet-fc1c1d2a",
+   "freq": 1.0,
+   "budget_Nm": 1.0,
+   "half_span_mm": 360.0,
+   "ctrl": [
+    0.13109,
+    0.0585,
+    0.05043,
+    0.0366,
+    0.02685,
+    0.0216
+   ],
+   "chords_mm": [
+    200.0,
+    180.68,
+    161.07,
+    141.16,
+    119.9,
+    94.15,
+    70.89,
+    58.5,
+    55.38,
+    53.51,
+    51.69,
+    48.79,
+    44.76,
+    40.41,
+    36.6,
+    33.4,
+    30.44,
+    27.91,
+    25.9,
+    24.14,
+    22.68,
+    21.6
+   ],
+   "summary": "atlas\\refine-top\\2-campaign-seeds\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "9b69f5d2e89872f688d3",
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.7662040186459138,
+      "torque": 0.8584162142882151,
+      "tip_twist": 37.01304978218698,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.10090917223787,
+      "torque": 0.9692450947758825,
+      "tip_twist": 45.47623054482348,
+      "half_span_mm": 400.0
+     },
+     "solves": 3
+    },
+    {
+     "freq": 1.0,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.7266617945335248,
+      "torque": 0.9986480737306594,
+      "tip_twist": 48.75115060284297,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.7266617945335248,
+      "torque": 0.9986480737306594,
+      "tip_twist": 48.75115060284297,
+      "half_span_mm": 360.0
+     }
+    },
+    {
+     "freq": 1.25,
+     "key": "09178617d251c48f0d19",
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.6605024618412143,
+      "torque": 1.0932141659227335,
+      "tip_twist": 58.17143688441665,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.017207417390264,
+      "torque": 0.9982489601060215,
+      "tip_twist": 46.75686128060475,
+      "half_span_mm": 313.1
+     },
+     "solves": 6
+    }
+   ]
+  },
+  {
+   "id": "B1-sheet-e5effbc5",
+   "freq": 1.0,
+   "budget_Nm": 1.0,
+   "half_span_mm": 360.0,
+   "ctrl": [
+    0.11749,
+    0.06527,
+    0.04963,
+    0.03197,
+    0.0255,
+    0.01
+   ],
+   "chords_mm": [
+    200.0,
+    173.14,
+    148.67,
+    127.07,
+    108.3,
+    90.51,
+    75.4,
+    65.27,
+    59.63,
+    55.58,
+    51.82,
+    47.08,
+    41.35,
+    35.88,
+    31.97,
+    29.84,
+    28.33,
+    26.65,
+    24.03,
+    20.22,
+    15.46,
+    10.0
+   ],
+   "summary": "atlas\\refine-top\\1-free-span-seeds\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "15a5c17b6dd3db50c6f3",
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.7434806998335854,
+      "torque": 0.8507860247690797,
+      "tip_twist": 34.09378227445581,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.0900357479643943,
+      "torque": 0.9691472984112248,
+      "tip_twist": 42.743232985694,
+      "half_span_mm": 400.0
+     },
+     "solves": 3
+    },
+    {
+     "freq": 1.0,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.7154439708352567,
+      "torque": 0.9988360878253829,
+      "tip_twist": 45.88308858340781,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.7154439708352567,
+      "torque": 0.9988360878253829,
+      "tip_twist": 45.88308858340781,
+      "half_span_mm": 360.0
+     }
+    },
+    {
+     "freq": 1.25,
+     "key": "2fa0962588ed993e7213",
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.665845205904412,
+      "torque": 1.0925063429385025,
+      "tip_twist": 55.75300603780201,
+      "half_span_mm": 360.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.0564772917980174,
+      "torque": 0.9980889599156559,
+      "tip_twist": 43.820884473855784,
+      "half_span_mm": 316.0
+     },
+     "solves": 5
+    }
+   ]
+  },
+  {
+   "id": "B1.25-sheet-1c187a1d",
+   "freq": 1.0,
+   "budget_Nm": 1.25,
+   "half_span_mm": 350.0,
+   "ctrl": [
+    0.18929,
+    0.11429,
+    0.07143,
+    0.05333,
+    0.04429,
+    0.01
+   ],
+   "chords_mm": [
+    200.0,
+    198.97,
+    196.13,
+    191.85,
+    184.12,
+    162.87,
+    136.02,
+    114.29,
+    99.33,
+    86.14,
+    75.52,
+    67.97,
+    62.01,
+    57.19,
+    53.33,
+    50.61,
+    48.59,
+    46.08,
+    41.71,
+    33.72,
+    22.8,
+    10.0
+   ],
+   "summary": "atlas\\refine-top\\1-free-span-seeds\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "69cb7bd2e94d67e105b9",
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.0096269767404658,
+      "torque": 1.0508977064162301,
+      "tip_twist": 36.11104283578768,
+      "half_span_mm": 350.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.480595737883906,
+      "torque": 1.214868709532471,
+      "tip_twist": 48.20501796464924,
+      "half_span_mm": 400.0
+     },
+     "solves": 3
+    },
+    {
+     "freq": 1.0,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.1064891829284704,
+      "torque": 1.2496610804507142,
+      "tip_twist": 47.702800991888274,
+      "half_span_mm": 350.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.1064891829284704,
+      "torque": 1.2496610804507142,
+      "tip_twist": 47.702800991888274,
+      "half_span_mm": 350.0
+     }
+    },
+    {
+     "freq": 1.25,
+     "key": "285844193900289d40db",
+     "fixed": {
+      "status": "verified",
+      "thrust": 4.136928237578956,
+      "torque": 1.435514419779836,
+      "tip_twist": 57.844973210504065,
+      "half_span_mm": 350.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.508411651444147,
+      "torque": 1.2478341586627233,
+      "tip_twist": 45.581185666071974,
+      "half_span_mm": 307.3
+     },
+     "solves": 4
+    }
+   ]
+  },
+  {
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "freq": 1.25,
+   "budget_Nm": 0.75,
+   "half_span_mm": 320.0,
+   "ctrl": [
+    0.08249,
+    0.04193,
+    0.0255,
+    0.0255,
+    0.0255,
+    0.0205
+   ],
+   "chords_mm": [
+    200.0,
+    157.48,
+    120.81,
+    92.6,
+    74.32,
+    60.54,
+    49.86,
+    41.93,
+    35.26,
+    29.51,
+    26.0,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.5,
+    25.35,
+    24.32,
+    22.59,
+    20.5
+   ],
+   "summary": "atlas\\refine-top\\3-f1.25\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "be2b947e780e50073e06",
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.133019439436894,
+      "torque": 0.5528781675188871,
+      "tip_twist": 29.04981962720916,
+      "half_span_mm": 320.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.6916743743015616,
+      "torque": 0.7460065062886455,
+      "tip_twist": 45.52475681303778,
+      "half_span_mm": 397.5
+     },
+     "solves": 4
+    },
+    {
+     "freq": 1.0,
+     "key": "3edaeed8d5f8e53f54a1",
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.8180506264194263,
+      "torque": 0.6683929944882374,
+      "tip_twist": 39.52876731854592,
+      "half_span_mm": 320.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.141670359363581,
+      "torque": 0.7475999899209679,
+      "tip_twist": 47.49037570207935,
+      "half_span_mm": 351.9
+     },
+     "solves": 4
+    },
+    {
+     "freq": 1.25,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.54158384258914,
+      "torque": 0.749472627945409,
+      "tip_twist": 48.8454741345666,
+      "half_span_mm": 320.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.54158384258914,
+      "torque": 0.749472627945409,
+      "tip_twist": 48.8454741345666,
+      "half_span_mm": 320.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "freq": 1.25,
+   "budget_Nm": 1.0,
+   "half_span_mm": 320.0,
+   "ctrl": [
+    0.12748,
+    0.06193,
+    0.04345,
+    0.02863,
+    0.0255,
+    0.01
+   ],
+   "chords_mm": [
+    200.0,
+    178.56,
+    157.68,
+    137.39,
+    117.13,
+    95.07,
+    75.11,
+    61.93,
+    55.02,
+    50.0,
+    45.7,
+    40.99,
+    35.86,
+    31.36,
+    28.63,
+    27.56,
+    26.92,
+    26.13,
+    24.47,
+    20.95,
+    15.93,
+    10.0
+   ],
+   "summary": "atlas\\refine-top\\3-f1.25\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "520f501154da77b8299c",
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.3326844908885023,
+      "torque": 0.6913459719820432,
+      "tip_twist": 25.421615511829195,
+      "half_span_mm": 320.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.0780030668837024,
+      "torque": 0.9641903556712655,
+      "tip_twist": 42.458811535880855,
+      "half_span_mm": 400.0
+     },
+     "solves": 3
+    },
+    {
+     "freq": 1.0,
+     "key": "6e3cc99beba0b6c6c937",
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.173663626718871,
+      "torque": 0.8635571828045707,
+      "tip_twist": 34.95445159424929,
+      "half_span_mm": 320.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.7165177157822686,
+      "torque": 0.9973142056972093,
+      "tip_twist": 45.91970574023277,
+      "half_span_mm": 361.4
+     },
+     "solves": 4
+    },
+    {
+     "freq": 1.25,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.086531434897445,
+      "torque": 0.9995698599379405,
+      "tip_twist": 44.92670207814194,
+      "half_span_mm": 320.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.086531434897445,
+      "torque": 0.9995698599379405,
+      "tip_twist": 44.92670207814194,
+      "half_span_mm": 320.0
+     }
+    }
+   ]
+  },
+  {
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "freq": 1.25,
+   "budget_Nm": 1.25,
+   "half_span_mm": 400.0,
+   "ctrl": [
+    0.14199,
+    0.0649,
+    0.04736,
+    0.0297,
+    0.01523,
+    0.01
+   ],
+   "chords_mm": [
+    200.0,
+    185.29,
+    169.0,
+    151.3,
+    131.27,
+    105.38,
+    80.49,
+    64.9,
+    58.28,
+    53.73,
+    49.68,
+    44.81,
+    39.62,
+    34.49,
+    29.7,
+    24.96,
+    20.33,
+    16.56,
+    14.14,
+    12.16,
+    10.68,
+    10.0
+   ],
+   "summary": "atlas\\refine-top\\3-f1.25\\stage2.json",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "81f094ddbd9539aa1e98",
+     "fixed": {
+      "status": "verified",
+      "thrust": 2.0931428559685936,
+      "torque": 1.0015310707127616,
+      "tip_twist": 37.155164728938516,
+      "half_span_mm": 400.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 2.0931428559685936,
+      "torque": 1.0015310707127616,
+      "tip_twist": 37.155164728938516,
+      "half_span_mm": 400.0
+     },
+     "solves": 1
+    },
+    {
+     "freq": 1.0,
+     "key": "015d8ef3e2a53f3a1ee3",
+     "fixed": {
+      "status": "verified",
+      "thrust": 3.206744588210813,
+      "torque": 1.1571980189446414,
+      "tip_twist": 49.91440197819642,
+      "half_span_mm": 400.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 3.206744588210813,
+      "torque": 1.1571980189446414,
+      "tip_twist": 49.91440197819642,
+      "half_span_mm": 400.0
+     },
+     "solves": 1
+    },
+    {
+     "freq": 1.25,
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 4.243552792384566,
+      "torque": 1.2474818993109542,
+      "tip_twist": 60.02217377994708,
+      "half_span_mm": 400.0
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 4.243552792384566,
+      "torque": 1.2474818993109542,
+      "tip_twist": 60.02217377994708,
+      "half_span_mm": 400.0
+     }
+    }
+   ]
+  }
+ ]
+}
