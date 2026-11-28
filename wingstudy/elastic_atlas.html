@@ -55,6 +55,10 @@ p{margin:4px 0 10px}
 .tile .k{color:var(--text-2);font-size:12.5px}
 .tile .v{font-size:26px;font-weight:650;margin:2px 0}
 .tile .s{color:var(--text-2);font-size:12.5px}
+.simcount{color:var(--text-2);font-size:15px;margin:-4px 0 12px}.simcount .v{font-size:34px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;margin-right:6px}
+.headline{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px}
+.headline .poster img{width:100%;display:block;border-radius:12px}.headline .tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0}
+@media (max-width:800px){.headline{grid-template-columns:1fr}}
 .muted{color:var(--text-2)}.small{font-size:12.5px}.tiny{font-size:11.5px}
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
@@ -252,6 +256,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
   <div class="seg" style="margin-bottom:14px"><button onclick="document.getElementById('el-chord').scrollIntoView({behavior:'smooth'})">Rigid → chordwise</button><button onclick="document.getElementById('el-span').scrollIntoView({behavior:'smooth'})">Chordwise → spanwise + chordwise</button></div>
   <div id="el-chord" style="scroll-margin-top:64px"></div>
   <div id="el-span" style="margin-top:28px;scroll-margin-top:64px"></div>
+  <div id="el-cov"></div>
 </section>
 <section class="tab" id="t-opt"></section>
 <section class="tab" id="t-conv"></section>
@@ -587,6 +592,19 @@ function renderShapes(){const el=$('#shapes-card');if(!el)return;
         +rows.map(j=>`<tr><td>${configName(j)}</td><td class="n">${Math.round(SPAN[j])} mm</td><td class="n">${fmt(C.T[j],3)} N</td><td class="n">${fmt(C.Q[j],3)} N·m</td><td class="n">${C.W[j]==null?'–':'±'+fmt(C.W[j],0)+'°'}</td><td>${statusPill(STATUS[C.S[j]])}</td><td class="tiny muted">${esc(D.studies[C.s[j]].short)}</td><td><button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎ on map</button>${mediaForRow(j)?' <span class="tiny muted">▶ animation</span>':''}</td></tr>`).join('')+`</table></td></tr>`}}
   h+=`</table></div><div class="chips" style="margin-top:8px;gap:8px">${chip(pg>0,'‹ Previous',`setShp('page',${pg-1})`)}<span class="small muted">Page ${pg+1} of ${pages}</span>${chip(pg<pages-1,'Next ›',`setShp('page',${pg+1})`)}</div></div>`;
   el.innerHTML=h}
+// Headline: the best verified one-sheet FAAV wing at or below each budget, any frequency, 8 x 4 mesh (as on the
+// Top tab), beside the animation of the best one at <= 1 N·m. Read from the data, so it follows every rebuild.
+function headlineCard(){const f0=TOPS.f;TOPS.f=-1;const rows=faavRows(true);TOPS.f=f0;
+  const tile=(k,v)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  const best=[0.75,1,1.25,1.5,2].map(B=>[B,bestUnder(rows,B)]).filter(([,i])=>i!=null);
+  const one=bestUnder(rows,1),media=one!=null?mediaForRow(one):null;
+  if(media)MEDIA_REG.headline={media,title:`Best FAAV wing at ≤ 1 N·m · ${D.freqs[C.f[one]]} Hz`,info:''};
+  return `<h3 style="margin-top:18px">Headline results: best FAAV wing at each torque budget</h3>
+  <div class="headline">${media?`<button class="poster" onclick="openViewer('headline')" aria-label="Play the animation"><img src="${MU(media.main)}" alt="Animation of the best wing at ≤ 1 N·m"></button>`:''}
+  <div class="tiles">${best.map(([B,i])=>tile(`≤ ${B} N·m · ${D.freqs[C.f[i]]} Hz`,fmt(C.T[i],2)+' N')).join('')}</div></div>`}
+// The simulation count runs up from zero the first time the Overview opens.
+function runCounter(){const el=$('#simcount');if(!el||runCounter.done||typeof requestAnimationFrame!=='function')return;runCounter.done=true;const t0=Date.now(),d=1200;
+  const step=()=>{const k=Math.min(1,(Date.now()-t0)/d);el.textContent=Math.round(N*(1-(1-k)**3)).toLocaleString();if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
 function renderOverview(){
   const R=Object.fromEntries(D.refined.filter(r=>(r.set||'campaign')==='campaign').map(r=>[r.model,r]));
   const RS=Object.fromEntries(D.refined.filter(r=>r.set==='sweep').map(r=>[r.model,r]));
@@ -594,16 +612,11 @@ function renderOverview(){
   const counts=D.studies.map((s,i)=>C.s.filter(x=>x===i).length);
   const tile=(k,v,s)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
   let h=`<h2>Carbon-fibre flapping wings in water: how the studies work and what they found</h2>
+  <div class="simcount"><span class="v" id="simcount">${N.toLocaleString()}</span> simulations</div>
   <p class="lede">One wing of the swimming robot: Ptera's unsteady vortex-lattice method coupled to a stabilized plate-torsion model. Every result is per wing at 0.5 m/s, a ±30° stroke (−26° to +34°) and a peak root torque budget (${LIM} N·m in the original campaigns, 0.75–1.25 N·m for the FAAV wing); root chord 200 mm, leading edge straight and normal to the flow.</p>
+  ${headlineCard()}
   ${methodsCard()}
   ${constantsCard()}
-  <h3 style="margin-top:18px">Headline results: the FAAV wing (0.5 mm sheet on a stiff leading edge, one 400 mm sheet)</h3>
-  <div class="tiles">
-   ${(()=>{const L=(D.mesh_ladder&&D.mesh_ladder.wings)||[],lw=(f,B)=>L.find(w=>w.freq===f&&w.budget_Nm===B),tw=w=>{const l=w.levels[w.levels.length-1];return l&&l.tip_twist!=null?` · ±${fmt(l.tip_twist,0)}° tip twist`:''};
-     return [[1,1],[1,0.75],[1,1.25],[1.25,1.25]].map(([f,B])=>{const w=lw(f,B);return w?tile(`Recommended · ${f} Hz · ${B} N·m budget`,fmt(w.thrust.extrapolated)+' N',`at ${fmt(w.torque.extrapolated,3)} N·m · ${Math.round(w.half_span_mm)} mm half-span${tw(w)} · converged`):''}).join('')})()}
-   ${tile('Passive pitch against a rigid wing','+25%','2.87 N against 2.30 N, best one-sheet wing at ≤ 1 N·m, 1 Hz, search mesh')}
-   ${tile('Designs simulated',N.toLocaleString(),`${(CAT_END-CAT0).toLocaleString()} rigid catalog runs + ${D.unique.toLocaleString()} unique elastic-study designs${N>CAT_END?` + ${(N-CAT_END).toLocaleString()} matched or planned-study results`:''}`)}
-  </div>
   ${coverageCard()}
   <div id="shapes-card"></div>
   <div class="grid2">
@@ -638,7 +651,7 @@ function renderOverview(){
    ${D.reports.map(r=>`<li><a href="${r.file}" target="_blank">${STUDY[r.study].label}: ${r.name.replace('chunk_','chunk ').replace('_',' · ').replace('Hz',' Hz')}</a></li>`).join('')}
   </ul><p class="tiny muted">Built ${D.built}. The page is a static snapshot of the results.</p></div>
   </div>`;
-  $('#t-overview').innerHTML=h;renderShapes();
+  $('#t-overview').innerHTML=h;renderShapes();runCounter();
 }
 
 /* ======================================================================================
@@ -1681,7 +1694,29 @@ function renderFreq(){
   h+=`</table></div><p class="tiny muted">8 × 4 search mesh, so absolute thrust and torque run about 15 % low against converged values (Convergence tab); the comparisons between wings are on one mesh. Half-spans are rescaled between 150 and 400 mm (800 mm for free-span wings); a wing that reaches its cap below its budget stops there, and its torque is given.</p></div>`;
   el.innerHTML=h;
 }
-function renderElastic(){renderStiff();renderSpan()}
+// Spanwise coverage (studies/2026-11-25-coverage-spanwise): 96 Sobol outlines, 150-450 mm, every standard sheet
+// with and without the rod, 0.75-1.25 Hz, spanwise model only. Where the same outline, sheet and frequency was also
+// solved chordwise elsewhere in the atlas (same shape number), the two are paired here.
+function coverageSpanCard(){const st=STUDY['2026-11-25-coverage-spanwise'];if(!st)return '';
+  const rows=[];for(let i=0;i<N;i++)if(C.s[i]===st.i)rows.push(i);if(!rows.length)return '';
+  const ok=i=>GOOD.has(STATUS[C.S[i]]),key=i=>C.g[i]+'|'+THK_OF[C.m[i]]+'|'+ROD_OF[C.m[i]]+'|'+C.f[i];
+  const twin=new Map();for(let i=0;i<N;i++)if(!isCat(i)&&STRUCT_OF[C.m[i]]===1&&ok(i)&&MESH_OF(i)===SEARCH_MESH){const k=key(i);if(!twin.has(k))twin.set(k,i)}
+  const mats=[...new Set(rows.map(i=>C.m[i]))].sort((a,b)=>(ROD_OF[a]-ROD_OF[b])||(THK_OF[a]-THK_OF[b]));
+  const bins=[[150,250],[250,350],[350,450]],inB=(i,[a,b])=>SPAN[i]>=a-0.5&&SPAN[i]<b+(b===450?0.5:0);
+  const pct=(a,b)=>b?`${Math.round(100*a/b)} %`:'–';
+  let h=`<div class="card"><h3>Spanwise coverage: where the spanwise model verifies</h3><p class="small muted" style="max-width:920px">${rows.length.toLocaleString()} spanwise solves: 96 space-filling outlines, 150–450 mm half-span, every sheet with and without the rod, 0.75, 1 and 1.25 Hz, 8 × 4 mesh. Share verified, by sheet and half-span. Solves that failed outright are not in the atlas, so a cell short of its count lost those.</p><div style="overflow-x:auto"><table class="small"><tr><th>Sheet</th>${bins.map(([a,b])=>`<th class="n">${a}–${b} mm</th>`).join('')}<th class="n">All</th><th class="n">Best thrust</th></tr>`;
+  for(const m of mats){const r=rows.filter(i=>C.m[i]===m),g=r.filter(ok),b=g.reduce((x,i)=>x==null||C.T[i]>C.T[x]?i:x,null);
+    h+=`<tr><td><span class="sw" style="background:${modelColor(D.models[m].id)}"></span>${matLabel(m)}</td>${bins.map(B=>{const rb=r.filter(i=>inB(i,B));return `<td class="n">${pct(rb.filter(ok).length,rb.length)} <span class="tiny muted">of ${rb.length}</span></td>`}).join('')}<td class="n"><b>${pct(g.length,r.length)}</b> <span class="tiny muted">of ${r.length}</span></td><td class="n">${b==null?'–':`<a href="#" onclick="showOnMap(${b});return false">${fmt(C.T[b],2)} N</a> <span class="tiny muted">${fmt(C.Q[b],2)} N·m</span>`}</td></tr>`}
+  h+='</table></div>';
+  const pairs=rows.filter(ok).map(i=>[twin.get(key(i)),i]).filter(([j])=>j!=null);
+  if(pairs.length){const dT=pairs.map(([j,i])=>100*(C.T[i]/C.T[j]-1)),dQ=pairs.map(([j,i])=>100*(C.Q[i]/C.Q[j]-1));
+    const tip=(j,i,k)=>`<b>${matLabel(C.m[i])} · ${D.freqs[C.f[i]]} Hz · ${Math.round(SPAN[i])} mm</b><br>${k?'Span + chord':'Chordwise only'}: ${fmt(C.T[k?i:j],3)} N at ${fmt(C.Q[k?i:j],3)} N·m<br><span class="muted">Click to open on the Wing map</span>`;
+    h+=`<h4 style="margin:14px 0 4px">Paired with a chordwise solve of the same wing (${pairs.length})</h4><p class="small" style="max-width:920px">These outlines were also solved chordwise-only on the same sheet and frequency in earlier studies. Adding span bending changes thrust by a median <b>${fmt(median(dT),1)} %</b> (${fmt(Math.min(...dT),1)} to ${fmt(Math.max(...dT),1)} %) and torque by <b>${fmt(median(dQ),1)} %</b>.</p>`
+      +legend([[css('--s1'),'Chordwise only'],[css('--s2'),'Span + chord']])
+      +lineChart({series:[{name:'Chordwise only',color:css('--s1'),line:false,points:pairs.map(([j,i])=>({x:C.Q[j],y:C.T[j],row:j,tip:tip(j,i,0)}))},{name:'Span + chord',color:css('--s2'),line:false,points:pairs.map(([j,i])=>({x:C.Q[i],y:C.T[i],row:i,tip:tip(j,i,1)}))}],
+        links:pairs.map(([j,i])=>[{x:C.Q[j],y:C.T[j]},{x:C.Q[i],y:C.T[i]}]),xlabel:'Peak fluid root torque (N·m)',ylabel:'Mean thrust (N)',w:1000,h:300,xfmt:x=>fmt(x,2)})}
+  return h+`<p class="tiny muted">The other ${(rows.filter(ok).length-pairs.length).toLocaleString()} verified spanwise wings have no chordwise solve yet, so they appear on the Wing map but not in the matched comparison above.</p></div>`}
+function renderElastic(){renderStiff();renderSpan();$('#el-cov').innerHTML=coverageSpanCard()}
 const RENDERED={};
 function go(t){$$('#nav button').forEach(b=>{b.classList.toggle('on',b.dataset.t===t);if(b.dataset.t===t&&b.scrollIntoView&&matchMedia('(max-width:760px)').matches)b.scrollIntoView({block:'nearest',inline:'nearest'})});$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t));
   try{history.replaceState(null,'','#'+t)}catch(e){}
