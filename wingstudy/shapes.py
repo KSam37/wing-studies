@@ -61,13 +61,18 @@ def assign(D: dict, registry: Path) -> int:
             nxt += 1
         return ids[key]
 
+    same = {int(r): src for r, src in (D.get("row_same_shape") or {}).items()}
     g = []
     for i in range(n):
-        if c0 <= i < c1:
+        if i in same:                       # re-solve of another row's shape (coarser outline sampling): set below
+            g.append(None)
+        elif c0 <= i < c1:
             g.append(number(poly_key(cat["poly"][i - c0])))
         else:
             ch = outlines.get(str(i)) or cols["C"][8 * i:8 * i + 8]
             g.append(number(outline_key(ch, cols["H"][i])))
+    for r, src in same.items():
+        g[r] = g[src]
     cols["g"] = g
     for p in D.get("span_comparisons") or []:
         s = p["source"]

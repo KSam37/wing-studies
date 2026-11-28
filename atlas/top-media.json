@@ -203,6 +203,23 @@
    "thrust_dev_pct": -0.01
   }
  },
+ "6be5066e7c05f451": {
+  "main": "top/6be5066e7c05f451/main.webp",
+  "front": "top/6be5066e7c05f451/front.webp",
+  "top": "top/6be5066e7c05f451/top.webp",
+  "poster": "top/6be5066e7c05f451/poster.webp",
+  "label": "F1.25-B1.25-sheet-ca4a5e50 on 8 x 4 at 1.25 Hz",
+  "kind": "optimized-8x4",
+  "freq": 1.25,
+  "replay": {
+   "thrust": 3.652174299383906,
+   "torque": 1.053316800003358,
+   "status": "verified",
+   "dt_s": 0.008,
+   "added_mass_factor": 0.5,
+   "thrust_dev_pct": -0.0
+  }
+ },
  "6e828947303245b3": {
   "main": "top/6e828947303245b3/main.webp",
   "front": "top/6e828947303245b3/front.webp",
@@ -301,6 +318,23 @@
    "torque": 1.4724854638672251,
    "status": "verified",
    "dt_s": 0.008,
+   "added_mass_factor": 0.5,
+   "thrust_dev_pct": 0.0
+  }
+ },
+ "8d6f90dd999a5a97": {
+  "main": "top/8d6f90dd999a5a97/main.webp",
+  "front": "top/8d6f90dd999a5a97/front.webp",
+  "top": "top/8d6f90dd999a5a97/top.webp",
+  "poster": "top/8d6f90dd999a5a97/poster.webp",
+  "label": "B0.75-sheet-62a23e20 on 8 x 4 at 1 Hz",
+  "kind": "optimized-8x4",
+  "freq": 1.0,
+  "replay": {
+   "thrust": 2.315858430470566,
+   "torque": 0.7386769406452447,
+   "status": "verified",
+   "dt_s": 0.01,
    "added_mass_factor": 0.5,
    "thrust_dev_pct": 0.0
   }
@@ -507,6 +541,23 @@
    "dt_s": 0.013333333333333334,
    "added_mass_factor": 0.5,
    "thrust_dev_pct": 0.06
+  }
+ },
+ "f835f99d08ec9236": {
+  "main": "top/f835f99d08ec9236/main.webp",
+  "front": "top/f835f99d08ec9236/front.webp",
+  "top": "top/f835f99d08ec9236/top.webp",
+  "poster": "top/f835f99d08ec9236/poster.webp",
+  "label": "B0.75-sheet-62a23e20 on 8 x 4 at 1.25 Hz",
+  "kind": "optimized-8x4",
+  "freq": 1.25,
+  "replay": {
+   "thrust": 2.7850388567034776,
+   "torque": 0.746713756943269,
+   "status": "verified",
+   "dt_s": 0.008,
+   "added_mass_factor": 0.5,
+   "thrust_dev_pct": 0.0
   }
  },
  "fa8cba030d9a6c78": {

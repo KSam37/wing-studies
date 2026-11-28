@@ -1,0 +1,1286 @@
+{
+ "about": "How far the 8 x 4 search mesh is from convergence: every wing solved on 8 x 4 and on a finer mesh, paired.",
+ "updated": "2026-11-28T02:05:17Z",
+ "summary": {
+  "picks|21 x 4": {
+   "n": 14,
+   "thrust": {
+    "median_pct": 4.43,
+    "p10_pct": 0.78,
+    "p90_pct": 10.03,
+    "min_pct": -5.56,
+    "max_pct": 11.2
+   },
+   "torque": {
+    "median_pct": 7.2,
+    "p10_pct": 1.86,
+    "p90_pct": 13.48,
+    "min_pct": -13.01,
+    "max_pct": 20.35
+   },
+   "thrust_rank_rho": 1.0
+  },
+  "picks|21 x 12": {
+   "n": 11,
+   "thrust": {
+    "median_pct": 12.56,
+    "p10_pct": 4.89,
+    "p90_pct": 15.76,
+    "min_pct": 4.47,
+    "max_pct": 19.69
+   },
+   "torque": {
+    "median_pct": 15.57,
+    "p10_pct": 7.83,
+    "p90_pct": 23.86,
+    "min_pct": 6.8,
+    "max_pct": 53.07
+   },
+   "thrust_rank_rho": 0.9909
+  },
+  "optimized|21 x 12": {
+   "n": 31,
+   "thrust": {
+    "median_pct": 6.2,
+    "p10_pct": 1.49,
+    "p90_pct": 16.19,
+    "min_pct": -0.79,
+    "max_pct": 21.32
+   },
+   "torque": {
+    "median_pct": 8.66,
+    "p10_pct": 2.57,
+    "p90_pct": 24.21,
+    "min_pct": 0.68,
+    "max_pct": 31.37
+   },
+   "thrust_rank_rho": 0.9907
+  },
+  "ladder|converged": {
+   "n": 9,
+   "thrust": {
+    "median_pct": 5.94,
+    "p10_pct": 3.48,
+    "p90_pct": 18.93,
+    "min_pct": 2.72,
+    "max_pct": 23.67
+   },
+   "torque": {
+    "median_pct": 12.29,
+    "p10_pct": 6.64,
+    "p90_pct": 28.0,
+    "min_pct": 6.52,
+    "max_pct": 28.09
+   },
+   "thrust_rank_rho": 0.9667
+  }
+ },
+ "pairs": [
+  {
+   "kind": "picks",
+   "id": "fc1900bdfeec108929f4de20",
+   "freq": 1.0,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 1.7752133011028906,
+    "torque": 0.6839753776594725
+   },
+   "fine": {
+    "thrust": 1.851479119599481,
+    "torque": 0.8231687713734295
+   },
+   "thrust_ratio": 1.04296,
+   "torque_ratio": 1.20351
+  },
+  {
+   "kind": "picks",
+   "id": "fc1900bdfeec108929f4de20",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.7752133011028906,
+    "torque": 0.6839753776594725
+   },
+   "fine": {
+    "thrust": 2.1247333344333597,
+    "torque": 1.0469892374074101
+   },
+   "thrust_ratio": 1.19689,
+   "torque_ratio": 1.53074
+  },
+  {
+   "kind": "picks",
+   "id": "e5effbc5105cb796e2b1ff6f",
+   "freq": 1.0,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 2.8513040707627058,
+    "torque": 0.9798499906012889
+   },
+   "fine": {
+    "thrust": 3.0760325474391013,
+    "torque": 1.080890979296728
+   },
+   "thrust_ratio": 1.07882,
+   "torque_ratio": 1.10312
+  },
+  {
+   "kind": "picks",
+   "id": "e5effbc5105cb796e2b1ff6f",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.8513040707627058,
+    "torque": 0.9798499906012889
+   },
+   "fine": {
+    "thrust": 3.1695959728949687,
+    "torque": 1.114678897634449
+   },
+   "thrust_ratio": 1.11163,
+   "torque_ratio": 1.1376
+  },
+  {
+   "kind": "picks",
+   "id": "1c187a1d348805f3d750c287",
+   "freq": 1.0,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 3.0587797470480522,
+    "torque": 1.1969203389286645
+   },
+   "fine": {
+    "thrust": 3.322335892942701,
+    "torque": 1.2950755300134398
+   },
+   "thrust_ratio": 1.08616,
+   "torque_ratio": 1.08201
+  },
+  {
+   "kind": "picks",
+   "id": "1c187a1d348805f3d750c287",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.0587797470480522,
+    "torque": 1.1969203389286645
+   },
+   "fine": {
+    "thrust": 3.4517389912438534,
+    "torque": 1.4373959947620003
+   },
+   "thrust_ratio": 1.12847,
+   "torque_ratio": 1.20091
+  },
+  {
+   "kind": "picks",
+   "id": "62a23e2059be32dcac6235ad",
+   "freq": 1.0,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 2.2729,
+    "torque": 0.7228
+   },
+   "fine": {
+    "thrust": 2.37658795566035,
+    "torque": 0.7723936648794425
+   },
+   "thrust_ratio": 1.04562,
+   "torque_ratio": 1.06861
+  },
+  {
+   "kind": "picks",
+   "id": "62a23e2059be32dcac6235ad",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.2729,
+    "torque": 0.7228
+   },
+   "fine": {
+    "thrust": 2.396452590947878,
+    "torque": 0.7818612349760544
+   },
+   "thrust_ratio": 1.05436,
+   "torque_ratio": 1.08171
+  },
+  {
+   "kind": "picks",
+   "id": "fc1c1d2ab64d2c74d3a9e7d9",
+   "freq": 1.0,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 2.8656,
+    "torque": 0.9902
+   },
+   "fine": {
+    "thrust": 3.1284902789598914,
+    "torque": 1.1066425483716196
+   },
+   "thrust_ratio": 1.09174,
+   "torque_ratio": 1.11759
+  },
+  {
+   "kind": "picks",
+   "id": "fc1c1d2ab64d2c74d3a9e7d9",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.8656,
+    "torque": 0.9902
+   },
+   "fine": {
+    "thrust": 3.2253782420165087,
+    "torque": 1.1443629769808612
+   },
+   "thrust_ratio": 1.12555,
+   "torque_ratio": 1.15569
+  },
+  {
+   "kind": "picks",
+   "id": "3aee3c6dda03723bac1d68f3",
+   "freq": 1.25,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 2.6652,
+    "torque": 0.7423
+   },
+   "fine": {
+    "thrust": 2.7756575410132447,
+    "torque": 0.794327292445901
+   },
+   "thrust_ratio": 1.04144,
+   "torque_ratio": 1.07009
+  },
+  {
+   "kind": "picks",
+   "id": "3aee3c6dda03723bac1d68f3",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.6652,
+    "torque": 0.7423
+   },
+   "fine": {
+    "thrust": 2.795507794710387,
+    "torque": 0.8004099441852209
+   },
+   "thrust_ratio": 1.04889,
+   "torque_ratio": 1.07828
+  },
+  {
+   "kind": "picks",
+   "id": "af1fc98ab84ff8de2e86cfed",
+   "freq": 1.25,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 3.5833,
+    "torque": 0.9946
+   },
+   "fine": {
+    "thrust": 3.9427230986754926,
+    "torque": 1.1177919935914034
+   },
+   "thrust_ratio": 1.10031,
+   "torque_ratio": 1.12386
+  },
+  {
+   "kind": "picks",
+   "id": "af1fc98ab84ff8de2e86cfed",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.5833,
+    "torque": 0.9946
+   },
+   "fine": {
+    "thrust": 4.068489583250121,
+    "torque": 1.1628200660111259
+   },
+   "thrust_ratio": 1.1354,
+   "torque_ratio": 1.16913
+  },
+  {
+   "kind": "picks",
+   "id": "ca4a5e50ccd5af5a804d4937",
+   "freq": 1.25,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 3.6374,
+    "torque": 1.0482
+   },
+   "fine": {
+    "thrust": 4.044681212811615,
+    "torque": 1.1895455590474209
+   },
+   "thrust_ratio": 1.11197,
+   "torque_ratio": 1.13485
+  },
+  {
+   "kind": "picks",
+   "id": "ca4a5e50ccd5af5a804d4937",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.6374,
+    "torque": 1.0482
+   },
+   "fine": {
+    "thrust": 4.166087401066861,
+    "torque": 1.2243935505107193
+   },
+   "thrust_ratio": 1.14535,
+   "torque_ratio": 1.16809
+  },
+  {
+   "kind": "picks",
+   "id": "74fb8fc1e60ea0492fafa1ff",
+   "freq": 0.75,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 1.7109,
+    "torque": 0.7458
+   },
+   "fine": {
+    "thrust": 1.777210738710616,
+    "torque": 0.7928781636546945
+   },
+   "thrust_ratio": 1.03876,
+   "torque_ratio": 1.06312
+  },
+  {
+   "kind": "picks",
+   "id": "74fb8fc1e60ea0492fafa1ff",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.7109,
+    "torque": 0.7458
+   },
+   "fine": {
+    "thrust": 1.7874424383831578,
+    "torque": 0.7964975888072344
+   },
+   "thrust_ratio": 1.04474,
+   "torque_ratio": 1.06798
+  },
+  {
+   "kind": "picks",
+   "id": "cbf15d97385d44677233a414",
+   "freq": 0.75,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 2.1366,
+    "torque": 0.9958
+   },
+   "fine": {
+    "thrust": 2.2403312588582427,
+    "torque": 1.06937632069855
+   },
+   "thrust_ratio": 1.04855,
+   "torque_ratio": 1.07389
+  },
+  {
+   "kind": "picks",
+   "id": "cbf15d97385d44677233a414",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.1366,
+    "torque": 0.9958
+   },
+   "fine": {
+    "thrust": 2.2842138807145687,
+    "torque": 1.1226834517729734
+   },
+   "thrust_ratio": 1.06909,
+   "torque_ratio": 1.12742
+  },
+  {
+   "kind": "picks",
+   "id": "6ec1be788e3ffd3e4d3f80fd",
+   "freq": 0.75,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 2.2563,
+    "torque": 1.2183
+   },
+   "fine": {
+    "thrust": 2.344414526281372,
+    "torque": 1.2757503932168097
+   },
+   "thrust_ratio": 1.03905,
+   "torque_ratio": 1.04716
+  },
+  {
+   "kind": "picks",
+   "id": "6ec1be788e3ffd3e4d3f80fd",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.2563,
+    "torque": 1.2183
+   },
+   "fine": {
+    "thrust": 2.6118883446444894,
+    "torque": 1.5089456003948198
+   },
+   "thrust_ratio": 1.1576,
+   "torque_ratio": 1.23857
+  },
+  {
+   "kind": "picks",
+   "id": "ec5a6068f1850e595b3c81db",
+   "freq": 1.25,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 1.483,
+    "torque": 0.4671
+   },
+   "fine": {
+    "thrust": 1.4945928072530936,
+    "torque": 0.4757793736651388
+   },
+   "thrust_ratio": 1.00782,
+   "torque_ratio": 1.01858
+  },
+  {
+   "kind": "picks",
+   "id": "8c1aff31adf1aac55db75a17",
+   "freq": 1.25,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 4.2447,
+    "torque": 1.4725
+   },
+   "fine": {
+    "thrust": 4.346304725016744,
+    "torque": 1.5220381643016805
+   },
+   "thrust_ratio": 1.02394,
+   "torque_ratio": 1.03364
+  },
+  {
+   "kind": "picks",
+   "id": "86a05230a790f28146af42c6",
+   "freq": 1.25,
+   "mesh": "21 x 4",
+   "coarse": {
+    "thrust": 4.867,
+    "torque": 1.7525
+   },
+   "fine": {
+    "thrust": 4.596250450377355,
+    "torque": 1.524539943111792
+   },
+   "thrust_ratio": 0.94437,
+   "torque_ratio": 0.86992
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B0.75-sheet-74fb8fc1",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.5985438160788688,
+    "torque": 0.7167456090610678
+   },
+   "fine": {
+    "thrust": 1.6318715993048936,
+    "torque": 0.7436650594706535
+   },
+   "thrust_ratio": 1.02085,
+   "torque_ratio": 1.03756,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B0.75-sheet-74fb8fc1",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.376300038354232,
+    "torque": 0.793304325925674
+   },
+   "fine": {
+    "thrust": 2.4752492893953875,
+    "torque": 0.840610795869223
+   },
+   "thrust_ratio": 1.04164,
+   "torque_ratio": 1.05963,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B0.75-sheet-74fb8fc1",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.0994108378692435,
+    "torque": 0.8391750640468394
+   },
+   "fine": {
+    "thrust": 3.2980714831010816,
+    "torque": 0.9149836982737644
+   },
+   "thrust_ratio": 1.0641,
+   "torque_ratio": 1.09034,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B1-sheet-cbf15d97",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.8109702565617691,
+    "torque": 0.9290058808994134
+   },
+   "fine": {
+    "thrust": 1.893635394554529,
+    "torque": 0.999530802767016
+   },
+   "thrust_ratio": 1.04565,
+   "torque_ratio": 1.07591,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B1-sheet-cbf15d97",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.696395524824399,
+    "torque": 1.0660736852840007
+   },
+   "fine": {
+    "thrust": 2.946874778352086,
+    "torque": 1.2207885906331368
+   },
+   "thrust_ratio": 1.09289,
+   "torque_ratio": 1.14513,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B1-sheet-cbf15d97",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.4646631661664453,
+    "torque": 1.1810413286707577
+   },
+   "fine": {
+    "thrust": 3.9757820477503616,
+    "torque": 1.4669826543673974
+   },
+   "thrust_ratio": 1.14752,
+   "torque_ratio": 1.24211,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B1.25-sheet-6ec1be78",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.9518928778867775,
+    "torque": 1.0182563926933184
+   },
+   "fine": {
+    "thrust": 2.2209354818814186,
+    "torque": 1.224169889005568
+   },
+   "thrust_ratio": 1.13784,
+   "torque_ratio": 1.20222,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B1.25-sheet-6ec1be78",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.729086873365498,
+    "torque": 1.1728718361373558
+   },
+   "fine": {
+    "thrust": 3.2616191097357774,
+    "torque": 1.4987549210190232
+   },
+   "thrust_ratio": 1.19513,
+   "torque_ratio": 1.27785,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F0.75-B1.25-sheet-6ec1be78",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.559649262507026,
+    "torque": 1.3602284795926487
+   },
+   "fine": {
+    "thrust": 4.318754944290995,
+    "torque": 1.7868736621459131
+   },
+   "thrust_ratio": 1.21325,
+   "torque_ratio": 1.31366,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B0.75-sheet-62a23e20",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.4809810440533917,
+    "torque": 0.6477081993968556
+   },
+   "fine": {
+    "thrust": 1.502970062520069,
+    "torque": 0.66695692412792
+   },
+   "thrust_ratio": 1.01485,
+   "torque_ratio": 1.02972,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B0.75-sheet-62a23e20",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.197882477464793,
+    "torque": 0.713897504553108
+   },
+   "fine": {
+    "thrust": 2.2635539806245144,
+    "torque": 0.7483389138011158
+   },
+   "thrust_ratio": 1.02988,
+   "torque_ratio": 1.04824,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "B0.75-sheet-62a23e20",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.868026907957161,
+    "torque": 0.7643568827352838
+   },
+   "fine": {
+    "thrust": 2.998998389058197,
+    "torque": 0.8209397941809584
+   },
+   "thrust_ratio": 1.04567,
+   "torque_ratio": 1.07403,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B0.75-sheet-fc1900bd",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.3373326360669298,
+    "torque": 0.6344329280924556
+   },
+   "fine": {
+    "thrust": 1.5079721855456873,
+    "torque": 0.7489380236434585
+   },
+   "thrust_ratio": 1.1276,
+   "torque_ratio": 1.18048,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "B1-sheet-fc1c1d2a",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.7071993150028282,
+    "torque": 0.8142407473002307
+   },
+   "fine": {
+    "thrust": 1.7662040186459138,
+    "torque": 0.8584162142882151
+   },
+   "thrust_ratio": 1.03456,
+   "torque_ratio": 1.05425,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B1-sheet-fc1c1d2a",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.562038327865425,
+    "torque": 0.9185760249514505
+   },
+   "fine": {
+    "thrust": 2.7266617945335248,
+    "torque": 0.9986480737306594
+   },
+   "thrust_ratio": 1.06425,
+   "torque_ratio": 1.08717,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "B1-sheet-fc1c1d2a",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.3304649919519007,
+    "torque": 0.9719514108118513
+   },
+   "fine": {
+    "thrust": 3.6605024618412143,
+    "torque": 1.0932141659227335
+   },
+   "thrust_ratio": 1.0991,
+   "torque_ratio": 1.12476,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B1-sheet-e5effbc5",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.6972010360704601,
+    "torque": 0.8224535468185658
+   },
+   "fine": {
+    "thrust": 1.7434806998335854,
+    "torque": 0.8507860247690797
+   },
+   "thrust_ratio": 1.02727,
+   "torque_ratio": 1.03445,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B1-sheet-e5effbc5",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.5850184113853243,
+    "torque": 0.9835363480149242
+   },
+   "fine": {
+    "thrust": 2.7154439708352567,
+    "torque": 0.9988360878253829
+   },
+   "thrust_ratio": 1.05045,
+   "torque_ratio": 1.01556,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "B1-sheet-e5effbc5",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.3285319059010665,
+    "torque": 0.9717167596934029
+   },
+   "fine": {
+    "thrust": 3.665845205904412,
+    "torque": 1.0925063429385025
+   },
+   "thrust_ratio": 1.10134,
+   "torque_ratio": 1.12431,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B1.25-sheet-1c187a1d",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.892210197383147,
+    "torque": 0.9618090274692565
+   },
+   "fine": {
+    "thrust": 2.0096269767404658,
+    "torque": 1.0508977064162301
+   },
+   "thrust_ratio": 1.06205,
+   "torque_ratio": 1.09263,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "B1.25-sheet-1c187a1d",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.7831090614050114,
+    "torque": 1.0759844659900981
+   },
+   "fine": {
+    "thrust": 3.1064891829284704,
+    "torque": 1.2496610804507142
+   },
+   "thrust_ratio": 1.11619,
+   "torque_ratio": 1.16141,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "B1.25-sheet-1c187a1d",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.5080746287260465,
+    "torque": 1.1540582438417306
+   },
+   "fine": {
+    "thrust": 4.136928237578956,
+    "torque": 1.435514419779836
+   },
+   "thrust_ratio": 1.17926,
+   "torque_ratio": 1.24388,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.1419900929269649,
+    "torque": 0.5491452440258591
+   },
+   "fine": {
+    "thrust": 1.133019439436894,
+    "torque": 0.5528781675188871
+   },
+   "thrust_ratio": 0.99214,
+   "torque_ratio": 1.0068,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.8117038217210584,
+    "torque": 0.6545578062932517
+   },
+   "fine": {
+    "thrust": 1.8180506264194263,
+    "torque": 0.6683929944882374
+   },
+   "thrust_ratio": 1.0035,
+   "torque_ratio": 1.02114,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.4991510306277016,
+    "torque": 0.7224838615165589
+   },
+   "fine": {
+    "thrust": 2.54158384258914,
+    "torque": 0.749472627945409
+   },
+   "thrust_ratio": 1.01698,
+   "torque_ratio": 1.03736,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.3231748963956427,
+    "torque": 0.6740496294119163
+   },
+   "fine": {
+    "thrust": 1.3326844908885023,
+    "torque": 0.6913459719820432
+   },
+   "thrust_ratio": 1.00719,
+   "torque_ratio": 1.02566,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.1310563026764306,
+    "torque": 0.8248803762902882
+   },
+   "fine": {
+    "thrust": 2.173663626718871,
+    "torque": 0.8635571828045707
+   },
+   "thrust_ratio": 1.01999,
+   "torque_ratio": 1.04689,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.977620095889189,
+    "torque": 0.9319969929033651
+   },
+   "fine": {
+    "thrust": 3.086531434897445,
+    "torque": 0.9995698599379405
+   },
+   "thrust_ratio": 1.03658,
+   "torque_ratio": 1.0725,
+   "own": true
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "freq": 0.75,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 1.9624063694674365,
+    "torque": 0.9217490120554711
+   },
+   "fine": {
+    "thrust": 2.0931428559685936,
+    "torque": 1.0015310707127616
+   },
+   "thrust_ratio": 1.06662,
+   "torque_ratio": 1.08656,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "freq": 1.0,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 2.8878316318135226,
+    "torque": 1.0218097580033765
+   },
+   "fine": {
+    "thrust": 3.206744588210813,
+    "torque": 1.1571980189446414
+   },
+   "thrust_ratio": 1.11043,
+   "torque_ratio": 1.1325,
+   "own": false
+  },
+  {
+   "kind": "optimized",
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "freq": 1.25,
+   "mesh": "21 x 12",
+   "coarse": {
+    "thrust": 3.6521870482199916,
+    "torque": 1.0533211844708208
+   },
+   "fine": {
+    "thrust": 4.243552792384566,
+    "torque": 1.2474818993109542
+   },
+   "thrust_ratio": 1.16192,
+   "torque_ratio": 1.18433,
+   "own": true
+  },
+  {
+   "kind": "ladder",
+   "id": "F0.75-B0.75-sheet-74fb8fc1",
+   "freq": 0.75,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 1.5985438160788688,
+    "torque": 0.7167456090610678
+   },
+   "fine": {
+    "thrust": 1.6541624751788953,
+    "torque": 0.7643716111693003
+   },
+   "thrust_ratio": 1.03479,
+   "torque_ratio": 1.06645,
+   "budget_Nm": 0.75,
+   "levels": {
+    "21 x 12": {
+     "thrust": 1.6318715993048936,
+     "torque": 0.7436650594706535
+    },
+    "32 x 18": {
+     "thrust": 1.638010047739022,
+     "torque": 0.7500005418188639
+    },
+    "47 x 27": {
+     "thrust": 1.6422890504075787,
+     "torque": 0.754234091335706
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "F0.75-B1-sheet-cbf15d97",
+   "freq": 0.75,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 1.8109702565617691,
+    "torque": 0.9290058808994134
+   },
+   "fine": {
+    "thrust": 1.9184795879499223,
+    "torque": 1.028028207918021
+   },
+   "thrust_ratio": 1.05937,
+   "torque_ratio": 1.10659,
+   "budget_Nm": 1.0,
+   "levels": {
+    "21 x 12": {
+     "thrust": 1.893635394554529,
+     "torque": 0.999530802767016
+    },
+    "32 x 18": {
+     "thrust": 1.903269375519468,
+     "torque": 1.010823533359918
+    },
+    "47 x 27": {
+     "thrust": 1.9089618903576604,
+     "torque": 1.0174052847890556
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "F0.75-B1.25-sheet-6ec1be78",
+   "freq": 0.75,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 1.9518928778867775,
+    "torque": 1.0182563926933184
+   },
+   "fine": {
+    "thrust": 2.3213885270824663,
+    "torque": 1.3033802687676506
+   },
+   "thrust_ratio": 1.1893,
+   "torque_ratio": 1.28001,
+   "budget_Nm": 1.25,
+   "levels": {
+    "21 x 12": {
+     "thrust": 2.2209354818814186,
+     "torque": 1.224169889005568
+    },
+    "32 x 18": {
+     "thrust": 2.257764492185452,
+     "torque": 1.2569582955987626
+    },
+    "47 x 27": {
+     "thrust": 2.2802632327881613,
+     "torque": 1.2755193271473542
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "B0.75-sheet-62a23e20",
+   "freq": 1.0,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 2.197882477464793,
+    "torque": 0.713897504553108
+   },
+   "fine": {
+    "thrust": 2.304494383590102,
+    "torque": 0.7706584214654684
+   },
+   "thrust_ratio": 1.04851,
+   "torque_ratio": 1.07951,
+   "budget_Nm": 0.75,
+   "levels": {
+    "21 x 12": {
+     "thrust": 2.2635539806245144,
+     "torque": 0.7483389138011158
+    },
+    "32 x 18": {
+     "thrust": 2.276209835381897,
+     "torque": 0.7556210931949874
+    },
+    "47 x 27": {
+     "thrust": 2.2846290419941893,
+     "torque": 0.7603476266712065
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "B1-sheet-fc1c1d2a",
+   "freq": 1.0,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 2.562038327865425,
+    "torque": 0.9185760249514505
+   },
+   "fine": {
+    "thrust": 2.7982215307811233,
+    "torque": 1.0418280650509149
+   },
+   "thrust_ratio": 1.09219,
+   "torque_ratio": 1.13418,
+   "budget_Nm": 1.0,
+   "levels": {
+    "21 x 12": {
+     "thrust": 2.7266617945335248,
+     "torque": 0.9986480737306594
+    },
+    "32 x 18": {
+     "thrust": 2.7534986302593887,
+     "torque": 1.0142587716147737
+    },
+    "47 x 27": {
+     "thrust": 2.7696798880061877,
+     "torque": 1.0238706720205046
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "B1.25-sheet-1c187a1d",
+   "freq": 1.0,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 2.7831090614050114,
+    "torque": 1.0759844659900981
+   },
+   "fine": {
+    "thrust": 3.2365891465695515,
+    "torque": 1.3229868815174861
+   },
+   "thrust_ratio": 1.16294,
+   "torque_ratio": 1.22956,
+   "budget_Nm": 1.25,
+   "levels": {
+    "21 x 12": {
+     "thrust": 3.1064891829284704,
+     "torque": 1.2496610804507142
+    },
+    "32 x 18": {
+     "thrust": 3.1546289128591924,
+     "torque": 1.2766671534319194
+    },
+    "47 x 27": {
+     "thrust": 3.1838828222137896,
+     "torque": 1.2931223268154455
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "F1.25-B0.75-sheet-3aee3c6d",
+   "freq": 1.25,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 2.4991510306277016,
+    "torque": 0.7224838615165589
+   },
+   "fine": {
+    "thrust": 2.5671667823766127,
+    "torque": 0.7696162402998785
+   },
+   "thrust_ratio": 1.02722,
+   "torque_ratio": 1.06524,
+   "budget_Nm": 0.75,
+   "levels": {
+    "21 x 12": {
+     "thrust": 2.54158384258914,
+     "torque": 0.749472627945409
+    },
+    "32 x 18": {
+     "thrust": 2.5490338419995466,
+     "torque": 0.7558377719282703
+    },
+    "47 x 27": {
+     "thrust": 2.5541158778804443,
+     "torque": 0.7600309094136221
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "F1.25-B1-sheet-af1fc98a",
+   "freq": 1.25,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 2.977620095889189,
+    "torque": 0.9319969929033651
+   },
+   "fine": {
+    "thrust": 3.132448085155191,
+    "torque": 1.0465193460821107
+   },
+   "thrust_ratio": 1.052,
+   "torque_ratio": 1.12288,
+   "budget_Nm": 1.0,
+   "levels": {
+    "21 x 12": {
+     "thrust": 3.086531434897445,
+     "torque": 0.9995698599379405
+    },
+    "32 x 18": {
+     "thrust": 3.100815103777279,
+     "torque": 1.0099973665484605
+    },
+    "47 x 27": {
+     "thrust": 3.1102909123810263,
+     "torque": 1.0177894799466634
+    }
+   }
+  },
+  {
+   "kind": "ladder",
+   "id": "F1.25-B1.25-sheet-ca4a5e50",
+   "freq": 1.25,
+   "mesh": "converged",
+   "coarse": {
+    "thrust": 3.6521870482199916,
+    "torque": 1.0533211844708208
+   },
+   "fine": {
+    "thrust": 4.516752377497431,
+    "torque": 1.34919278884477
+   },
+   "thrust_ratio": 1.23673,
+   "torque_ratio": 1.28089,
+   "budget_Nm": 1.25,
+   "levels": {
+    "21 x 12": {
+     "thrust": 4.243552792384566,
+     "torque": 1.2474818993109542
+    },
+    "32 x 18": {
+     "thrust": 4.346375393528636,
+     "torque": 1.2846160417805041
+    },
+    "47 x 27": {
+     "thrust": 4.408242066968376,
+     "torque": 1.307355087453188
+    }
+   }
+  }
+ ]
+}

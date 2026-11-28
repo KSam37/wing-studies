@@ -4,14 +4,20 @@
   1.0,
   1.25
  ],
- "mesh": "21 x 12, 50 steps per cycle, 4 cycles",
- "updated": "2026-11-27T23:53:48Z",
+ "mesh": "8 x 4, 50 steps per cycle, 4 cycles",
+ "updated": "2026-11-28T02:04:17Z",
  "wings": [
   {
    "id": "F0.75-B0.75-sheet-74fb8fc1",
    "freq": 0.75,
    "budget_Nm": 0.75,
    "half_span_mm": 380.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 1.6318715993048936,
+    "torque": 0.7436650594706535,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.08582,
     0.05527,
@@ -22,22 +28,9 @@
    ],
    "chords_mm": [
     200.0,
-    157.44,
-    121.13,
-    94.48,
-    79.6,
-    70.22,
-    62.91,
-    55.27,
-    44.97,
-    34.05,
-    26.62,
-    25.5,
-    25.5,
-    25.5,
-    25.5,
-    25.5,
-    25.5,
+    103.13,
+    68.29,
+    46.38,
     25.5,
     25.5,
     25.5,
@@ -45,60 +38,71 @@
     25.5
    ],
    "summary": "atlas\\refine-top\\4-f0.75\\stage2.json",
+   "final_key": "ef965c7d7d9d443a1ef5",
    "points": [
     {
      "freq": 0.75,
+     "key": "ecc191956570821e43f0",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 1.6318715993048936,
-      "torque": 0.7436650594706535,
-      "tip_twist": 42.47362887279297,
-      "half_span_mm": 380.0
+      "thrust": 1.5985438160788688,
+      "torque": 0.7167456090610678,
+      "tip_twist": 45.51543438735902,
+      "half_span_mm": 380.0,
+      "key": "ecc191956570821e43f0"
      },
      "matched": {
       "status": "verified",
-      "thrust": 1.6318715993048936,
-      "torque": 0.7436650594706535,
-      "tip_twist": 42.47362887279297,
-      "half_span_mm": 380.0
-     }
+      "thrust": 1.6991738537535148,
+      "torque": 0.7465663238972696,
+      "tip_twist": 48.851317218709546,
+      "half_span_mm": 396.9,
+      "key": "d7386b9a06a4897081e0"
+     },
+     "solves": 3
     },
     {
      "freq": 1.0,
-     "key": "f929fc7b10f8ded38060",
+     "key": "b1a17f76d0b2a265e9dc",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 2.4752492893953875,
-      "torque": 0.840610795869223,
-      "tip_twist": 54.016342476256746,
-      "half_span_mm": 380.0
+      "thrust": 2.376300038354232,
+      "torque": 0.793304325925674,
+      "tip_twist": 57.20702392036071,
+      "half_span_mm": 380.0,
+      "key": "b1a17f76d0b2a265e9dc"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.0748285810786626,
-      "torque": 0.7496148626098922,
-      "tip_twist": 44.58198953934445,
-      "half_span_mm": 338.1
+      "thrust": 2.1574488127865714,
+      "torque": 0.7488657131422441,
+      "tip_twist": 51.192397400945,
+      "half_span_mm": 351.5,
+      "key": "b93e028894b73f822c86"
      },
      "solves": 4
     },
     {
      "freq": 1.25,
-     "key": "d01e1e737a518d192b02",
+     "key": "ec604d877a0427a48e9d",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 3.2980714831010816,
-      "torque": 0.9149836982737644,
-      "tip_twist": 62.608306833450726,
-      "half_span_mm": 380.0
+      "thrust": 3.0994108378692435,
+      "torque": 0.8391750640468394,
+      "tip_twist": 65.4906347955226,
+      "half_span_mm": 380.0,
+      "key": "ec604d877a0427a48e9d"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.442470077577775,
-      "torque": 0.7483512873400985,
-      "tip_twist": 45.509409886547914,
-      "half_span_mm": 306.5
+      "thrust": 2.3703428095974144,
+      "torque": 0.7480567707935373,
+      "tip_twist": 49.572704744829274,
+      "half_span_mm": 305.0,
+      "key": "b8b69fbaa71c83c820a4"
      },
      "solves": 5
     }
@@ -109,6 +113,12 @@
    "freq": 0.75,
    "budget_Nm": 1.0,
    "half_span_mm": 340.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 1.893635394554529,
+    "torque": 0.999530802767016,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.1838,
     0.09903,
@@ -119,85 +129,83 @@
    ],
    "chords_mm": [
     200.0,
-    198.37,
-    193.98,
-    187.55,
-    176.83,
-    150.11,
-    119.09,
-    99.03,
-    91.35,
-    86.02,
-    81.2,
-    74.94,
-    66.72,
-    59.44,
+    190.16,
+    142.16,
+    92.14,
+    78.4,
+    58.75,
     56.3,
-    56.3,
-    56.3,
-    56.3,
-    54.95,
-    45.37,
-    29.3,
+    52.32,
     10.0
    ],
    "summary": "atlas\\refine-top\\4-f0.75\\stage2.json",
+   "final_key": "152727f0fab52844a34f",
    "points": [
     {
      "freq": 0.75,
+     "key": "f0e43a5bd1d2c0cc9e8c",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 1.893635394554529,
-      "torque": 0.999530802767016,
-      "tip_twist": 36.11312676000392,
-      "half_span_mm": 340.0
+      "thrust": 1.8109702565617691,
+      "torque": 0.9290058808994134,
+      "tip_twist": 40.262124862473385,
+      "half_span_mm": 340.0,
+      "key": "f0e43a5bd1d2c0cc9e8c"
      },
      "matched": {
       "status": "verified",
-      "thrust": 1.893635394554529,
-      "torque": 0.999530802767016,
-      "tip_twist": 36.11312676000392,
-      "half_span_mm": 340.0
-     }
+      "thrust": 2.025826922527296,
+      "torque": 0.9975383805082617,
+      "tip_twist": 46.52387806751703,
+      "half_span_mm": 367.3,
+      "key": "aa174277128fdd345fe3"
+     },
+     "solves": 4
     },
     {
      "freq": 1.0,
-     "key": "ad57416d6a51d41f6110",
+     "key": "2d98d8d159b4b7f450fe",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 2.946874778352086,
-      "torque": 1.2207885906331368,
-      "tip_twist": 47.14349966419761,
-      "half_span_mm": 340.0
+      "thrust": 2.696395524824399,
+      "torque": 1.0660736852840007,
+      "tip_twist": 52.18004017227317,
+      "half_span_mm": 340.0,
+      "key": "2d98d8d159b4b7f450fe"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.2682025329805975,
-      "torque": 0.9978442649801073,
-      "tip_twist": 34.812866971743055,
-      "half_span_mm": 293.6
+      "thrust": 2.436347788275731,
+      "torque": 0.9983814296893093,
+      "tip_twist": 45.43626241306954,
+      "half_span_mm": 314.1,
+      "key": "5a3adb683fc430266021"
      },
      "solves": 4
     },
     {
      "freq": 1.25,
-     "key": "bf2ca6359841621aaf78",
+     "key": "e5dcac83a3dcd4938519",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 3.9757820477503616,
-      "torque": 1.4669826543673974,
-      "tip_twist": 56.13573016071267,
-      "half_span_mm": 340.0
+      "thrust": 3.4646631661664453,
+      "torque": 1.1810413286707577,
+      "tip_twist": 61.38939153649159,
+      "half_span_mm": 340.0,
+      "key": "e5dcac83a3dcd4938519"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.588253248345261,
-      "torque": 0.9973233368788816,
-      "tip_twist": 34.193229278993215,
-      "half_span_mm": 262.2
+      "thrust": 2.770084975768097,
+      "torque": 0.9979006491653901,
+      "tip_twist": 44.51578163299367,
+      "half_span_mm": 277.8,
+      "key": "fb9a56831ac37c2ea5ce"
      },
-     "solves": 4
+     "solves": 5
     }
    ]
   },
@@ -206,6 +214,12 @@
    "freq": 0.75,
    "budget_Nm": 1.25,
    "half_span_mm": 360.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 2.2209354818814186,
+    "torque": 1.224169889005568,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.2,
     0.16167,
@@ -217,84 +231,82 @@
    "chords_mm": [
     200.0,
     200.0,
-    200.0,
-    200.0,
-    198.69,
-    189.77,
-    176.01,
-    161.67,
-    144.36,
-    123.83,
-    107.54,
-    100.98,
-    97.0,
-    94.32,
+    186.62,
+    146.85,
+    103.33,
+    94.09,
     93.33,
-    93.33,
-    93.33,
-    93.33,
-    90.9,
-    73.65,
-    44.74,
+    86.17,
     10.0
    ],
    "summary": "atlas\\refine-top\\4-f0.75\\stage2.json",
+   "final_key": "6e828947303245b35aea",
    "points": [
     {
      "freq": 0.75,
+     "key": "c235327ef257da85c0df",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 2.2209354818814186,
-      "torque": 1.224169889005568,
-      "tip_twist": 43.28204102985702,
-      "half_span_mm": 360.0
+      "thrust": 1.9518928778867775,
+      "torque": 1.0182563926933184,
+      "tip_twist": 47.86306781209062,
+      "half_span_mm": 360.0,
+      "key": "c235327ef257da85c0df"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.2209354818814186,
-      "torque": 1.224169889005568,
-      "tip_twist": 43.28204102985702,
-      "half_span_mm": 360.0
-     }
+      "thrust": 2.2227066666610904,
+      "torque": 1.1729676047307935,
+      "tip_twist": 53.409619656300606,
+      "half_span_mm": 400.0,
+      "key": "61bc53c361e29bf5fa98"
+     },
+     "solves": 3
     },
     {
      "freq": 1.0,
-     "key": "79eedba96801c78474ad",
+     "key": "0dc32489e29e50d84f23",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 3.2616191097357774,
-      "torque": 1.4987549210190232,
-      "tip_twist": 52.998424600728185,
-      "half_span_mm": 360.0
+      "thrust": 2.729086873365498,
+      "torque": 1.1728718361373558,
+      "tip_twist": 56.525223440742295,
+      "half_span_mm": 360.0,
+      "key": "0dc32489e29e50d84f23"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.7391261467163406,
-      "torque": 1.248286730307288,
-      "tip_twist": 46.069743825877,
-      "half_span_mm": 318.1
+      "thrust": 2.86919612544376,
+      "torque": 1.2476782247979923,
+      "tip_twist": 57.919323119795436,
+      "half_span_mm": 374.2,
+      "key": "c9e6cd1b83efab00f79d"
      },
      "solves": 4
     },
     {
      "freq": 1.25,
-     "key": "41d488cb50f7ed015e3c",
+     "key": "964bc52b8644bdefb310",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 4.318754944290995,
-      "torque": 1.7868736621459131,
-      "tip_twist": 58.49252289240732,
-      "half_span_mm": 360.0
+      "thrust": 3.559649262507026,
+      "torque": 1.3602284795926487,
+      "tip_twist": 60.39298301511865,
+      "half_span_mm": 360.0,
+      "key": "964bc52b8644bdefb310"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.1090568470865354,
-      "torque": 1.2481699819871583,
-      "tip_twist": 47.58103956510918,
-      "half_span_mm": 283.3
+      "thrust": 3.3067538702696098,
+      "torque": 1.2481439861142938,
+      "tip_twist": 59.13801137201301,
+      "half_span_mm": 342.4,
+      "key": "47ddb939ad4071388425"
      },
-     "solves": 5
+     "solves": 4
     }
    ]
   },
@@ -303,6 +315,12 @@
    "freq": 1.0,
    "budget_Nm": 0.75,
    "half_span_mm": 380.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 2.2635539806245144,
+    "torque": 0.7483389138011158,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.06082,
     0.03977,
@@ -313,85 +331,184 @@
    ],
    "chords_mm": [
     200.0,
-    145.64,
-    99.91,
-    68.9,
-    56.11,
-    49.2,
-    44.29,
-    39.77,
-    34.46,
-    29.33,
-    25.99,
+    78.42,
+    47.85,
+    35.15,
     25.5,
     25.5,
     25.5,
-    25.5,
-    25.5,
-    25.5,
-    25.5,
-    25.35,
-    24.32,
-    22.59,
+    25.07,
     20.5
    ],
    "summary": "atlas\\refine-top\\2-campaign-seeds\\stage2.json",
+   "final_key": "5988cbb3bbf348714d70",
    "points": [
     {
      "freq": 0.75,
-     "key": "76446e465e6efef80ab0",
+     "key": "d1ba2e412273b3d65ac3",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 1.502970062520069,
-      "torque": 0.66695692412792,
-      "tip_twist": 42.67712060012075,
-      "half_span_mm": 380.0
+      "thrust": 1.4809810440533917,
+      "torque": 0.6477081993968556,
+      "tip_twist": 45.34835775119873,
+      "half_span_mm": 380.0,
+      "key": "d1ba2e412273b3d65ac3"
      },
      "matched": {
       "status": "verified",
-      "thrust": 1.6223943180157678,
-      "torque": 0.7023527627559678,
-      "tip_twist": 46.52518247637142,
-      "half_span_mm": 400.0
+      "thrust": 1.588383934844343,
+      "torque": 0.6781123379178524,
+      "tip_twist": 49.192707048502015,
+      "half_span_mm": 400.0,
+      "key": "fbcffb461ab968b701da"
      },
-     "solves": 3
+     "solves": 2
     },
     {
      "freq": 1.0,
+     "key": "6d95b2d8832d47e5b3a6",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 2.2635539806245144,
-      "torque": 0.7483389138011158,
-      "tip_twist": 54.077499479342464,
-      "half_span_mm": 380.0
+      "thrust": 2.197882477464793,
+      "torque": 0.713897504553108,
+      "tip_twist": 56.94638890765864,
+      "half_span_mm": 380.0,
+      "key": "6d95b2d8832d47e5b3a6"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.2635539806245144,
-      "torque": 0.7483389138011158,
-      "tip_twist": 54.077499479342464,
-      "half_span_mm": 380.0
-     }
+      "thrust": 2.315832592417491,
+      "torque": 0.7386674860573741,
+      "tip_twist": 60.39539983752134,
+      "half_span_mm": 400.0,
+      "key": "8d6f90dd999a5a977ce4"
+     },
+     "solves": 3
     },
     {
      "freq": 1.25,
-     "key": "312d08c085b41276a50d",
+     "key": "37bd9d66c595993de50a",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 2.998998389058197,
-      "torque": 0.8209397941809584,
-      "tip_twist": 62.560384197322364,
-      "half_span_mm": 380.0
+      "thrust": 2.868026907957161,
+      "torque": 0.7643568827352838,
+      "tip_twist": 65.23991558639099,
+      "half_span_mm": 380.0,
+      "key": "37bd9d66c595993de50a"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.6713557287716214,
-      "torque": 0.7478366871709902,
-      "tip_twist": 55.24358090404087,
-      "half_span_mm": 343.1
+      "thrust": 2.7850078713275983,
+      "torque": 0.7467041179236547,
+      "tip_twist": 63.1864558565337,
+      "half_span_mm": 367.5,
+      "key": "f835f99d08ec92365aaa"
      },
      "solves": 3
+    }
+   ]
+  },
+  {
+   "id": "B0.75-sheet-fc1900bd",
+   "freq": 1.0,
+   "budget_Nm": 0.75,
+   "half_span_mm": 250.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 1.5079721855456873,
+    "torque": 0.7489380236434585,
+    "mesh": "21 x 12"
+   },
+   "ctrl": [
+    0.2,
+    0.2,
+    0.17667,
+    0.16667,
+    0.16333,
+    0.12833
+   ],
+   "chords_mm": [
+    200.0,
+    200.0,
+    200.0,
+    197.01,
+    176.67,
+    168.28,
+    165.14,
+    159.39,
+    128.33
+   ],
+   "summary": "atlas\\refine-top\\1-free-span-seeds\\stage2.json",
+   "final_key": "13022c199fc3ae96ffe0",
+   "points": [
+    {
+     "freq": 0.75,
+     "key": "799137a9d49cf59c4aeb",
+     "own": false,
+     "fixed": {
+      "status": "verified",
+      "thrust": 0.9434777385661827,
+      "torque": 0.5721932537198142,
+      "tip_twist": 36.59514176847851,
+      "half_span_mm": 250.0,
+      "key": "799137a9d49cf59c4aeb"
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.3333951953177006,
+      "torque": 0.7468743192703657,
+      "tip_twist": 42.62982289571319,
+      "half_span_mm": 310.3,
+      "key": "81861856d0b1f916a33f"
+     },
+     "solves": 5
+    },
+    {
+     "freq": 1.0,
+     "key": "5870b2528789d0879615",
+     "own": true,
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.3373326360669298,
+      "torque": 0.6344329280924556,
+      "tip_twist": 45.74828295894788,
+      "half_span_mm": 250.0,
+      "key": "5870b2528789d0879615"
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.6524517670001608,
+      "torque": 0.747607316426682,
+      "tip_twist": 47.83358816234045,
+      "half_span_mm": 287.8,
+      "key": "426af9c9c9f18b04b6d9"
+     },
+     "solves": 5
+    },
+    {
+     "freq": 1.25,
+     "key": "a5f4b4262d3ccb3a5120",
+     "own": false,
+     "fixed": {
+      "status": "verified",
+      "thrust": 1.6932377925262447,
+      "torque": 0.6656963211350866,
+      "tip_twist": 50.717659907019794,
+      "half_span_mm": 250.0,
+      "key": "a5f4b4262d3ccb3a5120"
+     },
+     "matched": {
+      "status": "verified",
+      "thrust": 1.959322344882427,
+      "torque": 0.7479920005150223,
+      "tip_twist": 50.94085083569211,
+      "half_span_mm": 274.1,
+      "key": "c57dc535b671328ab7c1"
+     },
+     "solves": 5
     }
    ]
   },
@@ -400,6 +517,12 @@
    "freq": 1.0,
    "budget_Nm": 1.0,
    "half_span_mm": 360.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 2.7266617945335248,
+    "torque": 0.9986480737306594,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.13109,
     0.0585,
@@ -410,85 +533,83 @@
    ],
    "chords_mm": [
     200.0,
-    180.68,
-    161.07,
-    141.16,
-    119.9,
-    94.15,
-    70.89,
-    58.5,
-    55.38,
-    53.51,
-    51.69,
-    48.79,
-    44.76,
-    40.41,
-    36.6,
-    33.4,
-    30.44,
-    27.91,
-    25.9,
-    24.14,
-    22.68,
+    148.66,
+    87.77,
+    55.67,
+    50.43,
+    39.89,
+    31.15,
+    25.21,
     21.6
    ],
    "summary": "atlas\\refine-top\\2-campaign-seeds\\stage2.json",
+   "final_key": "0e62ab6f4541abed96ef",
    "points": [
     {
      "freq": 0.75,
-     "key": "9b69f5d2e89872f688d3",
+     "key": "d180a68b1ce71b7189d4",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 1.7662040186459138,
-      "torque": 0.8584162142882151,
-      "tip_twist": 37.01304978218698,
-      "half_span_mm": 360.0
+      "thrust": 1.7071993150028282,
+      "torque": 0.8142407473002307,
+      "tip_twist": 40.936616984475904,
+      "half_span_mm": 360.0,
+      "key": "d180a68b1ce71b7189d4"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.10090917223787,
-      "torque": 0.9692450947758825,
-      "tip_twist": 45.47623054482348,
-      "half_span_mm": 400.0
+      "thrust": 1.9797982459222798,
+      "torque": 0.8965833202465019,
+      "tip_twist": 49.385926191783284,
+      "half_span_mm": 400.0,
+      "key": "b87a3f66937df35ae2e0"
      },
      "solves": 3
     },
     {
      "freq": 1.0,
+     "key": "3be8097f6cdb36c4f9dc",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 2.7266617945335248,
-      "torque": 0.9986480737306594,
-      "tip_twist": 48.75115060284297,
-      "half_span_mm": 360.0
+      "thrust": 2.562038327865425,
+      "torque": 0.9185760249514505,
+      "tip_twist": 53.17659974630095,
+      "half_span_mm": 360.0,
+      "key": "3be8097f6cdb36c4f9dc"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.7266617945335248,
-      "torque": 0.9986480737306594,
-      "tip_twist": 48.75115060284297,
-      "half_span_mm": 360.0
-     }
+      "thrust": 2.827074392871334,
+      "torque": 0.9665280354887417,
+      "tip_twist": 60.940940409685595,
+      "half_span_mm": 400.0,
+      "key": "3c4258584eaded3b572d"
+     },
+     "solves": 3
     },
     {
      "freq": 1.25,
-     "key": "09178617d251c48f0d19",
+     "key": "f921b6eb6288cd9cff4f",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 3.6605024618412143,
-      "torque": 1.0932141659227335,
-      "tip_twist": 58.17143688441665,
-      "half_span_mm": 360.0
+      "thrust": 3.3304649919519007,
+      "torque": 0.9719514108118513,
+      "tip_twist": 62.42235456922499,
+      "half_span_mm": 360.0,
+      "key": "f921b6eb6288cd9cff4f"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.017207417390264,
-      "torque": 0.9982489601060215,
-      "tip_twist": 46.75686128060475,
-      "half_span_mm": 313.1
+      "thrust": 3.504479076439282,
+      "torque": 0.997278805976237,
+      "tip_twist": 67.72535481535513,
+      "half_span_mm": 393.3,
+      "key": "d167780b20254b008864"
      },
-     "solves": 6
+     "solves": 4
     }
    ]
   },
@@ -497,6 +618,12 @@
    "freq": 1.0,
    "budget_Nm": 1.0,
    "half_span_mm": 360.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 2.7154439708352567,
+    "torque": 0.9988360878253829,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.11749,
     0.06527,
@@ -507,83 +634,81 @@
    ],
    "chords_mm": [
     200.0,
-    173.14,
-    148.67,
-    127.07,
-    108.3,
-    90.51,
-    75.4,
-    65.27,
-    59.63,
-    55.58,
-    51.82,
-    47.08,
-    41.35,
-    35.88,
-    31.97,
-    29.84,
-    28.33,
-    26.65,
-    24.03,
-    20.22,
-    15.46,
+    134.8,
+    86.39,
+    60.22,
+    49.63,
+    35.28,
+    28.69,
+    22.73,
     10.0
    ],
    "summary": "atlas\\refine-top\\1-free-span-seeds\\stage2.json",
+   "final_key": "340fd319d8e5483b1220",
    "points": [
     {
      "freq": 0.75,
-     "key": "15a5c17b6dd3db50c6f3",
+     "key": "186ed401c6208ee83d28",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 1.7434806998335854,
-      "torque": 0.8507860247690797,
-      "tip_twist": 34.09378227445581,
-      "half_span_mm": 360.0
+      "thrust": 1.6972010360704601,
+      "torque": 0.8224535468185658,
+      "tip_twist": 38.32481022441149,
+      "half_span_mm": 360.0,
+      "key": "186ed401c6208ee83d28"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.0900357479643943,
-      "torque": 0.9691472984112248,
-      "tip_twist": 42.743232985694,
-      "half_span_mm": 400.0
+      "thrust": 1.9632940585967,
+      "torque": 0.8955478872650102,
+      "tip_twist": 46.93103882309743,
+      "half_span_mm": 400.0,
+      "key": "095c07fb9b7911363298"
      },
      "solves": 3
     },
     {
      "freq": 1.0,
+     "key": "891736bd85a0cb920769",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 2.7154439708352567,
-      "torque": 0.9988360878253829,
-      "tip_twist": 45.88308858340781,
-      "half_span_mm": 360.0
+      "thrust": 2.5850184113853243,
+      "torque": 0.9835363480149242,
+      "tip_twist": 54.95100242184351,
+      "half_span_mm": 360.0,
+      "key": "891736bd85a0cb920769"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.7154439708352567,
-      "torque": 0.9988360878253829,
-      "tip_twist": 45.88308858340781,
-      "half_span_mm": 360.0
-     }
+      "thrust": 2.5993097295229837,
+      "torque": 0.9981028159877775,
+      "tip_twist": 56.527235367197655,
+      "half_span_mm": 362.1,
+      "key": "7b5086a192d30f5cfdf6"
+     },
+     "solves": 2
     },
     {
      "freq": 1.25,
-     "key": "2fa0962588ed993e7213",
+     "key": "bb868f41fc679ea83b4c",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 3.665845205904412,
-      "torque": 1.0925063429385025,
-      "tip_twist": 55.75300603780201,
-      "half_span_mm": 360.0
+      "thrust": 3.3285319059010665,
+      "torque": 0.9717167596934029,
+      "tip_twist": 60.538172530163706,
+      "half_span_mm": 360.0,
+      "key": "bb868f41fc679ea83b4c"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.0564772917980174,
-      "torque": 0.9980889599156559,
-      "tip_twist": 43.820884473855784,
-      "half_span_mm": 316.0
+      "thrust": 3.541278337016712,
+      "torque": 0.9949573057135398,
+      "tip_twist": 67.5643791144597,
+      "half_span_mm": 400.0,
+      "key": "0addbe488ade8759c7ec"
      },
      "solves": 5
     }
@@ -594,6 +719,12 @@
    "freq": 1.0,
    "budget_Nm": 1.25,
    "half_span_mm": 350.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 3.1064891829284704,
+    "torque": 1.2496610804507142,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.18929,
     0.11429,
@@ -604,85 +735,83 @@
    ],
    "chords_mm": [
     200.0,
-    198.97,
-    196.13,
-    191.85,
-    184.12,
-    162.87,
-    136.02,
-    114.29,
-    99.33,
-    86.14,
-    75.52,
-    67.97,
-    62.01,
-    57.19,
-    53.33,
-    50.61,
-    48.59,
-    46.08,
-    41.71,
-    33.72,
-    22.8,
+    193.6,
+    156.27,
+    101.11,
+    71.43,
+    56.66,
+    49.09,
+    39.12,
     10.0
    ],
    "summary": "atlas\\refine-top\\1-free-span-seeds\\stage2.json",
+   "final_key": "eb1077d1efc929445293",
    "points": [
     {
      "freq": 0.75,
-     "key": "69cb7bd2e94d67e105b9",
+     "key": "2ed4e776f78b51bd3280",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 2.0096269767404658,
-      "torque": 1.0508977064162301,
-      "tip_twist": 36.11104283578768,
-      "half_span_mm": 350.0
+      "thrust": 1.892210197383147,
+      "torque": 0.9618090274692565,
+      "tip_twist": 40.64841964204189,
+      "half_span_mm": 350.0,
+      "key": "2ed4e776f78b51bd3280"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.480595737883906,
-      "torque": 1.214868709532471,
-      "tip_twist": 48.20501796464924,
-      "half_span_mm": 400.0
+      "thrust": 2.234867782331343,
+      "torque": 1.0589259425519735,
+      "tip_twist": 51.3502654309326,
+      "half_span_mm": 400.0,
+      "key": "b6f31bbadf2fdceeb34d"
      },
      "solves": 3
     },
     {
      "freq": 1.0,
+     "key": "3653c71ac9dd78432d26",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 3.1064891829284704,
-      "torque": 1.2496610804507142,
-      "tip_twist": 47.702800991888274,
-      "half_span_mm": 350.0
+      "thrust": 2.7831090614050114,
+      "torque": 1.0759844659900981,
+      "tip_twist": 53.083936443749906,
+      "half_span_mm": 350.0,
+      "key": "3653c71ac9dd78432d26"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.1064891829284704,
-      "torque": 1.2496610804507142,
-      "tip_twist": 47.702800991888274,
-      "half_span_mm": 350.0
-     }
+      "thrust": 3.030375463477463,
+      "torque": 1.190680529437239,
+      "tip_twist": 66.61007397100818,
+      "half_span_mm": 400.0,
+      "key": "0ae8750e3bd50b4dfc6d"
+     },
+     "solves": 3
     },
     {
      "freq": 1.25,
-     "key": "285844193900289d40db",
+     "key": "fcc80a785e56e331c13a",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 4.136928237578956,
-      "torque": 1.435514419779836,
-      "tip_twist": 57.844973210504065,
-      "half_span_mm": 350.0
+      "thrust": 3.5080746287260465,
+      "torque": 1.1540582438417306,
+      "tip_twist": 62.36001759648609,
+      "half_span_mm": 350.0,
+      "key": "fcc80a785e56e331c13a"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.508411651444147,
-      "torque": 1.2478341586627233,
-      "tip_twist": 45.581185666071974,
-      "half_span_mm": 307.3
+      "thrust": 3.584395962041076,
+      "torque": 1.2081935290111865,
+      "tip_twist": 68.14529662968455,
+      "half_span_mm": 372.2,
+      "key": "6762e27f9bf761e67c68"
      },
-     "solves": 4
+     "solves": 7
     }
    ]
   },
@@ -691,6 +820,12 @@
    "freq": 1.25,
    "budget_Nm": 0.75,
    "half_span_mm": 320.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 2.54158384258914,
+    "torque": 0.749472627945409,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.08249,
     0.04193,
@@ -701,85 +836,83 @@
    ],
    "chords_mm": [
     200.0,
-    157.48,
-    120.81,
-    92.6,
-    74.32,
-    60.54,
-    49.86,
-    41.93,
-    35.26,
-    29.51,
-    26.0,
+    102.02,
+    57.59,
+    36.07,
     25.5,
     25.5,
     25.5,
-    25.5,
-    25.5,
-    25.5,
-    25.5,
-    25.35,
-    24.32,
-    22.59,
+    25.07,
     20.5
    ],
    "summary": "atlas\\refine-top\\3-f1.25\\stage2.json",
+   "final_key": "d05272350f4e1708d6b4",
    "points": [
     {
      "freq": 0.75,
-     "key": "be2b947e780e50073e06",
+     "key": "0512b5630b62855d357e",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 1.133019439436894,
-      "torque": 0.5528781675188871,
-      "tip_twist": 29.04981962720916,
-      "half_span_mm": 320.0
+      "thrust": 1.1419900929269649,
+      "torque": 0.5491452440258591,
+      "tip_twist": 31.372607463988004,
+      "half_span_mm": 320.0,
+      "key": "0512b5630b62855d357e"
      },
      "matched": {
       "status": "verified",
-      "thrust": 1.6916743743015616,
-      "torque": 0.7460065062886455,
-      "tip_twist": 45.52475681303778,
-      "half_span_mm": 397.5
+      "thrust": 1.6703195740962617,
+      "torque": 0.72478716684612,
+      "tip_twist": 48.80418400775148,
+      "half_span_mm": 400.0,
+      "key": "383e0a4aeaf664eb00b8"
      },
      "solves": 4
     },
     {
      "freq": 1.0,
-     "key": "3edaeed8d5f8e53f54a1",
+     "key": "b30ce326695590f3b345",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 1.8180506264194263,
-      "torque": 0.6683929944882374,
-      "tip_twist": 39.52876731854592,
-      "half_span_mm": 320.0
+      "thrust": 1.8117038217210584,
+      "torque": 0.6545578062932517,
+      "tip_twist": 42.5045364780467,
+      "half_span_mm": 320.0,
+      "key": "b30ce326695590f3b345"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.141670359363581,
-      "torque": 0.7475999899209679,
-      "tip_twist": 47.49037570207935,
-      "half_span_mm": 351.9
+      "thrust": 2.221826825405236,
+      "torque": 0.746445262822996,
+      "tip_twist": 53.965858089427975,
+      "half_span_mm": 366.9,
+      "key": "730f788ef497a1aacc87"
      },
      "solves": 4
     },
     {
      "freq": 1.25,
+     "key": "017ad1522b9677c7eff5",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 2.54158384258914,
-      "torque": 0.749472627945409,
-      "tip_twist": 48.8454741345666,
-      "half_span_mm": 320.0
+      "thrust": 2.4991510306277016,
+      "torque": 0.7224838615165589,
+      "tip_twist": 52.233928579220546,
+      "half_span_mm": 320.0,
+      "key": "017ad1522b9677c7eff5"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.54158384258914,
-      "torque": 0.749472627945409,
-      "tip_twist": 48.8454741345666,
-      "half_span_mm": 320.0
-     }
+      "thrust": 2.6402504904429525,
+      "torque": 0.7468624470115993,
+      "tip_twist": 55.67932916354939,
+      "half_span_mm": 333.3,
+      "key": "0322514c05fa74b62f0d"
+     },
+     "solves": 3
     }
    ]
   },
@@ -788,6 +921,12 @@
    "freq": 1.25,
    "budget_Nm": 1.0,
    "half_span_mm": 320.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 3.086531434897445,
+    "torque": 0.9995698599379405,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.12748,
     0.06193,
@@ -798,85 +937,83 @@
    ],
    "chords_mm": [
     200.0,
-    178.56,
-    157.68,
-    137.39,
-    117.13,
-    95.07,
-    75.11,
-    61.93,
-    55.02,
-    50.0,
-    45.7,
-    40.99,
-    35.86,
-    31.36,
-    28.63,
-    27.56,
-    26.92,
-    26.13,
-    24.47,
-    20.95,
-    15.93,
+    144.93,
+    89.7,
+    55.76,
+    43.45,
+    30.9,
+    27.07,
+    23.36,
     10.0
    ],
    "summary": "atlas\\refine-top\\3-f1.25\\stage2.json",
+   "final_key": "da141e78afb92db31fc7",
    "points": [
     {
      "freq": 0.75,
-     "key": "520f501154da77b8299c",
+     "key": "53ac609d4dc87b3b1896",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 1.3326844908885023,
-      "torque": 0.6913459719820432,
-      "tip_twist": 25.421615511829195,
-      "half_span_mm": 320.0
+      "thrust": 1.3231748963956427,
+      "torque": 0.6740496294119163,
+      "tip_twist": 28.193684645774013,
+      "half_span_mm": 320.0,
+      "key": "53ac609d4dc87b3b1896"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.0780030668837024,
-      "torque": 0.9641903556712655,
-      "tip_twist": 42.458811535880855,
-      "half_span_mm": 400.0
+      "thrust": 1.9640507213438239,
+      "torque": 0.8973260598083257,
+      "tip_twist": 46.47052848650341,
+      "half_span_mm": 400.0,
+      "key": "96be9c60a66ff729e239"
      },
      "solves": 3
     },
     {
      "freq": 1.0,
-     "key": "6e3cc99beba0b6c6c937",
+     "key": "2b2d1030e719de0f21e7",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 2.173663626718871,
-      "torque": 0.8635571828045707,
-      "tip_twist": 34.95445159424929,
-      "half_span_mm": 320.0
+      "thrust": 2.1310563026764306,
+      "torque": 0.8248803762902882,
+      "tip_twist": 38.83369917510062,
+      "half_span_mm": 320.0,
+      "key": "2b2d1030e719de0f21e7"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.7165177157822686,
-      "torque": 0.9973142056972093,
-      "tip_twist": 45.91970574023277,
-      "half_span_mm": 361.4
+      "thrust": 2.8520659258062433,
+      "torque": 0.9775032887293117,
+      "tip_twist": 58.82980813959075,
+      "half_span_mm": 400.0,
+      "key": "21c8406b75402c28681f"
      },
      "solves": 4
     },
     {
      "freq": 1.25,
+     "key": "bdf48913213dc53bf330",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 3.086531434897445,
-      "torque": 0.9995698599379405,
-      "tip_twist": 44.92670207814194,
-      "half_span_mm": 320.0
+      "thrust": 2.977620095889189,
+      "torque": 0.9319969929033651,
+      "tip_twist": 48.65549197364513,
+      "half_span_mm": 320.0,
+      "key": "bdf48913213dc53bf330"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.086531434897445,
-      "torque": 0.9995698599379405,
-      "tip_twist": 44.92670207814194,
-      "half_span_mm": 320.0
-     }
+      "thrust": 3.103806289769808,
+      "torque": 0.9939785991404242,
+      "tip_twist": 54.92675747783883,
+      "half_span_mm": 329.9,
+      "key": "043baa83e81d6bfa6d83"
+     },
+     "solves": 7
     }
    ]
   },
@@ -885,6 +1022,12 @@
    "freq": 1.25,
    "budget_Nm": 1.25,
    "half_span_mm": 400.0,
+   "single_sheet": true,
+   "optimized": {
+    "thrust": 4.243552792384566,
+    "torque": 1.2474818993109542,
+    "mesh": "21 x 12"
+   },
    "ctrl": [
     0.14199,
     0.0649,
@@ -895,85 +1038,83 @@
    ],
    "chords_mm": [
     200.0,
-    185.29,
-    169.0,
-    151.3,
-    131.27,
-    105.38,
-    80.49,
-    64.9,
-    58.28,
-    53.73,
-    49.68,
-    44.81,
-    39.62,
-    34.49,
-    29.7,
-    24.96,
-    20.33,
-    16.56,
-    14.14,
-    12.16,
-    10.68,
+    158.09,
+    98.74,
+    58.97,
+    47.36,
+    33.87,
+    21.44,
+    13.36,
     10.0
    ],
    "summary": "atlas\\refine-top\\3-f1.25\\stage2.json",
+   "final_key": "d2ed8b2ca43505a60f55",
    "points": [
     {
      "freq": 0.75,
-     "key": "81f094ddbd9539aa1e98",
+     "key": "86f20d03cccc3c7e2a64",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 2.0931428559685936,
-      "torque": 1.0015310707127616,
-      "tip_twist": 37.155164728938516,
-      "half_span_mm": 400.0
+      "thrust": 1.9624063694674365,
+      "torque": 0.9217490120554711,
+      "tip_twist": 42.573648648334085,
+      "half_span_mm": 400.0,
+      "key": "86f20d03cccc3c7e2a64"
      },
      "matched": {
       "status": "verified",
-      "thrust": 2.0931428559685936,
-      "torque": 1.0015310707127616,
-      "tip_twist": 37.155164728938516,
-      "half_span_mm": 400.0
+      "thrust": 1.9624063694674365,
+      "torque": 0.9217490120554711,
+      "tip_twist": 42.573648648334085,
+      "half_span_mm": 400.0,
+      "key": "86f20d03cccc3c7e2a64"
      },
      "solves": 1
     },
     {
      "freq": 1.0,
-     "key": "015d8ef3e2a53f3a1ee3",
+     "key": "67805574f62c306164d9",
+     "own": false,
      "fixed": {
       "status": "verified",
-      "thrust": 3.206744588210813,
-      "torque": 1.1571980189446414,
-      "tip_twist": 49.91440197819642,
-      "half_span_mm": 400.0
+      "thrust": 2.8878316318135226,
+      "torque": 1.0218097580033765,
+      "tip_twist": 55.73028398355568,
+      "half_span_mm": 400.0,
+      "key": "67805574f62c306164d9"
      },
      "matched": {
       "status": "verified",
-      "thrust": 3.206744588210813,
-      "torque": 1.1571980189446414,
-      "tip_twist": 49.91440197819642,
-      "half_span_mm": 400.0
+      "thrust": 2.8878316318135226,
+      "torque": 1.0218097580033765,
+      "tip_twist": 55.73028398355568,
+      "half_span_mm": 400.0,
+      "key": "67805574f62c306164d9"
      },
      "solves": 1
     },
     {
      "freq": 1.25,
+     "key": "6be5066e7c05f451aa30",
      "own": true,
      "fixed": {
       "status": "verified",
-      "thrust": 4.243552792384566,
-      "torque": 1.2474818993109542,
-      "tip_twist": 60.02217377994708,
-      "half_span_mm": 400.0
+      "thrust": 3.6521870482199916,
+      "torque": 1.0533211844708208,
+      "tip_twist": 65.30789779032916,
+      "half_span_mm": 400.0,
+      "key": "6be5066e7c05f451aa30"
      },
      "matched": {
       "status": "verified",
-      "thrust": 4.243552792384566,
-      "torque": 1.2474818993109542,
-      "tip_twist": 60.02217377994708,
-      "half_span_mm": 400.0
-     }
+      "thrust": 3.6521870482199916,
+      "torque": 1.0533211844708208,
+      "tip_twist": 65.30789779032916,
+      "half_span_mm": 400.0,
+      "key": "6be5066e7c05f451aa30"
+     },
+     "solves": 1
     }
    ]
   }

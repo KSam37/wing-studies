@@ -71,6 +71,23 @@ def tasks(summaries: list[Path], freqs) -> list[dict]:
     return out
 
 
+def sweep_tasks(keys) -> list[dict]:
+    """Rows of the 8 x 4 frequency sweep (atlas/frequency-sweep.json, frequency_sweep --mesh 8 4) by atlas key."""
+    out, keys = [], set(keys)
+    for w in S.read_json(ATLAS / "frequency-sweep.json")["wings"]:
+        for p in w["points"]:
+            for kind in ("fixed", "matched"):
+                r = p.get(kind) or {}
+                if r.get("key") in keys and r.get("thrust") is not None:
+                    keys.discard(r["key"])
+                    out.append({"key": r["key"][:16], "label": f"{w['id']} on 8 x 4 at {p['freq']:g} Hz", "kind": "optimized-8x4",
+                                "freq": p["freq"], "chords_m": [c / 1000 for c in w["chords_mm"]], "span_m": r["half_span_mm"] / 1000,
+                                "numerics": coarse_numerics(p["freq"]), "thrust": r["thrust"], "torque": r["torque"]})
+    if keys:
+        print("not in the sweep:", *sorted(keys))
+    return out
+
+
 def render(t: dict, reuse: dict | None = None) -> dict:
     """Verify, then animate with Ptera's default animation settings (the files are shipped as written, like
     every other atlas animation). ``reuse``: a previous replay's time step and added-mass factor, which skips
@@ -126,11 +143,12 @@ def main(argv=None) -> int:
     ap.add_argument("--freqs", type=float, nargs="+", default=list(FREQS))
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--force", action="store_true", help="re-render wings already in the manifest (reusing their time step)")
+    ap.add_argument("--sweep-keys", nargs="+", default=[], help="also render these rows of the 8 x 4 frequency sweep (atlas keys)")
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args(argv)
     summaries = a.summaries or sorted((ATLAS / "refine-top").glob("*/stage2.json"))
     man = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.exists() else {}
-    todo = [t for t in tasks(summaries, a.freqs) if a.force or t["key"] not in man or not (DEST / t["key"] / "poster.webp").exists()]
+    todo = [t for t in tasks(summaries, a.freqs) + sweep_tasks(a.sweep_keys) if a.force or t["key"] not in man or not (DEST / t["key"] / "poster.webp").exists()]
     for t in todo:
         print(f"{t['key']}  {t['kind']:9s} {t['freq']:g} Hz  {t['label']}  {t['thrust']:.3f} N", flush=True)
     print(f"{len(todo)} to render ({len(man)} already in {MANIFEST.name})", flush=True)

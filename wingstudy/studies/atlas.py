@@ -334,3 +334,57 @@ def merge_frontier(D: dict, data: dict | None) -> int:
                            f"{n.get('steps_per_cycle')} steps per cycle")
         added += 1
     return added
+
+
+def merge_optimized_search_mesh(D: dict, data: dict | None) -> int:
+    """The optimized FAAV wings re-solved on the 8 x 4 search mesh (wingstudy.frequency_sweep --mesh 8 4) as map rows.
+
+    Every atlas wing is compared on 8 x 4, so these rows rank with the study picks. Per wing and frequency there are up
+    to two rows: the outline as optimized (fixed) and its half-span rescaled until peak torque sits on the wing's own
+    budget (matched). The smooth outline is sampled at 9 stations. ``row_same_shape`` puts each row in the shape group
+    of the optimized final it came from, which was solved on a finer mesh.
+    """
+    if not data or not data.get("wings") or not str(data.get("mesh", "")).startswith("8 x 4"):
+        return 0
+    cols = D["cols"]
+    if D.get("catalog") and "end" not in D["catalog"]:
+        D["catalog"]["end"] = len(cols["s"])
+    keyrow = {k: r for r, k in enumerate(cols["k"])}
+    sid = len(D["studies"])
+    D["studies"].append({"id": "optimized-8x4", "label": "Optimized shapes on the 8 × 4 search mesh",
+                         "short": "Optimized shapes (8 × 4)", "kind": "rerun", "planned": True,
+                         "about": "Each optimized FAAV wing (smooth outline, found on finer meshes) re-solved on the 8 × 4 "
+                                  "search mesh at every frequency, as optimized and with its span rescaled to its torque "
+                                  "budget, so it ranks with every other wing (wingstudy.frequency_sweep --mesh 8 4).",
+                         **({"run_date": data["updated"]} if data.get("updated") else {})})
+    mi = _model(D, "t0.50", "chordwise")
+    notes, meshes, outlines = D.setdefault("row_notes", {}), D.setdefault("row_mesh", {}), D.setdefault("row_outline", {})
+    same = D.setdefault("row_same_shape", {})
+    added = 0
+    for w in data["wings"]:
+        src = keyrow.get(w.get("final_key"))
+        for p in w["points"]:
+            for kind in ("fixed", "matched"):
+                r = p.get(kind)
+                if not r or not r.get("key") or r["key"] in keyrow or not (_finite(r.get("thrust")) and _finite(r.get("torque"))):
+                    continue
+                row = len(cols["s"])
+                vals = {"s": sid, "m": mi, "f": _index(D["freqs"], p["freq"]), "T": r["thrust"], "Q": r["torque"],
+                        "H": r["half_span_mm"], "W": r.get("tip_twist"), "S": _index(D["statuses"], r["status"]),
+                        "src": SRC_STUDY, "k": r["key"], "obj": 0}
+                for k in cols:
+                    if k == "C":
+                        cols["C"].extend(_resample(w["chords_mm"], S.NODES))
+                    else:
+                        cols[k].append(vals.get(k))
+                keyrow[r["key"]] = row
+                meshes[str(row)] = "8 × 4"
+                outlines[str(row)] = list(w["chords_mm"])
+                if src is not None:
+                    same[str(row)] = src
+                notes[str(row)] = (f"Optimized wing {w['id']} (≤ {w['budget_Nm']:g} N·m at {w['freq']:g} Hz, "
+                                   f"{w['optimized']['thrust']:.3f} N on {w['optimized']['mesh']}) on the 8 × 4 search mesh at "
+                                   f"{p['freq']:g} Hz, " + ("outline as optimized" if kind == "fixed" else
+                                                            f"half-span rescaled to {r['half_span_mm']:.0f} mm for the {w['budget_Nm']:g} N·m budget"))
+                added += 1
+    return added
