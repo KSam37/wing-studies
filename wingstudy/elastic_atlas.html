@@ -386,14 +386,33 @@ const MODEL_CODE=['rigid','stiff LE','rod','spanwise','rod + spanwise'];
 function configParts(i){const b=BASE_OF[C.m[i]],rigid=b==='rigid';
   return [rigid?'rigid':`${MODEL[b].thickness} mm${ROD_OF[C.m[i]]?' + rod':''}`,...(rigid?[]:[MODEL_CODE[BC_OF[C.m[i]]]]),`${D.freqs[C.f[i]]} Hz`,MESH_OF(i)==='catalog'?'catalog settings':MESH_OF(i)]}
 const configName=i=>[shapeName(C.g[i]),...configParts(i)].join(' · ');
+// The optimizer changes the outline, so an optimized wing is a new shape. LINKS ties it to the shape it started
+// from both ways: from each optimization's final row (row_search evolution: study pick, then every accepted step).
+let LINKS=null;
+function shapeLinks(){if(LINKS)return LINKS;LINKS={from:new Map(),into:new Map()};
+  const add=(m,k,v)=>{if(!m.has(k))m.set(k,[]);if(!m.get(k).some(x=>x.final===v.final&&x.row===v.row))m.get(k).push(v)};
+  for(const [r,v] of Object.entries(D.row_search||{})){if(!(v.refine&&v.winner&&v.evolution))continue;
+    const fin=+r,st=v.evolution.steps||[],seed=st.length&&!(RS(st[0])||{}).refine?st[0]:null;if(seed==null)continue;
+    const lab=`≤ ${v.evolution.torque_budget_Nm} N·m at ${D.freqs[C.f[fin]]} Hz`;
+    add(LINKS.into,C.g[seed],{g:C.g[fin],row:fin,final:fin,lab});
+    for(const j of st.slice(1))if(C.g[j]!==C.g[seed])add(LINKS.from,C.g[j],{g:C.g[seed],row:seed,final:fin,step:j!==fin,lab})}
+  return LINKS}
+// mode 'map': links select a simulation; 'list': links open that shape in the Overview list
+function linkLines(g,mode){const L=shapeLinks(),go=(x,row)=>mode==='map'?`selectDesign(${row})`:`event.stopPropagation();openShape(${x})`;
+  const a=(x,row)=>`<a href="#" onclick="${go(x,row)};return false"><b>${shapeName(x)}</b></a>`,out=[];
+  for(const x of L.from.get(g)||[])out.push(x.step?`An intermediate step of the optimization of ${a(x.g,x.row)} (${x.lab}), which ended at ${a(C.g[x.final],x.final)}.`
+    :`Optimized from ${a(x.g,x.row)}, the study pick for ${x.lab} (8 × 4), on finer meshes and a smooth outline.`);
+  for(const x of L.into.get(g)||[])out.push(`Optimized into ${a(x.g,x.row)} for ${x.lab}: ${fmt(C.T[x.row],3)} N at ${fmt(C.Q[x.row],3)} N·m on ${MESH_OF(x.row)}.`);
+  return out.length?`<p class="small" style="margin:0 0 6px">${out.join('<br>')}</p>`:''}
+function openShape(g){SHP.q=String(g);SHP.open=g;SHP.page=0;renderShapes();$('#shapes-card').scrollIntoView({block:'start'})}
 function groupCard(i){if(isCat(i))return '';
   const all=groupOf(i),shown=all.filter(j=>j===i||paramPass(j)),hidden=all.length-shown.length;
-  if(all.length<2)return `<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}</h3><p class="small muted" style="margin:0">This shape has been simulated once.</p></div>`;
+  if(all.length<2)return `<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}</h3>${linkLines(C.g[i],'map')}<p class="small muted" style="margin:0">This shape has been simulated once.</p></div>`;
   const GBC=['Rigid','Stiff LE (FAAV)','Rod, twists','Free sheet, bends','Rod, bends'];
   const label=j=>BASE_OF[C.m[j]]==='rigid'?'–':`${MODEL[BASE_OF[C.m[j]]].thickness} mm${ROD_OF[C.m[j]]?' + rod':''}`,model=j=>`<span title="${esc(BCS[BC_OF[C.m[j]]][1])}">${GBC[BC_OF[C.m[j]]]}</span>`;
   const rows=shown.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
   let h=`<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">${shapeName(C.g[i])}: ${all.length} simulations of this shape</h3>
-    <p class="tiny muted" style="margin:0 0 6px">Same outline, varied construction, model, frequency and mesh. The map filters choose which are listed${hidden?`; ${hidden} hidden by them`:''}. Click a row to select it.</p>`;
+    <p class="tiny muted" style="margin:0 0 6px">Same outline, varied construction, model, frequency and mesh. The map filters choose which are listed${hidden?`; ${hidden} hidden by them`:''}. Click a row to select it.</p>${linkLines(C.g[i],'map')}`;
   // thrust against frequency, one line per construction, model and mesh
   const ser=new Map();for(const j of rows){const k=C.m[j]+'|'+MESH_OF(j);if(!ser.has(k))ser.set(k,[]);ser.get(k).push(j)}
   if(new Set(rows.map(j=>C.f[j])).size>1){const series=[...ser.values()].map(js=>{const j0=js[0],byF=new Map();for(const j of js)if(!byF.has(C.f[j])||C.T[j]>C.T[byF.get(C.f[j])])byF.set(C.f[j],j);
@@ -545,13 +564,13 @@ function renderShapes(){const el=$('#shapes-card');if(!el)return;
     <p class="small" style="margin:0 0 6px">${L.length.toLocaleString()} shapes${L.length!==shapeStats().length?` of ${shapeStats().length.toLocaleString()}`:''} · ${N.toLocaleString()} simulations in all</p>
     <div style="overflow-x:auto"><table class="small"><tr><th>Shape</th><th>Outline</th><th class="n">Half-span</th><th class="n">Runs</th><th>Models</th><th>Frequencies</th><th>Meshes</th><th>Best ≤ ${LIM} N·m (8 × 4)</th></tr>`;
   for(const s of view){const i0=s.rows[0],open=SHP.open===s.g;
-    h+=`<tr onclick="setShp('open',${open?'null':s.g})" style="cursor:pointer${open?';background:color-mix(in srgb,var(--accent) 12%,transparent)':''}"><td><b>${shapeName(s.g)}</b> <span class="tiny muted">${open?'▾':'▸'}</span></td>
+    h+=`<tr onclick="setShp('open',${open?'null':s.g})" style="cursor:pointer${open?';background:color-mix(in srgb,var(--accent) 12%,transparent)':''}"><td><b>${shapeName(s.g)}</b> <span class="tiny muted">${open?'▾':'▸'}</span>${shapeLinks().from.has(s.g)?' <span class="tiny muted" title="An optimized shape">optimized</span>':shapeLinks().into.has(s.g)?' <span class="tiny muted" title="Was optimized into another shape">optimized ↗</span>':''}</td>
       <td style="width:130px">${s.cat?polySVG(polyOf(i0),{w:120,h:40,color:css('--neutral')}):outlineSVG(designOutline(i0),{w:120,h:40,spanMax,color:s.faav?css('--s3'):css('--neutral')})}</td>
       <td class="n">${s.cat?'–':Math.round(SPAN[i0])+' mm'}</td><td class="n">${s.rows.length}</td>
       <td>${[...s.models].sort().map(k=>MODEL_CODE[k]).join(', ')}</td><td>${[...s.freqs].sort((a,b)=>D.freqs[a]-D.freqs[b]).map(f=>D.freqs[f]).join(', ')} Hz</td><td>${[...s.meshes].map(m=>m==='catalog'?'catalog':m).join(', ')}</td>
       <td>${s.best==null?'<span class="muted">–</span>':`<b>${fmt(C.T[s.best],2)} N</b> at ${fmt(C.Q[s.best],2)} N·m <span class="tiny muted">${configParts(s.best).slice(0,-1).join(' · ')}</span>`}</td></tr>`;
     if(open){const rows=s.rows.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
-      h+=`<tr><td colspan="8" style="padding:4px 0 10px 18px"><table class="small" style="white-space:nowrap"><tr><th>Simulation</th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Tip twist</th><th>Quality</th><th>Study</th><th></th></tr>`
+      h+=`<tr><td colspan="8" style="padding:4px 0 10px 18px">${linkLines(s.g,'list')}<table class="small" style="white-space:nowrap"><tr><th>Simulation</th><th class="n">Thrust</th><th class="n">Peak torque</th><th class="n">Tip twist</th><th>Quality</th><th>Study</th><th></th></tr>`
         +rows.map(j=>`<tr><td>${configName(j)}</td><td class="n">${fmt(C.T[j],3)} N</td><td class="n">${fmt(C.Q[j],3)} N·m</td><td class="n">${C.W[j]==null?'–':'±'+fmt(C.W[j],0)+'°'}</td><td>${statusPill(STATUS[C.S[j]])}</td><td class="tiny muted">${esc(D.studies[C.s[j]].short)}</td><td><button class="playbtn" onclick="event.stopPropagation();showOnMap(${j})">◎ on map</button>${mediaForRow(j)?' <span class="tiny muted">▶ animation</span>':''}</td></tr>`).join('')+`</table></td></tr>`}}
   h+=`</table></div><div class="chips" style="margin-top:8px;gap:8px">${chip(pg>0,'‹ Previous',`setShp('page',${pg-1})`)}<span class="small muted">Page ${pg+1} of ${pages}</span>${chip(pg<pages-1,'Next ›',`setShp('page',${pg+1})`)}</div></div>`;
   el.innerHTML=h}
