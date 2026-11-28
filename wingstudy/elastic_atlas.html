@@ -728,8 +728,9 @@ const MESH_LIST=(()=>{const n=new Map();for(let i=0;i<N;i++){const m=MESH_OF(i);
   const area=m=>m==='catalog'?-1:m.split(' × ').reduce((a,b)=>a*(+b||1),1);return [...n.keys()].sort((a,b)=>area(a)-area(b))})();
 const MESH_IDX=new Map(MESH_LIST.map((m,k)=>[m,k]));
 const MESHES=MESH_LIST.map((m,k)=>[k,m==='catalog'?'Rigid catalog settings':m===SEARCH_MESH?'8 × 4 (search mesh)':m,m==='catalog'?'The rigid catalog runs, each with its own recorded settings':m===SEARCH_MESH?'The mesh every wing is compared on':'A finer mesh, kept for the convergence analysis: thrust and torque both run higher than on 8 × 4, so it is hidden by default']);
+// Default view: chordwise models only (leading-edge options 1 and 2); rigid and spanwise are one click away.
 const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),mesh:new Set(MESH_LIST.map((m,k)=>[m,k]).filter(([m])=>m===SEARCH_MESH).map(([,k])=>k)),
-  studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set(D.freqs.map((_,k)=>k)),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false,steps:false});
+  studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set(D.freqs.map((_,k)=>k)),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set([1,2]),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false,steps:false});
 const M={x:'torque',y:'thrust',color:'freq',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
 M.spLo=SPAN_LIM[0];M.spHi=SPAN_LIM[1];M.until=TL.length-1;
