@@ -56,9 +56,13 @@ p{margin:4px 0 10px}
 .tile .v{font-size:26px;font-weight:650;margin:2px 0}
 .tile .s{color:var(--text-2);font-size:12.5px}
 .simcount{color:var(--text-2);font-size:15px;margin:-4px 0 12px}.simcount .v{font-size:34px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;margin-right:6px}
-.headline{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:start;margin-bottom:14px}
-.headline .poster img{width:100%;display:block;border-radius:12px}.headline .tiles{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0}
-@media (max-width:800px){.headline{grid-template-columns:1fr}}
+.hl-list{display:grid;gap:10px;margin-bottom:14px}
+.hl-row{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px}
+.hl-row .poster img{width:100%;display:block;border-radius:8px}
+.hl-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}.hl-big{font-size:24px;font-weight:650}
+.hl-kv{display:grid;grid-template-columns:repeat(3,auto minmax(0,1fr));gap:2px 10px;font-size:13px;margin-bottom:4px}.hl-kv .k{color:var(--text-2)}.hl-kv .v{font-weight:600}
+.hl-wing{max-width:420px;margin-top:6px}
+@media (max-width:800px){.hl-row{grid-template-columns:1fr}.hl-kv{grid-template-columns:repeat(2,auto minmax(0,1fr))}}
 .muted{color:var(--text-2)}.small{font-size:12.5px}.tiny{font-size:11.5px}
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
@@ -594,14 +598,21 @@ function renderShapes(){const el=$('#shapes-card');if(!el)return;
   el.innerHTML=h}
 // Headline: the best verified one-sheet FAAV wing at or below each budget, any frequency, 8 x 4 mesh (as on the
 // Top tab), beside the animation of the best one at <= 1 N·m. Read from the data, so it follows every rebuild.
+// The wing to build: the best verified one-sheet FAAV wing at or below each budget, any frequency, 8 x 4 mesh (as on
+// the Top tab). One compact row per budget: animation, then the numbers needed to build and judge it.
+const HL_BUDGETS=[0.75,1,1.25,1.5];
 function headlineCard(){const f0=TOPS.f;TOPS.f=-1;const rows=faavRows(true);TOPS.f=f0;
-  const tile=(k,v)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`;
-  const best=[0.75,1,1.25,1.5,2].map(B=>[B,bestUnder(rows,B)]).filter(([,i])=>i!=null);
-  const one=bestUnder(rows,1),media=one!=null?mediaForRow(one):null;
-  if(media)MEDIA_REG.headline={media,title:`Best FAAV wing at ≤ 1 N·m · ${D.freqs[C.f[one]]} Hz`,info:''};
-  return `<h3 style="margin-top:18px">Headline results: best FAAV wing at each torque budget</h3>
-  <div class="headline">${media?`<button class="poster" onclick="openViewer('headline')" aria-label="Play the animation"><img src="${MU(media.main)}" alt="Animation of the best wing at ≤ 1 N·m"></button>`:''}
-  <div class="tiles">${best.map(([B,i])=>tile(`≤ ${B} N·m · ${D.freqs[C.f[i]]} Hz`,fmt(C.T[i],2)+' N')).join('')}</div></div>`}
+  const kv=(k,v)=>`<div class="k">${k}</div><div class="v">${v}</div>`;let prev=null;
+  const out=HL_BUDGETS.map(B=>{const i=bestUnder(rows,B);if(i==null||i===prev)return '';prev=i;const media=mediaForRow(i),id='hl'+B;
+    if(media)MEDIA_REG[id]={media,title:`Best FAAV wing at ≤ ${B} N·m · ${D.freqs[C.f[i]]} Hz`,info:''};
+    const ch=chordsOf(i).filter(c=>c>0).map(c=>Math.round(c));
+    return `<div class="hl-row">${media?`<button class="poster" onclick="openViewer('${id}')" aria-label="Play the animation"><img loading="lazy" src="${MU(media.main)}" alt="Animation of the best wing at ≤ ${B} N·m"></button>`:'<div class="poster"></div>'}
+      <div><div class="hl-head"><b>≤ ${B} N·m</b><span class="hl-big">${fmt(C.T[i],2)} N</span><span class="small muted">at ${fmt(C.Q[i],2)} N·m</span></div>
+      <div class="hl-kv">${kv('Frequency',D.freqs[C.f[i]]+' Hz')}${kv('Half-span',Math.round(SPAN[i])+' mm')}${kv('Sheet',`${MODEL[BASE_OF[C.m[i]]].thickness} mm${ROD_OF[C.m[i]]?' + rod':''}`)}${kv('Tip twist',C.W[i]==null?'–':'±'+fmt(C.W[i],0)+'°')}${kv('Thrust / torque',fmt(C.T[i]/C.Q[i],2)+' m⁻¹')}${kv('Strouhal',fmt(ST[i],2))}</div>
+      <div class="small">Chords, root → tip, every ${fmt(C.H[i]/7,1)} mm: <b>${ch.join(' · ')}</b> mm</div>
+      <div class="hl-wing">${wingSVG(i,{w:420,h:70,spanMax:SHEET*1.02,zone:false})}</div>
+      <span class="tiny muted">${shapeName(C.g[i])} · <a href="#" onclick="showOnMap(${i});return false">on the map</a></span></div></div>`}).join('');
+  return `<h3 style="margin-top:18px">The wing to build: the best FAAV wing at each torque budget</h3><div class="hl-list">${out}</div>`}
 // The simulation count runs up from zero the first time the Overview opens.
 function runCounter(){const el=$('#simcount');if(!el||runCounter.done||typeof requestAnimationFrame!=='function')return;runCounter.done=true;const t0=Date.now(),d=1200;
   const step=()=>{const k=Math.min(1,(Date.now()-t0)/d);el.textContent=Math.round(N*(1-(1-k)**3)).toLocaleString();if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
