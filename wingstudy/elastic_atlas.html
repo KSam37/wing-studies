@@ -366,7 +366,39 @@ function outlineSVG(pts,{w=260,h=96,color='var(--accent)',spanMax=420,chordMax=2
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;display:block" role="img" aria-label="Wing outline, to scale"><title>Outline to scale: leading edge (thick line) at the top, root at the left</title>${g}</svg>`;
 }
 const designOutline=i=>activeOutline(D.row_outline&&D.row_outline[i]||chordsOf(i),C.H[i]);   // row_outline: refined rows, every mesh station
-const FINE=i=>!!(C.src[i]&8);   // fine-mesh refinement rows (Optimized shapes): not compared with 8 x 4 results
+// Panel mesh of each row ("span × chord"): studies, refinement and frontier re-solves record theirs (row_mesh);
+// campaign rows and matched reruns were solved on the 8 × 4 search mesh; the rigid catalog has its own settings.
+const SEARCH_MESH='8 × 4';
+const MESH_OF=i=>isCat(i)?'catalog':(D.row_mesh&&D.row_mesh[i])||(EXTRA[i]&&EXTRA[i].pair.source.numerics&&EXTRA[i].pair.source.numerics.span_panels?`${EXTRA[i].pair.source.numerics.span_panels} × ${EXTRA[i].pair.source.numerics.chord_panels}`:SEARCH_MESH);
+const FINE=i=>!isCat(i)&&MESH_OF(i)!==SEARCH_MESH;   // any finer mesh: never ranked against 8 × 4 results
+
+/* ---------- shape groups: every simulation of one outline ----------
+   A point is one simulation. Its shape group is every simulation of the same outline (root-to-tip chords and
+   half-span), whatever the construction, model, frequency or mesh. The outline is sampled at 25 equal span
+   fractions and rounded to 1 mm, so an 8-station outline and the same outline on tripled stations match. */
+const GSAMPLES=25;
+function groupKey(i){if(isCat(i))return 'cat'+i;const o=designOutline(i);if(!o.length)return 'row'+i;const L=o[o.length-1][0],out=[Math.round(L)];
+  for(let k=0;k<GSAMPLES;k++){const x=L*k/(GSAMPLES-1);let j=0;while(j<o.length-2&&o[j+1][0]<x)j++;const a=o[j],b=o[j+1]||a,t=b[0]>a[0]?(x-a[0])/(b[0]-a[0]):0;out.push(Math.round(a[1]+(b[1]-a[1])*Math.min(1,Math.max(0,t))))}
+  return out.join(',')}
+let GROUPS=null;
+function groupOf(i){if(!GROUPS){GROUPS=new Map();for(let j=0;j<N;j++){if(isCat(j))continue;const k=groupKey(j);const g=GROUPS.get(k);if(g)g.push(j);else GROUPS.set(k,[j])}}
+  return GROUPS.get(groupKey(i))||[i]}
+function groupCard(i){if(isCat(i))return '';
+  const all=groupOf(i),shown=all.filter(j=>j===i||paramPass(j)),hidden=all.length-shown.length;
+  if(all.length<2)return `<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">Shape group</h3><p class="small muted" style="margin:0">This outline has been simulated once.</p></div>`;
+  const GBC=['Rigid','Stiff LE (FAAV)','Rod, twists','Free sheet, bends','Rod, bends'];
+  const label=j=>BASE_OF[C.m[j]]==='rigid'?'–':`${MODEL[BASE_OF[C.m[j]]].thickness} mm${ROD_OF[C.m[j]]?' + rod':''}`,model=j=>`<span title="${esc(BCS[BC_OF[C.m[j]]][1])}">${GBC[BC_OF[C.m[j]]]}</span>`;
+  const rows=shown.slice().sort((a,b)=>(BC_OF[C.m[a]]-BC_OF[C.m[b]])||(MAT_OF[C.m[a]]-MAT_OF[C.m[b]])||(C.f[a]-C.f[b])||(MESH_IDX.get(MESH_OF(a))-MESH_IDX.get(MESH_OF(b))));
+  let h=`<div class="card" style="margin:10px 0;padding:10px 12px"><h3 style="margin:0 0 4px">Shape group: ${all.length} simulations of this outline</h3>
+    <p class="tiny muted" style="margin:0 0 6px">Same outline, varied construction, model, frequency and mesh. The map filters choose which are listed${hidden?`; ${hidden} hidden by them`:''}. Click a row to select it.</p>`;
+  // thrust against frequency, one line per construction, model and mesh
+  const ser=new Map();for(const j of rows){const k=C.m[j]+'|'+MESH_OF(j);if(!ser.has(k))ser.set(k,[]);ser.get(k).push(j)}
+  if(new Set(rows.map(j=>C.f[j])).size>1){const series=[...ser.values()].map(js=>{const j0=js[0],byF=new Map();for(const j of js)if(!byF.has(C.f[j])||C.T[j]>C.T[byF.get(C.f[j])])byF.set(C.f[j],j);
+      return {name:`${label(j0)} · ${GBC[BC_OF[C.m[j0]]]} · ${MESH_OF(j0)}`,color:modelColor(D.models[C.m[j0]].id),points:[...byF].sort((a,b)=>a[0]-b[0]).map(([f,j])=>({x:D.freqs[f],y:C.T[j],hollow:FINE(j),row:j,tip:`<b>${label(j)} · ${GBC[BC_OF[C.m[j]]]}</b><br>${D.freqs[C.f[j]]} Hz · ${MESH_OF(j)} mesh<br>${fmt(C.T[j],3)} N at ${fmt(C.Q[j],3)} N·m${C.W[j]!=null?` · ±${fmt(C.W[j],0)}°`:''}`}))}});
+    h+=lineChart({series,xlabel:'frequency (Hz)',ylabel:'thrust (N)',w:340,h:190,xfmt:v=>v+' Hz'})+`<p class="tiny muted" style="margin:0 0 6px">One line per construction, model and mesh; hollow = finer than 8 × 4. Hover for torque.</p>`}
+  h+=`<div style="max-height:260px;overflow:auto"><table class="small" style="white-space:nowrap"><tr><th>Sheet</th><th>Model</th><th class="n">Hz</th><th>Mesh</th><th class="n">N</th><th class="n">N·m</th><th class="n">Twist</th></tr>`;
+  for(const j of rows)h+=`<tr onclick="selectDesign(${j})" style="cursor:pointer${j===i?';background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:600':''}"><td>${label(j)}</td><td>${model(j)}</td><td class="n">${D.freqs[C.f[j]]}</td><td>${MESH_OF(j)}</td><td class="n">${fmt(C.T[j],3)}</td><td class="n">${fmt(C.Q[j],3)}</td><td class="n">${C.W[j]==null?'–':'±'+fmt(C.W[j],0)+'°'}</td></tr>`;
+  return h+'</table></div></div>'}
 
 /* ---------- media viewer ---------- */
 const viewer=$('#viewer');
@@ -605,8 +637,11 @@ const QUALS=[[0,'Verified / settled'],[1,'Uncertain (hollow)'],[2,'Unverified / 
 const LAMBDAS=[[2,'0.75 · favours thrust'],[4,'1.25'],[8,'1.75 · favours low torque'],[0,'No λ (other searches, maps, sweeps, reruns)']];
 const LAMBDA_BITS=2|4|8;
 const lambdaPass=i=>{const o=C.obj[i]&LAMBDA_BITS;if(!o)return M.lambda.has(0);for(const b of [2,4,8])if(o&b&&M.lambda.has(b))return true;return false};
-const MESHES=[[0,'Search mesh (8 × 4)','The meshes the studies searched on'],[1,'Refined mesh (21 × 4, 21 × 12)','Optimized shapes: the fine-mesh refinement. Thrust and torque both run about 15% higher than on 8 × 4, so compare like with like']];
-const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),mesh:new Set([0,1]),
+const MESH_LIST=(()=>{const n=new Map();for(let i=0;i<N;i++){const m=MESH_OF(i);n.set(m,(n.get(m)||0)+1)}
+  const area=m=>m==='catalog'?-1:m.split(' × ').reduce((a,b)=>a*(+b||1),1);return [...n.keys()].sort((a,b)=>area(a)-area(b))})();
+const MESH_IDX=new Map(MESH_LIST.map((m,k)=>[m,k]));
+const MESHES=MESH_LIST.map((m,k)=>[k,m==='catalog'?'Rigid catalog settings':m===SEARCH_MESH?'8 × 4 (search mesh)':m,m==='catalog'?'The rigid catalog runs, each with its own recorded settings':m===SEARCH_MESH?'The mesh every study searched on':'A finer mesh: thrust and torque both run higher than on 8 × 4, so compare like with like']);
+const mapDefaults=()=>({lambda:new Set([2,4,8,0]),lim:new Set([0,1]),quality:new Set([0]),mesh:new Set(MESH_LIST.map((_,k)=>k)),
   studies:new Set(SGROUPS.map(g=>g[0])),freqs:new Set([D.freqs.indexOf(1)>=0?D.freqs.indexOf(1):0]),models:new Set(MATS),struct:new Set([0,1,2]),constr:new Set([0,1]),bc:new Set(BCS.map(b=>b[0])),thk:new Set(THKS.map((_,k)=>k)),faav:true,favOnly:false,steps:false});
 const M={x:'torque',y:'thrust',color:'study',...mapDefaults(),view:null,sel:null};
 const SPAN_LIM=(()=>{let a=Infinity,b=-Infinity;for(let i=0;i<N;i++){const v=SPAN[i];if(isFinite(v)&&v>0){if(v<a)a=v;if(v>b)b=v}}return [Math.floor(a),Math.ceil(b)]})();
@@ -690,14 +725,15 @@ function renderChips(){
   chipRow($('#f-quality'),QUALS,M.quality,null);
   chipRow($('#f-mesh'),MESHES,M.mesh,null);
 }
+// The parameters a shape group varies over (construction, model, frequency, mesh) plus result quality.
+function paramPass(i){const m=C.m[i];
+  if(!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))return false;
+  if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))return false;
+  return M.quality.has(QUAL_OF(STATUS[C.S[i]]))&&M.mesh.has(MESH_IDX.get(MESH_OF(i)))}
 function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   for(let i=0;i<N;i++){
-    const m=C.m[i];
-    if(!M.studies.has(SGROUP_OF[C.s[i]])||!M.freqs.has(C.f[i])||!M.models.has(MAT_OF[m])||!M.struct.has(STRUCT_OF[m])||!M.bc.has(BC_OF[m]))continue;
-    if(ROD_OF[m]!=null&&(!M.constr.has(ROD_OF[m])||!M.thk.has(THK_OF[m])))continue;
-    if(!M.quality.has(QUAL_OF(STATUS[C.S[i]])))continue;
-    if(!M.mesh.has(FINE(i)?1:0))continue;
+    if(!M.studies.has(SGROUP_OF[C.s[i]])||!paramPass(i))continue;
     if(M.favOnly&&!isFav(C.k[i]))continue;
     if(!M.steps&&STEP_ROW(i)&&i!==M.sel&&!isFav(C.k[i]))continue;
     if(!lambdaPass(i))continue;
@@ -788,7 +824,7 @@ function updateCounts(){
 
   const nF=VIS.filter(i=>isFav(C.k[i])).length;
   const nFine=VIS.filter(FINE).length,mixed=nFine&&nFine<VIS.length;
-  $('#map-note').innerHTML=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Shift-click a chip to show only that one. Hollow = uncertain. Squares = refined mesh (${nFine.toLocaleString()}).`+(mixed?`<br><b>Two meshes are shown.</b> Refined-mesh squares run about 15% higher in thrust and torque than the 8 × 4 dots, so an 8 × 4 dot just under the budget is usually over it on the finer mesh. Use the Mesh filter to compare one mesh at a time.`:'');
+  $('#map-note').innerHTML=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Shift-click a chip to show only that one. Hollow = uncertain. Squares = a mesh finer than 8 × 4 (${nFine.toLocaleString()}).`+(mixed?`<br><b>More than one mesh is shown.</b> Finer-mesh squares run about 15% higher in thrust and torque than the 8 × 4 dots, so an 8 × 4 dot just under the budget is usually over it on the finer mesh. Use the Mesh filter to compare one mesh at a time.`:'');
 }
 function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
 const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75'],[512,'matched elasticity comparison']];
@@ -895,6 +931,7 @@ function selectDesign(i){
     <div>Strouhal number</div><div>${fmt(ST[i],3)} <span class="muted small">(f·A/U, tip excursion A = ${Math.round(TIPA[i])} mm, U = ${U_FWD} m/s)</span></div>
     <div>Area</div><div>${fmt(AREA[i],1)} cm²</div>
     <div>Chords</div><div class="small">${chordsOf(i).map(Math.round).join(' · ')} mm (root → tip, ${chordsOf(i).length} equally spaced stations)</div>
+    <div>Mesh</div><div>${MESH_OF(i)} panels${FINE(i)?' <span class="tiny muted">(finer than the 8 × 4 search mesh)</span>':''}</div>
     <div>Quality</div><div>${statusPill(st)}</div>
     <div>Found by</div><div class="small">${[C.src[i]&8?'fine-mesh refinement (Optimized shapes)':C.src[i]&1?'a search':'',C.src[i]&2?(D.studies[C.s[i]].id==='sweep'?'the geometric sweep':'the shape map'):'',C.src[i]&4?'a planned study':''].filter(Boolean).join(' and ')||'–'}</div>
     ${D.row_notes&&D.row_notes[i]?`<div>Numerics</div><div class="small">${esc(D.row_notes[i])}</div>`:''}
@@ -906,7 +943,8 @@ function selectDesign(i){
   $('#detail').innerHTML=`<h3>${m.label} · ${D.freqs[C.f[i]]} Hz</h3>${w?`<p class="small" style="margin-top:-2px">Top performer: ${D.studies[C.s[i]].label}, ${w.freq} Hz, best ≤ ${LIM} N·m.</p>`:''}
     ${outlineSVG(designOutline(i),{w:320,h:118,color:col,labels:true})}
     <div style="margin:8px 0 0">${favButton(i)} ${basketButton(i)}</div>
-    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(FINE(i)?'<p class="tiny muted">No animation rendered for this design. It was solved by the fine-mesh refinement; rerunning it reuses the cached solves:<br><code>python -m wingstudy.refine_top --from atlas/refine-top.json --chord-panels 12 --curve 6 --out outputs/refine-top-curve</code></p>':C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
+    ${groupCard(i)}
+    <div style="margin:10px 0">${media?posterButton(media,`${m.label} · ${D.freqs[C.f[i]]} Hz · ${D.studies[C.s[i]].short}`,info):(C.src[i]&8?'<p class="tiny muted">No animation rendered for this design. It was solved by the fine-mesh refinement; rerunning it reuses the cached solves:<br><code>python -m wingstudy.refine_top --from atlas/refine-top.json --chord-panels 12 --curve 6 --out outputs/refine-top-curve</code></p>':C.src[i]&4?'<p class="tiny muted">No animation rendered for this design. The study re-solves from its spec (cached cases are reused):<br><code>python -m wingstudy run '+esc(D.studies[C.s[i]].id)+'</code></p>':'<p class="tiny muted">No animation rendered for this design. It can be re-solved from its key:<br><code>python -m wingstudy campaign replay outputs/elastic/campaigns/'+D.studies[C.s[i]].id+' '+C.k[i]+'</code></p>')}</div>${info}`;
 }
 function downloadCSV(){
   const head=['study','plate','leading_edge_bc','freq_hz','status','thrust_N','peak_torque_Nm','tip_twist_deg','half_span_mm','strouhal','area_cm2','c1_mm','c2_mm','c3_mm','c4_mm','c5_mm','c6_mm','c7_mm','c8_mm','source','key'];
@@ -1525,10 +1563,11 @@ function renderFreq(){
   h+=`<div class="card"><h3>Every wing at every frequency</h3><p class="small muted" style="max-width:920px">Equal torque: thrust and the rescaled half-span, then the gap to the best wing at that frequency and budget. Fixed outline: thrust and peak torque; torque over budget is marked. Bold: the frequency the wing was optimized at.</p><div style="overflow-x:auto"><table><tr><th>Optimized at</th><th>Outline</th>${FR.map(f=>`<th class="n">${f} Hz<br><span class="tiny muted">equal torque</span></th><th class="n">${f} Hz<br><span class="tiny muted">fixed outline</span></th>`).join('')}</tr>`;
   for(const w of F.wings){h+=`<tr><td class="small"><span class="sw" style="background:${fc(w.freq)}"></span><b>${name(w)}</b><br>${Math.round(w.half_span_mm)} mm</td><td style="width:140px">${w.chords_mm?outlineSVG(activeOutline(w.chords_mm,w.half_span_mm),{w:130,h:40,spanMax:420,color:fc(w.freq)}):''}</td>`;
     for(const f of FR){const m=pt(w,f).matched,x=pt(w,f).fixed,own=pt(w,f).own,b=best(w.budget_Nm,f),gap=m&&m.thrust!=null&&b>0?100*(m.thrust/b-1):null;
-      h+=`<td class="n small" style="${own?'font-weight:600':''}">${m&&m.thrust!=null?`${fmt(m.thrust)} N · ${Math.round(m.half_span_mm)} mm<br><span class="tiny ${gap!=null&&gap>-0.05?'':'muted'}">${gap==null?'':gap>-0.05?'best':fmt(gap,1)+' %'}</span>`:'–'}</td>`
+      const cap=m&&m.torque!=null&&m.torque<w.budget_Nm-0.01;
+      h+=`<td class="n small" style="${own?'font-weight:600':''}">${m&&m.thrust!=null?`${fmt(m.thrust)} N · ${Math.round(m.half_span_mm)} mm<br><span class="tiny ${gap!=null&&gap>-0.05?'':'muted'}">${gap==null?'':gap>-0.05?'best':fmt(gap,1)+' %'}${cap?` · ${fmt(m.torque,2)} N·m at the 400 mm cap`:''}</span>`:'–'}</td>`
         +`<td class="n small" style="${own?'font-weight:600':''}">${x&&x.thrust!=null?`${fmt(x.thrust)} N<br><span class="tiny ${x.torque>w.budget_Nm+1e-3?'':'muted'}">${fmt(x.torque,3)} N·m${x.torque>w.budget_Nm+1e-3?' (over)':''}</span>`:'–'}</td>`}
     h+=`</tr>`}
-  h+=`</table></div><p class="tiny muted">Search mesh (21 × 12), so absolute values run 0.5–2.4 % low on thrust and 1.2–3.1 % low on torque against the converged ones (Convergence tab); the comparisons between wings are on one mesh. Half-spans are rescaled between ${Math.round(1000*0.28)} and 400 mm.</p></div>`;
+  h+=`</table></div><p class="tiny muted">Search mesh (21 × 12), so absolute values run 0.5–2.4 % low on thrust and 1.2–3.1 % low on torque against the converged ones (Convergence tab); the comparisons between wings are on one mesh. Half-spans are rescaled between 150 and 400 mm; a wing that reaches 400 mm below its budget stops there, and its torque is given.</p></div>`;
   el.innerHTML=h;
 }
 function renderElastic(){renderStiff();renderSpan()}

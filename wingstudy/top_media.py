@@ -33,12 +33,14 @@ from .studies import spec as S
 ATLAS = S.ROOT / "atlas"
 DEST = ATLAS / "media" / "top"
 MANIFEST = ATLAS / "top-media.json"
-HQ_OPTIONS = {"window_size": (1600, 1200), "quality": 90.0, "speed": 1.0}   # as elastic_atlas.render_hq
 FREQS = (0.75, 1.0, 1.25)
+# 800 x 600 like the other atlas animations; 2x real time keeps about 100 frames for 4 cycles (Ptera drops
+# frames above 50 fps), so a wing's three views come to a few MB rather than ~25 MB at every time step.
+ANIMATION = {"window_size": (800, 600), "quality": 75.0, "speed": 2.0}
 
 
 def coarse_numerics(freq):
-    return {"span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4, "dt_refinements": [1, 2], "freq": freq}
+    return {"span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4, "dt_refinements": [1, 2, 4], "freq": freq}
 
 
 def tasks(summaries: list[Path], freqs) -> list[dict]:
@@ -69,7 +71,10 @@ def tasks(summaries: list[Path], freqs) -> list[dict]:
     return out
 
 
-def render(t: dict) -> dict:
+def render(t: dict, reuse: dict | None = None) -> dict:
+    """Verify, then animate with Ptera's default animation settings (the files are shipped as written, like
+    every other atlas animation). ``reuse``: a previous replay's time step and added-mass factor, which skips
+    the verification solve."""
     warnings.filterwarnings("ignore")
     from PIL import Image
     from . import cases as _cases
@@ -84,15 +89,19 @@ def render(t: dict) -> dict:
     ov = {"dt_s": 1.0 / (num["steps_per_cycle"] * num["freq"]), "cycles": num["cycles"],
           "span_panels": num["span_panels"], "chord_panels": num["chord_panels"]}
     spec = {"stiffness_model": "plate", "thickness_m": 0.5e-3, "material": ER.MATERIAL, "rod": {}}
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        v = R.run_verified(case, settings, elastic.ElasticConfig.from_dict(spec), ov, dt_refinements=tuple(num["dt_refinements"]))
-    if v.get("status") not in ("verified", "ok") or v.get("mean_thrust_N") is None:
+    if reuse:
+        v = {"status": reuse["status"], "mean_thrust_N": reuse["thrust"], "peak_abs_root_torque_Nm": reuse["torque"],
+             "dt_s": reuse["dt_s"], "added_mass_factor": reuse["added_mass_factor"]}
+    else:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            v = R.run_verified(case, settings, elastic.ElasticConfig.from_dict(spec), ov, dt_refinements=tuple(num["dt_refinements"]))
+    if v.get("status") not in ("verified", "ok", "uncertain") or v.get("mean_thrust_N") is None:
         return {**t, "error": f"verification run {v.get('status')}: {v.get('error')}"}
     dev = 100 * (v["mean_thrust_N"] / t["thrust"] - 1)
     factor = v.get("added_mass_factor") or (v.get("elastic") or {}).get("added_mass_factor") or 0.5
     cfg = elastic.ElasticConfig.from_dict({**spec, "added_mass_factor": factor})
-    R.ANIMATION_OPTIONS.update(HQ_OPTIONS)
-    tmp = dest.with_name(dest.name + ".tmp")
+    R.ANIMATION_OPTIONS.update(ANIMATION)
+    tmp = S.ROOT / "outputs" / "top-media-tmp" / t["key"]           # Ptera also writes plots: keep them out of the atlas
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         r = R.run(case, settings, cfg, {**ov, "dt_s": v["dt_s"], "cycles": v.get("cycles", ov["cycles"])}, output_dir=tmp)
     if r.get("status") != "ok" or not (tmp / "animation_front.webp").exists():
@@ -116,11 +125,12 @@ def main(argv=None) -> int:
     ap.add_argument("summaries", type=Path, nargs="*", help="second-stage refine_top summaries (default atlas/refine-top/*/stage2.json)")
     ap.add_argument("--freqs", type=float, nargs="+", default=list(FREQS))
     ap.add_argument("--workers", type=int, default=2)
+    ap.add_argument("--force", action="store_true", help="re-render wings already in the manifest (reusing their time step)")
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args(argv)
     summaries = a.summaries or sorted((ATLAS / "refine-top").glob("*/stage2.json"))
     man = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.exists() else {}
-    todo = [t for t in tasks(summaries, a.freqs) if t["key"] not in man or not (DEST / t["key"] / "poster.webp").exists()]
+    todo = [t for t in tasks(summaries, a.freqs) if a.force or t["key"] not in man or not (DEST / t["key"] / "poster.webp").exists()]
     for t in todo:
         print(f"{t['key']}  {t['kind']:9s} {t['freq']:g} Hz  {t['label']}  {t['thrust']:.3f} N", flush=True)
     print(f"{len(todo)} to render ({len(man)} already in {MANIFEST.name})", flush=True)
@@ -128,7 +138,7 @@ def main(argv=None) -> int:
         return 0
     todo.sort(key=lambda t: t["numerics"]["span_panels"] * t["numerics"]["chord_panels"])    # quick coarse ones first
     with ProcessPoolExecutor(max_workers=a.workers) as pool:
-        for job in as_completed([pool.submit(render, t) for t in todo]):
+        for job in as_completed([pool.submit(render, t, (man.get(t["key"]) or {}).get("replay")) for t in todo]):
             r = job.result()
             if r.get("error"):
                 print(time.strftime("%H:%M:%S"), r["key"], "FAILED", r["error"], flush=True)

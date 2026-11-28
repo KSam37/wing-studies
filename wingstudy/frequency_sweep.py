@@ -34,7 +34,7 @@ def _project(task):
     """Fixed-outline solve, then rescale the half-span until peak torque sits on the budget."""
     budget, tol = task["budget"], 0.002
     target = budget - 0.002
-    lo, hi = ER.SPAN_RANGE[0], min(ER.SPAN_RANGE[1], SHEET_M)
+    lo, hi = 0.150, SHEET_M                                       # refine_top.SPAN_LIMITS floor, one sheet
     span, pts, recs, best = task["span"], [], [], None
     for _ in range(7):
         span = round(min(hi, max(lo, span)), 4)
