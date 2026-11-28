@@ -119,6 +119,8 @@ def build(out: Path) -> None:
     fx = ROOT / "atlas" / "freq-explore.json"       # wingstudy.freq_explore output: top shapes at higher frequencies
     if fx.exists():
         print(f"higher frequencies on 8 x 4: {study_atlas.merge_freq_explore(D, json.loads(fx.read_text(encoding='utf-8')))} map rows")
+    for bp in sorted((ROOT / "atlas" / "bayes").glob("*.json")):   # wingstudy.bayes_search runs (tools/bayes_queue.sh)
+        print(f"Bayesian search {bp.stem}: {study_atlas.merge_bayes(D, json.loads(bp.read_text(encoding='utf-8')))} map rows")
     # wingstudy.refine_top --search-mesh runs, one folder each under atlas/optimize-8x4/ (summary.json): the top wings
     # optimized as smooth outlines on the 8 x 4 search mesh, so they rank with everything else
     for d in sorted(x for x in (ROOT / "atlas" / "optimize-8x4").glob("*") if x.is_dir()):

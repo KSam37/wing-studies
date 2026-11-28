@@ -113,6 +113,8 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
                              "about": f"{spec['question']} Planned study by {spec['author']}; "
                                       f"{len(results['cases'])} cases, code {results['code']['digest']}.",
                              "planned": True, "kind": spec["kind"],
+                             **({"objectives": sorted({k for x in results.get("searches") or [] for k in x["objective"]})}
+                                if spec["kind"] == "evolutionary" else {}),
                              **({"run_date": results["completed"]} if results.get("completed") else {}),
                              **({"convergence": True} if CV.is_convergence(spec) else {})})
         if CV.is_convergence(spec):
@@ -143,7 +145,7 @@ def merge(D: dict, studies: list[tuple[dict, dict]]) -> int:
             vals = {"s": sid, "m": _model(D, c["model"], c["structure"]), "f": fi, "T": c["thrust_N"],
                     "Q": c["torque_Nm"], "H": c["half_span_mm"], "W": c.get("tip_twist_deg"),
                     "S": _index(D["statuses"], c["status"]),
-                    "src": SRC_STUDY | (SRC_SEARCH if spec["kind"] == "evolutionary" else 0), "k": c["key"],
+                    "src": SRC_STUDY | (SRC_SEARCH if spec["kind"] in ("evolutionary", "bayesian") else 0), "k": c["key"],
                     "obj": (role["bits"] | (16 if role["seed"] and not role["winner_of"] else 0)) if role else 0}
             rows_of[c["key"]] = row
             if spec["kind"] == "evolutionary":
@@ -442,3 +444,13 @@ def merge_freq_explore(D: dict, data: dict | None) -> int:
                                                                     f"{w['budget_Nm']:g} N·m budget"))
             added += 1
     return added
+
+
+def merge_bayes(D: dict, data: dict | None) -> int:
+    """A wingstudy.bayes_search run (atlas/bayes/<name>.json) as a study: every solve a map row, kind "bayesian"."""
+    if not data or not data.get("cases"):
+        return 0
+    spec = {"id": data["study"], "title": data["title"], "author": "sam", "question": data["question"], "kind": "bayesian"}
+    n = merge(D, [(spec, data)])
+    D["studies"][-1]["settings"] = data.get("settings")
+    return n
