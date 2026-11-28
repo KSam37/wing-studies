@@ -66,7 +66,7 @@ def tasks(summaries: list[Path], freqs) -> list[dict]:
                 continue
             seen.add(k)
             out.append({"key": k, "label": x["id"] + " optimized", "kind": "optimized", "freq": num.get("freq", 1.0),
-                        "chords_m": list(ER.chords_from_ctrl(ctrl, num["stations"], num.get("param"))), "span_m": span,
+                        "chords_m": list(ER.chords_from_ctrl(ctrl, num["stations"], num.get("param"), ER.root_of(num))), "span_m": span,
                         "numerics": {**num, "freq": num.get("freq", 1.0)}, "thrust": fin["thrust"], "torque": fin["torque"]})
     return out
 

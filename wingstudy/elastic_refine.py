@@ -58,17 +58,23 @@ DEFAULT_NUMERICS = {"stations": 25, "span_panels": 24, "chord_panels": 6, "steps
 # Geometry
 # ----------------------------------------------------------------------------------------
 
-def chords_from_ctrl(ctrl, stations, param=None):
+def root_of(numerics) -> float:
+    """Root chord (m) of a solve: numerics["root"] when set, else the campaigns' 200 mm. Only a root other than
+    200 mm is written into numerics, so the cache keys of every 200 mm-root solve are unchanged."""
+    return (numerics or {}).get("root", ROOT_CHORD)
+
+
+def chords_from_ctrl(ctrl, stations, param=None, root=ROOT_CHORD):
     """param 'exact': the control chords ARE the outline stations (straight segments between them)."""
     if param == "exact":
-        return [ROOT_CHORD] + [round(float(c), 6) for c in ctrl]
+        return [root] + [round(float(c), 6) for c in ctrl]
     import numpy as np
     from scipy.interpolate import PchipInterpolator
     eta = np.linspace(0, 1, len(ctrl) + 1)
-    f = PchipInterpolator(eta, [ROOT_CHORD] + list(ctrl))   # monotone data -> monotone curve
+    f = PchipInterpolator(eta, [root] + list(ctrl))   # monotone data -> monotone curve
     c = f(np.linspace(0, 1, stations))
-    c[0] = ROOT_CHORD
-    return [round(float(max(MIN_CHORD, min(MAX_CHORD, x))), 6) for x in c]
+    c[0] = root
+    return [round(float(max(MIN_CHORD, min(root, x))), 6) for x in c]
 
 
 def fit_ctrl(chords, half_span, param=None):
@@ -116,7 +122,7 @@ def _solve(task):
     t0 = time.time()
     num = task["numerics"]
     template, settings = _cases.load_case(7657)
-    chords = chords_from_ctrl(task["ctrl"], num["stations"], num.get("param"))
+    chords = chords_from_ctrl(task["ctrl"], num["stations"], num.get("param"), root_of(num))
     case = R.sections_case(template, settings, chords, task["span"], task["key"])
     freq = num.get("freq", FREQ)                 # refine_top runs at other frequencies set numerics["freq"]
     case["frequency_hz"] = freq
@@ -383,7 +389,7 @@ def write_outputs(ref: Refiner, out: Path, numerics, color):
     (out / "history.json").write_text(json.dumps({"winner": w, "numerics": numerics, "note": ref.note,
                                                   "history": ref.history}, indent=1, default=str))
     fin = ref.current
-    fch = chords_from_ctrl(fin["ctrl"], numerics["stations"], numerics.get("param"))
+    fch = chords_from_ctrl(fin["ctrl"], numerics["stations"], numerics.get("param"), root_of(numerics))
     # outline before/after, to scale
     fig, ax = plt.subplots(figsize=(8, 3.4))
     act = [c for c in w["chords"] if c > 0]
@@ -414,7 +420,7 @@ def write_outputs(ref: Refiner, out: Path, numerics, color):
         for i, st in enumerate(h + [h[-1]] * 6):
             fig, ax = plt.subplots(figsize=(7, 3))
             ax.plot(x0, y0, color="#c8c7c1", lw=1, ls="--")
-            xs, ys_ = outline_xy(chords_from_ctrl(st["ctrl"], numerics["stations"], numerics.get("param")), st["span"])
+            xs, ys_ = outline_xy(chords_from_ctrl(st["ctrl"], numerics["stations"], numerics.get("param"), root_of(numerics)), st["span"])
             ax.fill(xs, ys_, color=color, alpha=0.25, lw=0); ax.plot(xs, ys_, color=color, lw=1.6)
             ax.set_aspect("equal"); ax.set_xlim(-0.01, 0.41); ax.set_ylim(-0.21, 0.01); ax.axis("off")
             ax.set_title(f"{label}  step {min(i, len(h) - 1)}/{len(h) - 1}: {st['thrust']:.2f} N @ {st['torque']:.2f} N·m, "
@@ -447,7 +453,7 @@ def animate_final(ref: Refiner, out: Path, numerics):
     from . import cases as _cases
     fin = ref.current
     template, settings = _cases.load_case(7657)
-    case = R.sections_case(template, settings, chords_from_ctrl(fin["ctrl"], numerics["stations"], numerics.get("param")), fin["span"], "refined")
+    case = R.sections_case(template, settings, chords_from_ctrl(fin["ctrl"], numerics["stations"], numerics.get("param"), root_of(numerics)), fin["span"], "refined")
     case["frequency_hz"] = FREQ
     ov = {"dt_s": fin.get("dt") or 1.0 / (numerics["steps_per_cycle"] * FREQ), "cycles": numerics["cycles"],
           "span_panels": numerics["span_panels"], "chord_panels": numerics["chord_panels"]}
@@ -471,7 +477,7 @@ def summary(refs, out: Path, numerics):
         f, w = r.current, r.w
         rows.append(f"{r.model},{w['source']},{w['key']},{w['thrust']:.4f},{w['torque']:.4f},{f['thrust']:.4f},{f['torque']:.4f},"
                     f"{f['span'] * 1000:.0f},{f.get('tip_twist') or ''},{len(r.history) - 1},{r.note}")
-        xs, ys = outline_xy(chords_from_ctrl(f["ctrl"], numerics["stations"], numerics.get("param")), f["span"])
+        xs, ys = outline_xy(chords_from_ctrl(f["ctrl"], numerics["stations"], numerics.get("param"), root_of(numerics)), f["span"])
         c = colors.get(r.model, "#2a78d6")
         ax.fill(xs, [v + y for v in ys], color=c, alpha=0.25, lw=0); ax.plot(xs, [v + y for v in ys], color=c, lw=1.6)
         ax.text(-0.02, y - 0.05, f"{MODELS[r.model][0]}\n{f['thrust']:.2f} N @ {f['torque']:.2f} N·m\n"

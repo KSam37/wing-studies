@@ -106,7 +106,8 @@ def effective_span_mm(c: dict) -> float:
 
 def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False, freq: float = 1.0, free_span: bool = False) -> list[dict]:
     """Standouts per budget. With ``free_span``, a budget whose best wing already fits one sheet also gets an
-    'any' seed from that wing, searched without the 400 mm cap, so every budget has a free-span search."""
+    'any' seed from that wing, searched without the 400 mm cap, so every budget has a free-span search.
+    Any root chord: the search holds each wing's own root fixed."""
     seeds = []
     for B in levels:
         ok = [c for c in cases if c["torque_Nm"] <= B]
@@ -135,35 +136,41 @@ def refine_outline(chords_mm, half_span_mm, factor=FACTOR):
         j = min(int(x), len(active) - 2)
         t = x - j
         pts.append(active[j] * (1 - t) + active[j + 1] * t)
-    pts[0] = ER.ROOT_CHORD * 1000
-    prev, ctrl = ER.ROOT_CHORD, []
+    prev, ctrl = active[0] / 1000, []                          # the wing's own root, held fixed
     for c in pts[1:]:
         prev = min(prev, max(ER.MIN_CHORD, round(c / 1000, 5)))
         ctrl.append(prev)
     return ctrl, round(span / 1000, 5)
 
 
-def numerics_for(n_segments: int, chord_panels: int = 4, param: str = "exact", freq: float = 1.0) -> dict:
+def _with_root(out: dict, root) -> dict:
+    """Write the root chord (m) into numerics only when it is not 200 mm, so existing cache keys stay valid."""
+    if root is not None and abs(root - ER.ROOT_CHORD) > 1e-9:
+        out["root"] = round(root, 5)
+    return out
+
+
+def numerics_for(n_segments: int, chord_panels: int = 4, param: str = "exact", freq: float = 1.0, root=None) -> dict:
     """Solve settings; "freq" is only added away from 1 Hz, so the 1 Hz cache keys stay as they were."""
     out = {"stations": n_segments + 1, "span_panels": n_segments, "chord_panels": chord_panels, "steps_per_cycle": 50,
            "cycles": 4, "dt_refinements": [1, 2], "param": param}
     if abs(freq - 1.0) > 1e-9:
         out["freq"] = freq
-    return out
+    return _with_root(out, root)
 
 
 def outline_mm(ctrl, numerics) -> list[float]:
     """Chords (mm) at the mesh stations for a control vector, exact or PCHIP."""
     if numerics.get("param") == "exact":
-        return [round(1000 * x, 2) for x in ER.chords_from_ctrl(ctrl, 0, "exact")]
-    return [round(1000 * x, 2) for x in ER.chords_from_ctrl(ctrl, numerics["stations"], numerics.get("param"))]
+        return [round(1000 * x, 2) for x in ER.chords_from_ctrl(ctrl, 0, "exact", ER.root_of(numerics))]
+    return [round(1000 * x, 2) for x in ER.chords_from_ctrl(ctrl, numerics["stations"], numerics.get("param"), ER.root_of(numerics))]
 
 
 def fit_curve(chords_mm, n_ctrl):
     """PCHIP control chords (m) through a station outline: its values at k/n of the half-span, kept monotone."""
     import numpy as np
     ys = np.linspace(0, 1, len(chords_mm))
-    out, prev = [], ER.ROOT_CHORD
+    out, prev = [], chords_mm[0] / 1000                        # the outline's own root
     for k in range(1, n_ctrl + 1):
         c = float(np.interp(k / n_ctrl, ys, chords_mm)) / 1000
         prev = min(prev, max(ER.MIN_CHORD, round(c, 5)))
@@ -171,12 +178,12 @@ def fit_curve(chords_mm, n_ctrl):
     return out
 
 
-def search_mesh_numerics(freq: float, stations: int = 9, param: str = "pchip") -> dict:
+def search_mesh_numerics(freq: float, stations: int = 9, param: str = "pchip", root=None) -> dict:
     out = {"stations": stations, "span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4, "dt_refinements": [1, 2, 4],
            "param": param}
     if abs(freq - 1.0) > 1e-9:
         out["freq"] = freq
-    return out
+    return _with_root(out, root)
 
 
 def extra_cases(paths, freq: float) -> list[dict]:
@@ -209,24 +216,25 @@ class Search:
         c = seed["case"]
         self.recheck = None
         if seed.get("ctrl"):                                    # second stage: start from a refined outline
-            n = len(seed["ctrl"])
-            self.recheck_numerics = numerics_for(n, chord_panels, "exact", f)
+            n, self.root = len(seed["ctrl"]), seed.get("root", ER.ROOT_CHORD)
+            self.recheck_numerics = numerics_for(n, chord_panels, "exact", f, self.root)
             if curve:
-                self.ctrl, self.span = fit_curve(outline_mm(seed["ctrl"], {"param": "exact"}), curve), seed["span"]
-                self.numerics = numerics_for(n, chord_panels, "pchip", f)
+                self.ctrl, self.span = fit_curve(outline_mm(seed["ctrl"], _with_root({"param": "exact"}, self.root)), curve), seed["span"]
+                self.numerics = numerics_for(n, chord_panels, "pchip", f, self.root)
             else:
                 self.ctrl, self.span, self.numerics = list(seed["ctrl"]), seed["span"], self.recheck_numerics
         elif search_mesh:                                       # on the 8 x 4 search mesh
             active = [x for x in c["chords_mm"] if x > 0]
-            self.span = round(effective_span_mm(c) / 1000, 5)
+            self.span, self.root = round(effective_span_mm(c) / 1000, 5), active[0] / 1000
             if curve:                                           # smooth curve through `curve` control chords
-                self.ctrl, self.numerics = fit_curve(active, curve), search_mesh_numerics(f)
+                self.ctrl, self.numerics = fit_curve(active, curve), search_mesh_numerics(f, root=self.root)
             else:                                               # the seed's own stations: the start IS the seed
                 self.ctrl = [round(x / 1000, 5) for x in active[1:]]
-                self.numerics = search_mesh_numerics(f, len(active), "exact")
+                self.numerics = search_mesh_numerics(f, len(active), "exact", self.root)
         else:
+            self.root = [x for x in c["chords_mm"] if x > 0][0] / 1000
             self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
-            self.numerics = numerics_for(len(self.ctrl), chord_panels, freq=f)
+            self.numerics = numerics_for(len(self.ctrl), chord_panels, freq=f, root=self.root)
         self.span_max = SHEET_M if seed["single_sheet"] else SPAN_LIMITS[1]
         self.step_i, self.rounds, self.max_rounds = 0, 0, max_rounds
         self.current, self.history, self.done, self.note = None, [], False, ""
@@ -246,7 +254,7 @@ class Search:
         for i in range(n):
             for sgn in (1, -1):
                 c = list(self.ctrl)
-                hi = ER.ROOT_CHORD if i == 0 else c[i - 1]
+                hi = self.root if i == 0 else c[i - 1]
                 lo = ER.MIN_CHORD if i == n - 1 else max(ER.MIN_CHORD, c[i + 1])
                 v = min(hi, max(lo, c[i] + sgn * cs))
                 if abs(v - c[i]) > 1e-9:
@@ -289,14 +297,19 @@ class Search:
                 "history": [dict(h, chords_mm=outline_mm(h["ctrl"], self.numerics)) if h.get("ctrl") else h for h in self.history]}
 
 
-def seeds_from_summary(path: Path) -> list[dict]:
-    """Second-stage seeds: each refined final outline of a finished summary, same id and budget."""
+def seeds_from_summary(path: Path, factor: int = FACTOR) -> list[dict]:
+    """Second-stage seeds: each refined final outline of a finished summary, same id and budget. A final from the
+    8 x 4 search mesh (--search-mesh) is first put on ``factor`` times as many straight segments, as the first stage
+    does with a study pick, so the next mesh has one span panel per segment (21 x 12 from 8 stations)."""
     out = []
     for x in S.read_json(path)["seeds"]:
         f = x.get("final") or {}
         if f.get("ctrl") and f.get("status") in ("ok", "verified"):
+            ctrl, span, root = f["ctrl"], f["span"], ER.root_of(x.get("numerics"))
+            if (x.get("numerics") or {}).get("span_panels") == 8 and x.get("final_chords_mm"):
+                ctrl, span = refine_outline(x["final_chords_mm"], 1000 * f["span"], factor)
             out.append({"id": x["id"], "budget": x["budget_Nm"], "single_sheet": x["single_sheet"], "case": x["source"],
-                        "ctrl": f["ctrl"], "span": f["span"], "previous": {k: f.get(k) for k in ("thrust", "torque", "span")},
+                        "ctrl": ctrl, "span": span, "root": root, "previous": {k: f.get(k) for k in ("thrust", "torque", "span")},
                         "freq": x.get("freq", (x.get("numerics") or {}).get("freq", 1.0))})
     return out
 
@@ -382,7 +395,7 @@ def main(argv=None) -> int:
             print("wrote", p)
         return 0
     if a.from_summary:
-        seeds = seeds_from_summary(a.from_summary)
+        seeds = seeds_from_summary(a.from_summary, a.factor)
     else:
         results = [S.read_json(S.study_dir(s) / "results.json") for s in a.studies if (S.study_dir(s) / "results.json").exists()]
         cases = []

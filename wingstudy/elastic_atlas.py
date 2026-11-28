@@ -138,7 +138,7 @@ def _hq_refined(model_id, folder="refine", suffix=""):
     h = json.loads((ELASTIC / folder / model_id / "history.json").read_text())
     num, fin = h["numerics"], h["history"][-1]
     template, settings = _cases.load_case(7657)
-    case = R.sections_case(template, settings, F.chords_from_ctrl(fin["ctrl"], num["stations"], num.get("param")), fin["span"], "refined")
+    case = R.sections_case(template, settings, F.chords_from_ctrl(fin["ctrl"], num["stations"], num.get("param"), F.root_of(num)), fin["span"], "refined")
     case["frequency_hz"] = F.FREQ
     ov = {"dt_s": fin.get("dt") or 1.0 / (num["steps_per_cycle"] * F.FREQ), "cycles": num["cycles"],
           "span_panels": num["span_panels"], "chord_panels": num["chord_panels"]}
