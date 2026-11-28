@@ -786,9 +786,12 @@ function paramPass(i){const m=C.m[i];
 function filtered(){
   const out=[],gx=AXES[M.x].get,gy=AXES[M.y].get;
   for(let i=0;i<N;i++){
+    // favourites are always shown, whatever the filters (a star at 1.25 Hz stays on a 1 Hz map)
+    const fav=!isCat(i)&&isFav(C.k[i]);
+    if(M.favOnly&&!fav)continue;
+    if(fav){const x=gx(i),y=gy(i);if(x!=null&&y!=null&&isFinite(x)&&isFinite(y))out.push(i);continue}
     if(!M.studies.has(SGROUP_OF[C.s[i]])||!paramPass(i))continue;
-    if(M.favOnly&&!isFav(C.k[i]))continue;
-    if(!M.steps&&STEP_ROW(i)&&i!==M.sel&&!isFav(C.k[i]))continue;
+    if(!M.steps&&STEP_ROW(i)&&i!==M.sel)continue;
     if(!lambdaPass(i))continue;
     if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
     if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
@@ -877,7 +880,7 @@ function updateCounts(){
 
   const nF=VIS.filter(i=>isFav(C.k[i])).length;
   const nFine=VIS.filter(FINE).length,mixed=nFine&&nFine<VIS.length;
-  $('#map-note').innerHTML=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Shift-click a chip to show only that one. Hollow = uncertain. Squares = a mesh finer than 8 × 4 (${nFine.toLocaleString()}).`+(mixed?`<br><b>More than one mesh is shown.</b> Finer-mesh squares run about 15% higher in thrust and torque than the 8 × 4 dots, so an 8 × 4 dot just under the budget is usually over it on the finer mesh. Use the Mesh filter to compare one mesh at a time.`:'');
+  $('#map-note').innerHTML=`${VIS.length.toLocaleString()} designs shown of ${N.toLocaleString()} (${nF} favourite${nF===1?'':'s'}). Favourites are always shown, whatever the filters. Shift-click a chip to show only that one. Hollow = uncertain. Squares = a mesh finer than 8 × 4 (${nFine.toLocaleString()}).`+(mixed?`<br><b>More than one mesh is shown.</b> Finer-mesh squares run about 15% higher in thrust and torque than the 8 × 4 dots, so an 8 × 4 dot just under the budget is usually over it on the finer mesh. Use the Mesh filter to compare one mesh at a time.`:'');
 }
 function nearest(mx,my){let best=null,bd=144;for(let k=0;k<VIS.length;k++){const d=(SX[k]-mx)**2+(SY[k]-my)**2;if(d<bd){bd=d;best=VIS[k]}}return best}
 const OBJ_NAMES=[[1,'max thrust ≤ 1 N·m'],[2,'λ 0.75'],[4,'λ 1.25'],[8,'λ 1.75'],[512,'matched elasticity comparison']];
