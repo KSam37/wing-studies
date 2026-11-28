@@ -29,6 +29,12 @@ the half-span (the fit used by elastic_refine), and searched again on that mesh:
 (tripled stations, straight segments) on the ``--chord-panels`` mesh and write OUT/baseline.json,
 so the study pick and the optimized wing can be compared on the same mesh.
 ``--gif DIR --summaries A B ...`` writes one evolution GIF per seed through every stage in order.
+
+``--search-mesh`` (first stage): search on the 8 x 4 mesh every atlas wing is compared on. Each seed outline is
+re-described as a PCHIP curve through the root chord and ``--curve`` control chords (default 6), sampled at 9
+stations, and searched as above; the time step is halved up to twice until verified. ``--extra-cases FILE...`` adds
+seed candidates from 8 x 4 results outside the studies: wingstudy.freq_explore results (both the as-found and the
+budget-rescaled solves) and the 8 x 4 frequency sweep of the optimized wings, at ``--freq``.
 """
 from __future__ import annotations
 
@@ -162,8 +168,39 @@ def fit_curve(chords_mm, n_ctrl):
     return out
 
 
+def search_mesh_numerics(freq: float) -> dict:
+    out = {"stations": 9, "span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4, "dt_refinements": [1, 2, 4],
+           "param": "pchip"}
+    if abs(freq - 1.0) > 1e-9:
+        out["freq"] = freq
+    return out
+
+
+def extra_cases(paths, freq: float) -> list[dict]:
+    """8 x 4 results outside the studies as seed candidates (freq_explore results, 8 x 4 frequency sweep)."""
+    out = {}
+    def add(key, chords, r, study):
+        if r and r.get("status") in ("ok", "verified") and r.get("thrust") is not None and key:
+            out.setdefault(key, {"key": key, "model": "t0.50", "structure": "chordwise", "freq": freq, "status": "verified",
+                                 "chords_mm": list(chords), "half_span_mm": r["half_span_mm"], "thrust_N": r["thrust"],
+                                 "torque_Nm": r["torque"], "study": study})
+    for p in paths:
+        d = S.read_json(p)
+        for x in d.get("results", []):                                    # freq_explore
+            if abs(x["freq"] - freq) < 1e-9:
+                for kind in ("fixed", "matched"):
+                    add((x.get(kind) or {}).get("key"), x["chords_mm"], x.get(kind), "freq-explore")
+        if str(d.get("mesh", "")).startswith("8 x 4"):                    # frequency_sweep --mesh 8 4
+            for w in d.get("wings", []):
+                for q in w["points"]:
+                    if abs(q["freq"] - freq) < 1e-9:
+                        for kind in ("fixed", "matched"):
+                            add((q.get(kind) or {}).get("key"), w["chords_mm"], q.get(kind), "optimized-8x4")
+    return list(out.values())
+
+
 class Search:
-    def __init__(self, seed: dict, factor: int, max_rounds: int, chord_panels: int = 4, curve: int = 0):
+    def __init__(self, seed: dict, factor: int, max_rounds: int, chord_panels: int = 4, curve: int = 0, search_mesh: bool = False):
         self.seed, self.budget = seed, seed["budget"]
         f = seed.get("freq", 1.0)
         c = seed["case"]
@@ -176,6 +213,10 @@ class Search:
                 self.numerics = numerics_for(n, chord_panels, "pchip", f)
             else:
                 self.ctrl, self.span, self.numerics = list(seed["ctrl"]), seed["span"], self.recheck_numerics
+        elif search_mesh:                                       # smooth outline on the 8 x 4 search mesh
+            active = [x for x in c["chords_mm"] if x > 0]
+            self.ctrl, self.span = fit_curve(active, curve or 6), round(effective_span_mm(c) / 1000, 5)
+            self.numerics = search_mesh_numerics(f)
         else:
             self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
             self.numerics = numerics_for(len(self.ctrl), chord_panels, freq=f)
@@ -323,6 +364,8 @@ def main(argv=None) -> int:
     ap.add_argument("--levels", type=float, nargs="+", default=list(LEVELS), help="torque budgets to pick standouts at (N*m)")
     ap.add_argument("--sheet-only", action="store_true", help="only single-sheet (<= 400 mm) standouts, kept within one sheet")
     ap.add_argument("--free-span", action="store_true", help="also search each budget's best wing without the 400 mm cap when it fits one sheet")
+    ap.add_argument("--search-mesh", action="store_true", help="first stage: search a PCHIP outline (--curve, default 6) on the 8 x 4 mesh")
+    ap.add_argument("--extra-cases", type=Path, nargs="*", default=[], help="8 x 4 result files to also pick seeds from (freq_explore, frequency_sweep --mesh 8 4)")
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--dry", action="store_true", help="list the seeds and the first round's size, solve nothing")
     a = ap.parse_args(argv)
@@ -338,11 +381,15 @@ def main(argv=None) -> int:
         if a.atlas:
             have = {c["key"] for c in cases}
             cases += [c for c in atlas_cases(a.freq) if c["key"] not in have]
+        if a.extra_cases:
+            have = {c["key"] for c in cases}
+            cases += [c for c in extra_cases(a.extra_cases, a.freq) if c["key"] not in have]
         seeds = pick_seeds(cases, a.levels, a.sheet_only, a.freq, a.free_span)
     if not seeds:
         print("no verified FAAV wings to start from")
         return 1
-    searches = [Search(s, a.factor, a.max_rounds, a.chord_panels, a.curve if a.from_summary else 0) for s in seeds]
+    searches = [Search(s, a.factor, a.max_rounds, a.chord_panels, a.curve if (a.from_summary or a.search_mesh) else 0,
+                       search_mesh=a.search_mesh and not a.from_summary) for s in seeds]
     for s in searches:
         c = s.seed["case"]
         kind = "curve control chords" if s.numerics.get("param") == "pchip" else "chords"

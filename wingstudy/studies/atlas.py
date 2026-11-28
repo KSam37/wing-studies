@@ -206,7 +206,7 @@ def _resample(chords: list, n: int) -> list:
     return out
 
 
-def merge_refinement(D: dict, stages: list[dict]) -> int:
+def merge_refinement(D: dict, stages: list[dict], study: dict | None = None) -> int:
     """Fine-mesh refinement of the FAAV standouts (wingstudy.refine_top summaries, in stage order) as map rows.
 
     Every accepted step of every stage becomes a row (``src`` = search | refine). The last accepted
@@ -223,11 +223,11 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
         D["catalog"]["end"] = len(cols["s"])
     keyrow = {k: r for r, k in enumerate(cols["k"])}
     sid = len(D["studies"])
-    D["studies"].append({"id": "refine-top", "label": "Optimized shapes: fine-mesh refinement of the FAAV standouts",
-                         "short": "Optimized shapes (fine mesh)", "kind": "refine", "planned": True,
+    D["studies"].append({**(study or {"id": "refine-top", "label": "Optimized shapes: fine-mesh refinement of the FAAV standouts",
+                         "short": "Optimized shapes (fine mesh)",
                          "about": "The best single-sheet FAAV wing at each torque budget, refined on finer meshes "
                                   "(wingstudy.refine_top): tripled chord stations on 21 × 4 panels, then 21 × 12 "
-                                  "panels and a smooth-curve search. See Optimized shapes.",
+                                  "panels and a smooth-curve search. See Optimized shapes."}), "kind": "refine", "planned": True,
                          **({"run_date": stages[-1]["updated"]} if stages[-1].get("updated") else {})})
     mi = _model(D, "t0.50", "chordwise")
     notes, outlines, rsearch = D.setdefault("row_notes", {}), D.setdefault("row_outline", {}), D.setdefault("row_search", {})
@@ -283,7 +283,8 @@ def merge_refinement(D: dict, stages: list[dict]) -> int:
                 "lambda": None, "torque_budget_Nm": budget, "family": "wing", "seed_label": "study pick",
                 "seed_half_span_mm": source.get("half_span_mm") if source else None,
                 "steps": ([seed] if seed is not None else []) + list(dict.fromkeys(rows)),
-                "note": "The study pick (8 × 4 mesh), then every accepted step: tripled chord stations on 21 × 4 panels, "
+                "note": (study or {}).get("evolution_note") or
+                        "The study pick (8 × 4 mesh), then every accepted step: tripled chord stations on 21 × 4 panels, "
                         "then a smooth curve through 6 control chords on 21 × 12 panels. Thrust and torque rise with the "
                         "finer meshes, so compare steps within a mesh."}})
     return added
@@ -387,4 +388,57 @@ def merge_optimized_search_mesh(D: dict, data: dict | None) -> int:
                                    f"{p['freq']:g} Hz, " + ("outline as optimized" if kind == "fixed" else
                                                             f"half-span rescaled to {r['half_span_mm']:.0f} mm for the {w['budget_Nm']:g} N·m budget"))
                 added += 1
+    return added
+
+
+def merge_freq_explore(D: dict, data: dict | None) -> int:
+    """The top FAAV shapes at higher frequencies on 8 x 4 (wingstudy.freq_explore) as map rows.
+
+    Up to two rows per shape and frequency: as found (fixed) and with the half-span rescaled to the shape's torque
+    budget (matched). Each row joins the shape group of the wing it came from (``row_same_shape``).
+    """
+    if not data or not data.get("results"):
+        return 0
+    cols = D["cols"]
+    if D.get("catalog") and "end" not in D["catalog"]:
+        D["catalog"]["end"] = len(cols["s"])
+    keyrow = {k: r for r, k in enumerate(cols["k"])}
+    sid = len(D["studies"])
+    D["studies"].append({"id": "freq-explore", "label": "Top shapes at higher frequencies (8 × 4)",
+                         "short": "Higher frequencies (8 × 4)", "kind": "rerun", "planned": True,
+                         "about": "The FAAV frontier and the best few wings under each budget at 0.75 to 1.25 Hz, and the "
+                                  "optimized wings, solved at " + ", ".join(f"{f:g}" for f in data.get("freqs", [])) +
+                                  " Hz on the 8 × 4 search mesh, as found and with the half-span rescaled to each wing's "
+                                  "budget (wingstudy.freq_explore).",
+                         **({"run_date": data["updated"]} if data.get("updated") else {})})
+    mi = _model(D, "t0.50", "chordwise")
+    notes, meshes, outlines = D.setdefault("row_notes", {}), D.setdefault("row_mesh", {}), D.setdefault("row_outline", {})
+    same = D.setdefault("row_same_shape", {})
+    added = 0
+    for w in data["results"]:
+        src = keyrow.get(w.get("source_key"))
+        for kind in ("fixed", "matched"):
+            r = w.get(kind)
+            if not r or not r.get("key") or r["key"] in keyrow or not (_finite(r.get("thrust")) and _finite(r.get("torque"))):
+                continue
+            row = len(cols["s"])
+            vals = {"s": sid, "m": mi, "f": _index(D["freqs"], w["freq"]), "T": r["thrust"], "Q": r["torque"],
+                    "H": r["half_span_mm"], "W": r.get("tip_twist"), "S": _index(D["statuses"], r["status"]),
+                    "src": SRC_STUDY, "k": r["key"], "obj": 0}
+            for k in cols:
+                if k == "C":
+                    cols["C"].extend(_resample(w["chords_mm"], S.NODES))
+                else:
+                    cols[k].append(vals.get(k))
+            keyrow[r["key"]] = row
+            meshes[str(row)] = "8 × 4"
+            outlines[str(row)] = list(w["chords_mm"])
+            if src is not None:
+                same[str(row)] = src
+            fd = w["found"]
+            notes[str(row)] = (f"{'Optimized wing' if w['kind'] == 'optimized' else 'Wing'} {w['id']} (found at {w['found_at']:g} Hz: "
+                               f"{fd['thrust']:.3f} N at {fd['torque']:.3f} N·m, {fd['half_span_mm']:.0f} mm) at {w['freq']:g} Hz, "
+                               + ("as found" if kind == "fixed" else f"half-span rescaled to {r['half_span_mm']:.0f} mm for the "
+                                                                    f"{w['budget_Nm']:g} N·m budget"))
+            added += 1
     return added

@@ -116,6 +116,22 @@ def build(out: Path) -> None:
         n = study_atlas.merge_optimized_search_mesh(D, D["frequency_sweep"])
         if n:
             print(f"optimized shapes on 8 x 4: {n} map rows")
+    fx = ROOT / "atlas" / "freq-explore.json"       # wingstudy.freq_explore output: top shapes at higher frequencies
+    if fx.exists():
+        print(f"higher frequencies on 8 x 4: {study_atlas.merge_freq_explore(D, json.loads(fx.read_text(encoding='utf-8')))} map rows")
+    # wingstudy.refine_top --search-mesh runs, one folder each under atlas/optimize-8x4/ (summary.json): the top wings
+    # optimized as smooth outlines on the 8 x 4 search mesh, so they rank with everything else
+    for d in sorted(x for x in (ROOT / "atlas" / "optimize-8x4").glob("*") if x.is_dir()):
+        sm = d / "summary.json"
+        if sm.exists():
+            n = study_atlas.merge_refinement(D, [json.loads(sm.read_text(encoding="utf-8"))], {
+                "id": f"optimize-8x4-{d.name}", "label": f"Optimized on the 8 × 4 search mesh ({d.name})",
+                "short": f"Optimized on 8 × 4 ({d.name})",
+                "about": "The best FAAV wing under each torque budget, re-described as a smooth curve through 6 control "
+                         "chords and optimized on the 8 × 4 search mesh (wingstudy.refine_top --search-mesh).",
+                "evolution_note": "The starting wing (8 × 4), then every accepted step of the smooth-curve search on the same "
+                                  "8 × 4 mesh, so every step compares directly."})
+            print(f"optimized on 8 x 4 ({d.name}): {n} map rows")
     from wingstudy import shapes
     new = shapes.assign(D, ROOT / "atlas" / "shape-ids.json")   # permanent shape numbers; append-only registry
     print(f"wing shapes: {len(set(x for x in D['cols']['g'] if x)):,} ({new:,} newly numbered)")

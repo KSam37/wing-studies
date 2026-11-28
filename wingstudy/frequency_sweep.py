@@ -40,12 +40,17 @@ def _project(task):
     budget, tol = task["budget"], 0.002
     target = budget - 0.002
     lo, hi = 0.150, task.get("span_max", SHEET_M)                  # refine_top.SPAN_LIMITS floor, one sheet
-    span, pts, recs, best = task["span"], [], [], None
+    span, pts, recs, best, guess = task["span"], [], [], None, task.get("span_guess")
     for _ in range(7):
         span = round(min(hi, max(lo, span)), 4)
-        rec = ER._solve({k: v for k, v in task.items() if k not in ("budget", "span_max")} | {"span": span, "fixed_span": True})
+        rec = ER._solve({k: v for k, v in task.items() if k not in ("budget", "span_max", "span_guess")} | {"span": span, "fixed_span": True})
         recs.append(rec)
         if rec["status"] not in ("ok", "verified") or rec["torque"] is None:
+            # a failed solve (e.g. twist past the model's limit) gets one retry at the guessed on-budget span
+            g = None if guess is None else round(min(hi, max(lo, guess)), 4)
+            if g is not None and abs(g - span) > 1e-3 and not pts:
+                span, guess = g, None
+                continue
             break
         if rec["torque"] <= budget and (best is None or rec["thrust"] > best["thrust"]):
             best = rec
