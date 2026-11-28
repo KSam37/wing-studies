@@ -30,9 +30,11 @@ the half-span (the fit used by elastic_refine), and searched again on that mesh:
 so the study pick and the optimized wing can be compared on the same mesh.
 ``--gif DIR --summaries A B ...`` writes one evolution GIF per seed through every stage in order.
 
-``--search-mesh`` (first stage): search on the 8 x 4 mesh every atlas wing is compared on. Each seed outline is
-re-described as a PCHIP curve through the root chord and ``--curve`` control chords (default 6), sampled at 9
-stations, and searched as above; the time step is halved up to twice until verified. ``--extra-cases FILE...`` adds
+``--search-mesh`` (first stage): search on the 8 x 4 mesh every atlas wing is compared on, starting from the seed
+exactly as solved (its own stations, straight segments), so the result can only match or beat it; with ``--curve N``
+the outline is instead a PCHIP curve through N control chords sampled at 9 stations. The time step is halved up to
+twice until verified. ``--pool-freqs F...`` picks seeds over all those frequencies together (each seed keeps its own):
+the best wing under each budget at whichever frequency, as the Top tab shows it. ``--extra-cases FILE...`` adds
 seed candidates from 8 x 4 results outside the studies: wingstudy.freq_explore results (both the as-found and the
 budget-rescaled solves) and the 8 x 4 frequency sweep of the optimized wings, at ``--freq``.
 """
@@ -116,8 +118,9 @@ def pick_seeds(cases: list[dict], levels=LEVELS, sheet_only: bool = False, freq:
         for c, single in pairs:
             if c is None or any(s["case"]["key"] == c["key"] and s["budget"] == B and s["single_sheet"] == single for s in seeds):
                 continue
-            seeds.append({"id": f"{'' if abs(freq - 1.0) < 1e-9 else f'F{freq:g}-'}B{B:g}-{'sheet' if single else 'any'}-{c['key'][:8]}",
-                          "budget": B, "single_sheet": single, "case": c, "freq": freq})
+            f = c.get("freq", freq)
+            seeds.append({"id": f"{'' if abs(f - 1.0) < 1e-9 else f'F{f:g}-'}B{B:g}-{'sheet' if single else 'any'}-{c['key'][:8]}",
+                          "budget": B, "single_sheet": single, "case": c, "freq": f})
     return seeds
 
 
@@ -168,9 +171,9 @@ def fit_curve(chords_mm, n_ctrl):
     return out
 
 
-def search_mesh_numerics(freq: float) -> dict:
-    out = {"stations": 9, "span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4, "dt_refinements": [1, 2, 4],
-           "param": "pchip"}
+def search_mesh_numerics(freq: float, stations: int = 9, param: str = "pchip") -> dict:
+    out = {"stations": stations, "span_panels": 8, "chord_panels": 4, "steps_per_cycle": 50, "cycles": 4, "dt_refinements": [1, 2, 4],
+           "param": param}
     if abs(freq - 1.0) > 1e-9:
         out["freq"] = freq
     return out
@@ -213,10 +216,14 @@ class Search:
                 self.numerics = numerics_for(n, chord_panels, "pchip", f)
             else:
                 self.ctrl, self.span, self.numerics = list(seed["ctrl"]), seed["span"], self.recheck_numerics
-        elif search_mesh:                                       # smooth outline on the 8 x 4 search mesh
+        elif search_mesh:                                       # on the 8 x 4 search mesh
             active = [x for x in c["chords_mm"] if x > 0]
-            self.ctrl, self.span = fit_curve(active, curve or 6), round(effective_span_mm(c) / 1000, 5)
-            self.numerics = search_mesh_numerics(f)
+            self.span = round(effective_span_mm(c) / 1000, 5)
+            if curve:                                           # smooth curve through `curve` control chords
+                self.ctrl, self.numerics = fit_curve(active, curve), search_mesh_numerics(f)
+            else:                                               # the seed's own stations: the start IS the seed
+                self.ctrl = [round(x / 1000, 5) for x in active[1:]]
+                self.numerics = search_mesh_numerics(f, len(active), "exact")
         else:
             self.ctrl, self.span = refine_outline(c["chords_mm"], c["half_span_mm"], factor)
             self.numerics = numerics_for(len(self.ctrl), chord_panels, freq=f)
@@ -364,7 +371,8 @@ def main(argv=None) -> int:
     ap.add_argument("--levels", type=float, nargs="+", default=list(LEVELS), help="torque budgets to pick standouts at (N*m)")
     ap.add_argument("--sheet-only", action="store_true", help="only single-sheet (<= 400 mm) standouts, kept within one sheet")
     ap.add_argument("--free-span", action="store_true", help="also search each budget's best wing without the 400 mm cap when it fits one sheet")
-    ap.add_argument("--search-mesh", action="store_true", help="first stage: search a PCHIP outline (--curve, default 6) on the 8 x 4 mesh")
+    ap.add_argument("--search-mesh", action="store_true", help="first stage: search on the 8 x 4 mesh from the exact seed (or a --curve outline)")
+    ap.add_argument("--pool-freqs", type=float, nargs="+", help="pick seeds over these frequencies together (with --atlas / --extra-cases)")
     ap.add_argument("--extra-cases", type=Path, nargs="*", default=[], help="8 x 4 result files to also pick seeds from (freq_explore, frequency_sweep --mesh 8 4)")
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--dry", action="store_true", help="list the seeds and the first round's size, solve nothing")
@@ -377,13 +385,15 @@ def main(argv=None) -> int:
         seeds = seeds_from_summary(a.from_summary)
     else:
         results = [S.read_json(S.study_dir(s) / "results.json") for s in a.studies if (S.study_dir(s) / "results.json").exists()]
-        cases = faav_cases(results, a.freq)
-        if a.atlas:
-            have = {c["key"] for c in cases}
-            cases += [c for c in atlas_cases(a.freq) if c["key"] not in have]
-        if a.extra_cases:
-            have = {c["key"] for c in cases}
-            cases += [c for c in extra_cases(a.extra_cases, a.freq) if c["key"] not in have]
+        cases = []
+        for fq in (a.pool_freqs or [a.freq]):
+            cases += faav_cases(results, fq)
+            if a.atlas:
+                have = {c["key"] for c in cases}
+                cases += [c for c in atlas_cases(fq) if c["key"] not in have]
+            if a.extra_cases:
+                have = {c["key"] for c in cases}
+                cases += [c for c in extra_cases(a.extra_cases, fq) if c["key"] not in have]
         seeds = pick_seeds(cases, a.levels, a.sheet_only, a.freq, a.free_span)
     if not seeds:
         print("no verified FAAV wings to start from")
