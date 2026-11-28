@@ -1,0 +1,70 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-27-budgets-1p25hz",
+ "title": "Continuous span and shape across torque budgets 0.5-2 N·m at 1.25 Hz, 0.5 mm FAAV sheet",
+ "author": "sam",
+ "question": "At 1.25 Hz, where every current top FAAV wing sits, only the 1 N·m budget has been searched with a 200 mm root. With half-span free, how do the best thrust, half-span and outline change with torque budget from 0.5 to 2 N·m?",
+ "kind": "evolutionary",
+ "parent": "2026-11-25-free-span-budgets",
+ "structure": "chordwise",
+ "models": [
+  "t0.50"
+ ],
+ "frequencies_hz": [
+  1.25
+ ],
+ "numerics": [
+  {
+   "span_panels": 8,
+   "chord_panels": 4,
+   "steps_per_cycle": 50,
+   "cycles": 4
+  }
+ ],
+ "search": {
+  "objectives": [
+   {
+    "torque_budget_Nm": 0.5
+   },
+   {
+    "torque_budget_Nm": 0.75
+   },
+   {
+    "torque_budget_Nm": 1.0
+   },
+   {
+    "torque_budget_Nm": 1.25
+   },
+   {
+    "torque_budget_Nm": 1.5
+   },
+   {
+    "torque_budget_Nm": 2.0
+   }
+  ],
+  "seed_half_spans_mm": [
+   250,
+   350,
+   450,
+   550
+  ],
+  "seed_families": [
+   "concave",
+   "convex",
+   "triangle"
+  ],
+  "solves_per_lineage": 150,
+  "step_mm": 20,
+  "min_chord_mm": 10,
+  "decreasing": true,
+  "span_step_mm": 20,
+  "half_span_limits_mm": [
+   150,
+   800
+  ]
+ },
+ "notes": "The 1 Hz budget sweep (2026-11-25-free-span-budgets) repeated at 1.25 Hz, with 1 N·m added: same FAAV boundary condition (0.5 mm sheet pivoting on a stiff leading edge), 200 mm root, twelve lineages per budget (concave, convex and triangle seeds at 250, 350, 450 and 550 mm), half-span a search coordinate (20 mm step) between 150 and 800 mm, chord step 20 mm. Manufacturing: a single sheet is at most 400 mm; not a search limit, shaded in the atlas.",
+ "budget": {
+  "max_cases": 11000
+ }
+}

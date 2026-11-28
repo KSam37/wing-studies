@@ -1,0 +1,227 @@
+{
+ "schema": "wingstudy/study-spec@1",
+ "id": "2026-11-27-small-root",
+ "title": "Smaller roots: 50 and 100 mm root chord, 0.5 mm FAAV sheet, 1.25 Hz",
+ "author": "sam",
+ "question": "Every FAAV search so far fixed the root chord at 200 mm. With a 50 or 100 mm root and the half-span free, what are the best thrust and outline at 0.75, 1, 1.25 and 1.5 N·m at 1.25 Hz, and does a smaller root beat the 200 mm root at any budget?",
+ "kind": "evolutionary",
+ "parent": "2026-11-25-free-span-budgets",
+ "structure": "chordwise",
+ "models": [
+  "t0.50"
+ ],
+ "frequencies_hz": [
+  1.25
+ ],
+ "numerics": [
+  {
+   "span_panels": 8,
+   "chord_panels": 4,
+   "steps_per_cycle": 50,
+   "cycles": 4
+  }
+ ],
+ "search": {
+  "objectives": [
+   {
+    "torque_budget_Nm": 0.75
+   },
+   {
+    "torque_budget_Nm": 1.0
+   },
+   {
+    "torque_budget_Nm": 1.25
+   },
+   {
+    "torque_budget_Nm": 1.5
+   }
+  ],
+  "seed_half_spans_mm": [],
+  "seed_families": [],
+  "solves_per_lineage": 100,
+  "step_mm": 10,
+  "min_chord_mm": 10,
+  "decreasing": true,
+  "span_step_mm": 20,
+  "half_span_limits_mm": [
+   150,
+   800
+  ]
+ },
+ "wings": {
+  "designs": [
+   {
+    "name": "triangle seed, 50 mm root, 300 mm",
+    "chords_mm": [
+     50.0,
+     44.286,
+     38.571,
+     32.857,
+     27.143,
+     21.429,
+     15.714,
+     10.0
+    ],
+    "half_span_mm": 300
+   },
+   {
+    "name": "triangle seed, 50 mm root, 500 mm",
+    "chords_mm": [
+     50.0,
+     44.286,
+     38.571,
+     32.857,
+     27.143,
+     21.429,
+     15.714,
+     10.0
+    ],
+    "half_span_mm": 500
+   },
+   {
+    "name": "concave seed, 50 mm root, 300 mm",
+    "chords_mm": [
+     50.0,
+     39.388,
+     30.408,
+     23.061,
+     17.347,
+     13.265,
+     10.816,
+     10.0
+    ],
+    "half_span_mm": 300
+   },
+   {
+    "name": "concave seed, 50 mm root, 500 mm",
+    "chords_mm": [
+     50.0,
+     39.388,
+     30.408,
+     23.061,
+     17.347,
+     13.265,
+     10.816,
+     10.0
+    ],
+    "half_span_mm": 500
+   },
+   {
+    "name": "convex seed, 50 mm root, 300 mm",
+    "chords_mm": [
+     50.0,
+     49.184,
+     46.735,
+     42.653,
+     36.939,
+     29.592,
+     20.612,
+     10.0
+    ],
+    "half_span_mm": 300
+   },
+   {
+    "name": "convex seed, 50 mm root, 500 mm",
+    "chords_mm": [
+     50.0,
+     49.184,
+     46.735,
+     42.653,
+     36.939,
+     29.592,
+     20.612,
+     10.0
+    ],
+    "half_span_mm": 500
+   },
+   {
+    "name": "triangle seed, 100 mm root, 300 mm",
+    "chords_mm": [
+     100.0,
+     87.143,
+     74.286,
+     61.429,
+     48.571,
+     35.714,
+     22.857,
+     10.0
+    ],
+    "half_span_mm": 300
+   },
+   {
+    "name": "triangle seed, 100 mm root, 500 mm",
+    "chords_mm": [
+     100.0,
+     87.143,
+     74.286,
+     61.429,
+     48.571,
+     35.714,
+     22.857,
+     10.0
+    ],
+    "half_span_mm": 500
+   },
+   {
+    "name": "concave seed, 100 mm root, 300 mm",
+    "chords_mm": [
+     100.0,
+     76.122,
+     55.918,
+     39.388,
+     26.531,
+     17.347,
+     11.837,
+     10.0
+    ],
+    "half_span_mm": 300
+   },
+   {
+    "name": "concave seed, 100 mm root, 500 mm",
+    "chords_mm": [
+     100.0,
+     76.122,
+     55.918,
+     39.388,
+     26.531,
+     17.347,
+     11.837,
+     10.0
+    ],
+    "half_span_mm": 500
+   },
+   {
+    "name": "convex seed, 100 mm root, 300 mm",
+    "chords_mm": [
+     100.0,
+     98.163,
+     92.653,
+     83.469,
+     70.612,
+     54.082,
+     33.878,
+     10.0
+    ],
+    "half_span_mm": 300
+   },
+   {
+    "name": "convex seed, 100 mm root, 500 mm",
+    "chords_mm": [
+     100.0,
+     98.163,
+     92.653,
+     83.469,
+     70.612,
+     54.082,
+     33.878,
+     10.0
+    ],
+    "half_span_mm": 500
+   }
+  ]
+ },
+ "notes": "Same boundary condition and search as 2026-11-25-free-span-budgets (0.5 mm sheet pivoting on a stiff leading edge, half-span a search coordinate, 20 mm span step), at 1.25 Hz, where every current top wing sits. The root chord is held at each seed's root: 12 lineages per budget, triangle, concave and convex seeds with a 50 or 100 mm root at 300 and 500 mm half-span. Chord step 10 mm (20 mm is too coarse for a 50 mm root). The 200 mm-root wings already in the atlas at 1.25 Hz are the comparison.",
+ "budget": {
+  "max_cases": 5000
+ }
+}
