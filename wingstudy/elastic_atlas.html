@@ -55,7 +55,7 @@ p{margin:4px 0 10px}
 .tile .k{color:var(--text-2);font-size:12.5px}
 .tile .v{font-size:26px;font-weight:650;margin:2px 0}
 .tile .s{color:var(--text-2);font-size:12.5px}
-.simcount{color:var(--text-2);font-size:15px;margin:-4px 0 12px}.simcount .v{font-size:34px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;margin-right:6px}
+.simcount{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:4px 0 6px;color:var(--text-2);font-size:16px}.simcount .v{font-size:38px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
 .hl-list{display:grid;gap:10px;margin-bottom:14px}
 .hl-row{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px}
 .hl-row .poster img{width:100%;display:block;border-radius:8px}
@@ -622,9 +622,7 @@ function renderOverview(){
   const W=(st,f,m)=>D.winners.find(w=>w.study===st&&w.freq===f&&w.model===m);
   const counts=D.studies.map((s,i)=>C.s.filter(x=>x===i).length);
   const tile=(k,v,s)=>`<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
-  let h=`<h2>Carbon-fibre flapping wings in water: how the studies work and what they found</h2>
-  <div class="simcount"><span class="v" id="simcount">${N.toLocaleString()}</span> simulations</div>
-  <p class="lede">One wing of the swimming robot: Ptera's unsteady vortex-lattice method coupled to a stabilized plate-torsion model. Every result is per wing at 0.5 m/s, a ±30° stroke (−26° to +34°) and a peak root torque budget (${LIM} N·m in the original campaigns, 0.75–1.25 N·m for the FAAV wing); root chord 200 mm, leading edge straight and normal to the flow.</p>
+  let h=`<div class="simcount"><span class="v" id="simcount">${N.toLocaleString()}</span><span>unsteady vortex-lattice simulations of flapping wings in water</span></div>
   ${headlineCard()}
   ${methodsCard()}
   ${constantsCard()}
