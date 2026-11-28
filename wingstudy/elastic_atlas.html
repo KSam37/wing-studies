@@ -213,9 +213,7 @@ table.cov .cov-n{font-size:1.15em;font-weight:600;font-variant-numeric:tabular-n
       <fieldset class="fg"><legend>Analysis</legend>
         <div class="frow"><span class="fl">Model (leading edge)</span><div class="chips" id="f-bc"></div></div>
         <div class="frow"><span class="fl">Sheet thickness</span><div class="chips" id="f-thk"></div></div>
-        <div class="frow"><span class="fl">Torque penalty λ</span><div class="chips" id="f-lambda"></div></div>
-        <p class="tiny muted" style="margin:2px 0 0"><b>Model</b> = analysis type + leading-edge construction (hover a chip). The root is always fixed to the hub; thickness applies to elastic models only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube.
-        <b>λ</b> is the torque penalty in the search score S = T/T<sub>ref</sub> − λ·M/M<sub>ref</sub> (a larger λ favours lower torque); designs found any other way have none.</p>
+        <p class="tiny muted" style="margin:2px 0 0"><b>Model</b> = analysis type + leading-edge construction (hover a chip). The root is always fixed to the hub; thickness applies to elastic models only. Sheets are carbon fibre; the rod is a 5/3 mm carbon tube.</p>
       </fieldset>
       <fieldset class="fg"><legend>Geometry, conditions &amp; quality</legend>
         <div class="frow"><span class="fl">Half-span</span><div class="chips">
@@ -545,7 +543,7 @@ function methodsCard(){
    ${blk('2 · Fluid model',`Ptera Software's unsteady vortex-lattice method (inviscid, with a prescribed wake), 8 spanwise × 4 chordwise panels and 50 time steps per cycle, run for 4 cycles. <b>Thrust</b> is the mean streamwise force over the last cycle; <b>torque</b> is the peak |root roll moment|, which is what the motor must supply. The torque budget is the motor's limit.`)}
    ${blk('3 · Structure and boundary condition',`<b>Chordwise elasticity</b>: the leading edge is held straight and in place and each spanwise strip pitches about it, resisted by the sheet's torsion and warping (a stabilized plate-torsion model), coupled to the fluid loads every step. <b>The FAAV build</b> is this model with a 0.5 mm sheet: a stiff leading edge the sheet pivots about, which itself neither bends nor twists. With the <b>rod bonded</b> the rod's torsion adds to the sheet's; <b>spanwise</b> runs also let the sheet bend along the span. Rigid wings have no structure.`)}
    ${blk('4 · Verification',`Every elastic case is solved at the base time step and refined (dt/2, dt/4) until two settings agree within 3%: <b>verified</b>. A rigid case is <b>settled</b> when its last two cycles agree within 5%. Results that never agree are kept but marked and left out of the rankings. Verified is numerical repeatability, not experimental validation.`)}
-   ${blk('5 · Objective functions',`<b>Torque budget B</b> (the main one): maximize thrust T subject to peak torque Q ≤ B. The search scores a design S = T/T<sub>ref</sub> if Q ≤ B, and S = −10 − (Q − B)/M<sub>ref</sub> if not, so any design within budget beats any over it, and over-budget seeds first walk down in torque.<br><b>Torque penalty λ</b>: S = T/T<sub>ref</sub> − λ·Q/M<sub>ref</sub>; a larger λ favours lower torque. T<sub>ref</sub> and M<sub>ref</sub> are the largest thrust and torque among the search's own seeds.`)}
+   ${blk('5 · Objective function',`<b>Maximize thrust T subject to peak root torque Q ≤ B</b>, for a torque budget B set by the motor. Every ranking on this site uses it: the best wing at a budget is the highest-thrust verified wing at or below it, whichever search found it. The search scores a design S = T/T<sub>ref</sub> if Q ≤ B and S = −10 − (Q − B)/M<sub>ref</sub> if not, so any design within budget beats any over it, and over-budget seeds first walk down in torque.<br><span class="muted">The first two campaigns (rod, weekend) also ran weighted searches, S = T/T<sub>ref</sub> − λ·Q/M<sub>ref</sub> with λ = 0.75, 1.25 and 1.75. A weighted score lands on one torque that can't be chosen in advance, so later studies set the budget directly. The wings those searches found are kept and ranked the same way.</span>`)}
    ${blk('6 · Search',`A coordinate (pattern) search. Each pass tries +step and −step on every outboard chord in turn, and on the half-span when it is free; a move is kept only if the score improves. A coordinate that fails both ways gets one retry at half the step, then retires; a lineage stops when all are retired or its solve budget is spent. Lineages start from family seeds (triangle, square, concave, convex, narrow) or from existing designs, advance in lockstep and are solved in parallel. Every trial, accepted or not, is kept in the atlas.`)}
    ${blk('7 · Convergence',`Top designs and a random sample are re-solved on three uniformly refined settings (8 × 4 / 50, 12 × 6 / 75, 18 × 9 / 112; r = 1.5) and with each parameter doubled alone. Observed order p = ln|(f₃ − f₂)/(f₂ − f₁)| / ln r, Richardson value f₁ + (f₁ − f₂)/(r<sup>p</sup> − 1), GCI = 1.25 |(f₁ − f₂)/f₁| / (r<sup>p</sup> − 1).${S?` <b>Latest:</b> thrust ranking kept with ρ = ${fmt(S.rank_correlation_base_fine,3)}; base-setting thrust within ${fmt(S.median_abs_base_error_thrust_pct,1)}% (median) of the extrapolated value.`:' See the Convergence tab for results.'}`)}
    ${blk('8 · Derived quantities',`<b>Strouhal number</b> St = f·A/U with A the tip's peak-to-peak excursion, A = R(sin 34° + sin 26°) ≈ R for half-span R (elastic deflection not included). <b>Effective half-span</b> runs to the last non-zero chord. A <b>single sheet</b> is at most ${SHEET} mm, so longer half-spans need a joined sheet.`)}
@@ -805,7 +803,6 @@ function chipRow(el,items,set,colorFn){
 }
 function renderChips(){
   for(const [id,on] of [['f-faav',M.faav],['f-fav',M.favOnly],['f-steps',M.steps]]){const b=$('#'+id);if(b){b.classList.toggle('off',!on);b.setAttribute('aria-pressed',on)}}
-  chipRow($('#f-lambda'),LAMBDAS,M.lambda,null);
   chipRow($('#f-bc'),BCS.map(([k,l,t])=>[k,BC_SHORT[k],l+'. '+t]),M.bc,M.color==='bc'?bcColor:null);
   chipRow($('#f-thk'),THKS.map((t,k)=>[k,t+' mm']),M.thk,M.color==='thk'?thkColor:null);
   chipRow($('#f-freq'),D.freqs.map((f,i)=>[i,f+' Hz']),M.freqs,M.color==='freq'?freqColor:null);
@@ -827,7 +824,6 @@ function filtered(){
     if(fav){const x=gx(i),y=gy(i);if(x!=null&&y!=null&&isFinite(x)&&isFinite(y))out.push(i);continue}
     if(!paramPass(i))continue;
     if(!M.steps&&STEP_ROW(i)&&i!==M.sel)continue;
-    if(!lambdaPass(i))continue;
     if(!M.lim.has(C.Q[i]>LIM?1:0))continue;
     if(SPAN[i]<M.spLo-0.5||SPAN[i]>M.spHi+0.5)continue;
     if(TL.length&&TIME[i]>TL[M.until].t)continue;
